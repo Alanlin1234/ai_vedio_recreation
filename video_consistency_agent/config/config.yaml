@@ -1,0 +1,51 @@
+# 视频一致性检查Agent配置
+
+# 一致性阈值设置
+consistency_threshold: 0.8
+visual_threshold: 0.8
+temporal_threshold: 0.8
+semantic_threshold: 0.85
+style_threshold: 0.8
+
+# 一致性权重配置
+consistency_weights:
+  visual: 0.3
+  temporal: 0.2
+  semantic: 0.3
+  style: 0.2
+
+# 模型配置
+models:
+  vlm_model: "qwen3-vl-flash"  # 使用用户要求的模型
+  llm_model: "qwen3-max-preview"  # 使用用户指定的模型
+  model_type: "api"
+  timeout: 30
+  # 阿里云API配置（从环境变量读取）
+  dashscope_api_key: "sk-d433c2f93eff433583a88e3bdb37289f"  # 使用经过测试可用的API密钥
+  aliyun_access_key_id: "${ALIBABA_CLOUD_ACCESS_KEY_ID}"
+  aliyun_access_key_secret: "${ALIBABA_CLOUD_ACCESS_KEY_SECRET}"
+  aliyun_region_id: "${ALIBABA_CLOUD_REGION_ID}"
+
+# 优化器配置
+optimizer:
+  style_strength_adjustment: 0.1
+  keyframe_weight_adjustment: 0.2
+  max_retries: 3
+
+# 视频处理配置
+video_processing:
+  keyframe_count: 2
+  ffmpeg_path: "ffmpeg"
+  temp_dir: "/tmp/video_consistency"
+
+# 相似度计算配置
+similarity:
+  clip_model: "ViT-B/32"
+  ssim_window_size: 11
+  histogram_bins: 256
+
+# 日志配置
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "video_consistency.log"
