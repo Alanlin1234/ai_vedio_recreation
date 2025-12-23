@@ -1,19 +1,10 @@
-# ==============================================================================
 # Copyright (C) 2021 Evil0ctal
 #
-# This file is part of the Douyin_TikTok_Download_API project.
 #
-# This project is licensed under the Apache License 2.0 (the "License");
-# you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at:
 # http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
 # limitations under the License.
-# ==============================================================================
 # 　　　　 　　  ＿＿
 # 　　　 　　 ／＞　　フ
 # 　　　 　　| 　_　 _ l
@@ -24,13 +15,11 @@
 # 　／￣|　　 |　|　|
 # 　| (￣ヽ＿_ヽ_)__)
 # 　＼二つ
-# ==============================================================================
 #
 # Contributor Link:
 # - https://github.com/Evil0ctal
 # - https://github.com/Johnserf-Seed
 #
-# ==============================================================================
 import asyncio
 import json
 import os
@@ -75,6 +64,43 @@ with open(f"{path}/config.yaml", "r", encoding="utf-8") as f:
     config = yaml.safe_load(f)
 
 
+# 配置验证函数
+def validate_config(config):
+    """验证配置文件的有效性"""
+    douyin_config = config.get("TokenManager", {}).get("douyin", {})
+    headers = douyin_config.get("headers", {})
+    
+    # 验证Cookie是否存在且不为空
+    cookie = headers.get("Cookie", "")
+    if not cookie:
+        logger.warning("Cookie配置为空，请在config.yaml中配置有效的抖音Cookie")
+    
+    # 验证User-Agent是否为推荐的默认值
+    default_ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"
+    current_ua = headers.get("User-Agent", "")
+    if current_ua != default_ua:
+        logger.warning(f"User-Agent已被修改为: {current_ua}\n建议保持默认值: {default_ua}")
+    
+    # 验证Referer是否指向抖音官网
+    referer = headers.get("Referer", "")
+    if "douyin.com" not in referer:
+        logger.warning(f"Referer配置不正确: {referer}\n建议设置为: https://www.douyin.com/")
+    
+    # 验证msToken配置是否存在
+    ms_token_config = douyin_config.get("msToken", None)
+    if not ms_token_config:
+        logger.warning("msToken配置缺失，请检查config.yaml文件")
+    
+    # 验证ttwid配置是否存在
+    ttwid_config = douyin_config.get("ttwid", None)
+    if not ttwid_config:
+        logger.warning("ttwid配置缺失，请检查config.yaml文件")
+
+
+# 执行配置验证
+validate_config(config)
+
+
 class TokenManager:
     douyin_manager = config.get("TokenManager").get("douyin")
     token_conf = douyin_manager.get("msToken", None)
@@ -87,10 +113,6 @@ class TokenManager:
 
     @classmethod
     def gen_real_msToken(cls) -> str:
-        """
-        生成真实的msToken,当出现错误时返回虚假的值
-        (Generate a real msToken and return a false value when an error occurs)
-        """
 
         payload = json.dumps(
             {
@@ -121,26 +143,19 @@ class TokenManager:
                 return msToken
 
             # except httpx.RequestError as exc:
-            #     # 捕获所有与 httpx 请求相关的异常情况 (Captures all httpx request-related exceptions)
             #     raise APIConnectionError(
-            #         "请求端点失败，请检查当前网络环境。 链接：{0}，代理：{1}，异常类名：{2}，异常详细信息：{3}"
-            #         .format(cls.token_conf["url"], cls.proxies, cls.__name__, exc)
             #     )
             #
             # except httpx.HTTPStatusError as e:
-            #     # 捕获 httpx 的状态代码错误 (captures specific status code errors from httpx)
             #     if e.response.status_code == 401:
             #         raise APIUnauthorizedError(
-            #             "参数验证失败，请更新 Douyin_TikTok_Download_API 配置文件中的 {0}，以匹配 {1} 新规则"
             #             .format("msToken", "douyin")
             #         )
             #
             #     elif e.response.status_code == 404:
-            #         raise APINotFoundError("{0} 无法找到API端点".format("msToken"))
             #     else:
             #         raise APIResponseError(
             #             "链接：{0}，状态码 {1}：{2} ".format(
-            #                 e.response.url, e.response.status_code, e.response.text
             #             )
             #         )
 
@@ -157,10 +172,6 @@ class TokenManager:
 
     @classmethod
     def gen_ttwid(cls) -> str:
-        """
-        生成请求必带的ttwid
-        (Generate the essential ttwid for requests)
-        """
 
         transport = httpx.HTTPTransport(retries=5)
         with httpx.Client(transport=transport) as client:
@@ -174,14 +185,12 @@ class TokenManager:
                 return ttwid
 
             except httpx.RequestError as exc:
-                # 捕获所有与 httpx 请求相关的异常情况 (Captures all httpx request-related exceptions)
                 raise APIConnectionError(
                     "请求端点失败，请检查当前网络环境。 链接：{0}，代理：{1}，异常类名：{2}，异常详细信息：{3}"
                     .format(cls.ttwid_conf["url"], cls.proxies, cls.__name__, exc)
                 )
 
             except httpx.HTTPStatusError as e:
-                # 捕获 httpx 的状态代码错误 (captures specific status code errors from httpx)
                 if e.response.status_code == 401:
                     raise APIUnauthorizedError(
                         "参数验证失败，请更新 Douyin_TikTok_Download_API 配置文件中的 {0}，以匹配 {1} 新规则"
@@ -200,9 +209,6 @@ class TokenManager:
 class VerifyFpManager:
     @classmethod
     def gen_verify_fp(cls) -> str:
-        """
-        生成verifyFp 与 s_v_web_id (Generate verifyFp)
-        """
         base_str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
         t = len(base_str)
         milliseconds = int(round(time.time() * 1000))
@@ -258,7 +264,6 @@ class BogusManager:
         except Exception as e:
             raise RuntimeError("生成X-Bogus失败: {0})".format(e))
 
-        # 检查base_endpoint是否已有查询参数 (Check if base_endpoint already has query parameters)
         separator = "&" if "?" in base_endpoint else "?"
 
         final_endpoint = f"{base_endpoint}{separator}{param_str}&X-Bogus={xb_value[1]}"
@@ -268,14 +273,9 @@ class BogusManager:
     # 字符串方法生成A-Bogus参数
     # TODO: 未完成测试，暂时不提交至主分支。
     # @classmethod
-    # def ab_str_2_endpoint_js_ver(cls, endpoint: str, user_agent: str) -> str:
     #     try:
     #         # 获取请求参数
-    #         endpoint_query_params = urllib.parse.urlparse(endpoint).query
     #         # 确定A-Bogus JS文件路径
-    #         js_path = os.path.dirname(os.path.abspath(__file__))
-    #         a_bogus_js_path = os.path.join(js_path, 'a_bogus.js')
-    #         with open(a_bogus_js_path, 'r', encoding='utf-8') as file:
     #             js_code = file.read()
     #         # 此处需要使用Node环境
     #         # - 安装Node.js
@@ -284,8 +284,6 @@ class BogusManager:
     #         # - npm install jsdom
     #         node_runtime = execjs.get('Node')
     #         context = node_runtime.compile(js_code)
-    #         arg = [0, 1, 0, endpoint_query_params, "", user_agent]
-    #         a_bougus = quote(context.call('get_a_bogus', arg), safe='')
     #         return a_bougus
     #     except Exception as e:
     #         raise RuntimeError("生成A-Bogus失败: {0})".format(e))
@@ -311,15 +309,6 @@ class SecUserIdFetcher:
 
     @classmethod
     async def get_sec_user_id(cls, url: str) -> str:
-        """
-        从单个url中获取sec_user_id (Get sec_user_id from a single url)
-
-        Args:
-            url (str): 输入的url (Input url)
-
-        Returns:
-            str: 匹配到的sec_user_id (Matched sec_user_id)。
-        """
 
         if not isinstance(url, str):
             raise TypeError("参数必须是字符串类型")
@@ -344,7 +333,6 @@ class SecUserIdFetcher:
                     transport=transport, proxies=TokenManager.proxies, timeout=10
             ) as client:
                 response = await client.get(url, follow_redirects=True)
-                # 444一般为Nginx拦截，不返回状态 (444 is generally intercepted by Nginx and does not return status)
                 if response.status_code in {200, 444}:
                     match = pattern.search(str(response.url))
                     if match:
@@ -377,15 +365,6 @@ class SecUserIdFetcher:
 
     @classmethod
     async def get_all_sec_user_id(cls, urls: list) -> list:
-        """
-        获取列表sec_user_id列表 (Get list sec_user_id list)
-
-        Args:
-            urls: list: 用户url列表 (User url list)
-
-        Return:
-            sec_user_ids: list: 用户sec_user_id列表 (User sec_user_id list)
-        """
 
         if not isinstance(urls, list):
             raise TypeError("参数必须是列表类型")
@@ -412,15 +391,6 @@ class AwemeIdFetcher:
 
     @classmethod
     async def get_aweme_id(cls, url: str) -> str:
-        """
-        从单个url中获取aweme_id (Get aweme_id from a single url)
-
-        Args:
-            url (str): 输入的url (Input url)
-
-        Returns:
-            str: 匹配到的aweme_id (Matched aweme_id)
-        """
 
         if not isinstance(url, str):
             raise TypeError("参数必须是字符串类型")
@@ -461,15 +431,6 @@ class AwemeIdFetcher:
 
     @classmethod
     async def get_all_aweme_id(cls, urls: list) -> list:
-        """
-        获取视频aweme_id,传入列表url都可以解析出aweme_id (Get video aweme_id, pass in the list url can parse out aweme_id)
-
-        Args:
-            urls: list: 列表url (list url)
-
-        Return:
-            aweme_ids: list: 视频的唯一标识，返回列表 (The unique identifier of the video, return list)
-        """
 
         if not isinstance(urls, list):
             raise TypeError("参数必须是列表类型")
@@ -497,23 +458,12 @@ class MixIdFetcher:
 class WebCastIdFetcher:
     # 预编译正则表达式
     _DOUYIN_LIVE_URL_PATTERN = re.compile(r"live/([^/?]*)")
-    # https://live.douyin.com/766545142636?cover_type=0&enter_from_merge=web_live&enter_method=web_card&game_name=&is_recommend=1&live_type=game&more_detail=&request_id=20231110224012D47CD00C18B4AE4BFF9B&room_id=7299828646049827596&stream_type=vertical&title_type=1&web_live_page=hot_live&web_live_tab=all
     # https://live.douyin.com/766545142636
     _DOUYIN_LIVE_URL_PATTERN2 = re.compile(r"http[s]?://live.douyin.com/(\d+)")
-    # https://webcast.amemv.com/douyin/webcast/reflow/7318296342189919011?u_code=l1j9bkbd&did=MS4wLjABAAAAEs86TBQPNwAo-RGrcxWyCdwKhI66AK3Pqf3ieo6HaxI&iid=MS4wLjABAAAA0ptpM-zzoliLEeyvWOCUt-_dQza4uSjlIvbtIazXnCY&with_sec_did=1&use_link_command=1&ecom_share_track_params=&extra_params={"from_request_id":"20231230162057EC005772A8EAA0199906","im_channel_invite_id":"0"}&user_id=3644207898042206&liveId=7318296342189919011&from=share&style=share&enter_method=click_share&roomId=7318296342189919011&activity_info={}
     _DOUYIN_LIVE_URL_PATTERN3 = re.compile(r"reflow/([^/?]*)")
 
     @classmethod
     async def get_webcast_id(cls, url: str) -> str:
-        """
-        从单个url中获取webcast_id (Get webcast_id from a single url)
-
-        Args:
-            url (str): 输入的url (Input url)
-
-        Returns:
-            str: 匹配到的webcast_id (Matched webcast_id)。
-        """
 
         if not isinstance(url, str):
             raise TypeError("参数必须是字符串类型")
@@ -555,7 +505,6 @@ class WebCastIdFetcher:
                 return match.group(1)
 
         except httpx.RequestError as exc:
-            # 捕获所有与 httpx 请求相关的异常情况 (Captures all httpx request-related exceptions)
             raise APIConnectionError("请求端点失败，请检查当前网络环境。 链接：{0}，代理：{1}，异常类名：{2}，异常详细信息：{3}"
                                      .format(url, TokenManager.proxies, cls.__name__, exc)
                                      )
@@ -568,15 +517,6 @@ class WebCastIdFetcher:
 
     @classmethod
     async def get_all_webcast_id(cls, urls: list) -> list:
-        """
-        获取直播webcast_id,传入列表url都可以解析出webcast_id (Get live webcast_id, pass in the list url can parse out webcast_id)
-
-        Args:
-            urls: list: 列表url (list url)
-
-        Return:
-            webcast_ids: list: 直播的唯一标识，返回列表 (The unique identifier of the live, return list)
-        """
 
         if not isinstance(urls, list):
             raise TypeError("参数必须是列表类型")
@@ -599,28 +539,6 @@ def format_file_name(
         aweme_data: dict = {},
         custom_fields: dict = {},
 ) -> str:
-    """
-    根据配置文件的全局格式化文件名
-    (Format file name according to the global conf file)
-
-    Args:
-        aweme_data (dict): 抖音数据的字典 (dict of douyin data)
-        naming_template (str): 文件的命名模板, 如 "{create}_{desc}" (Naming template for files, such as "{create}_{desc}")
-        custom_fields (dict): 用户自定义字段, 用于替代默认的字段值 (Custom fields for replacing default field values)
-
-    Note:
-        windows 文件名长度限制为 255 个字符, 开启了长文件名支持后为 32,767 个字符
-        (Windows file name length limit is 255 characters, 32,767 characters after long file name support is enabled)
-        Unix 文件名长度限制为 255 个字符
-        (Unix file name length limit is 255 characters)
-        取去除后的50个字符, 加上后缀, 一般不会超过255个字符
-        (Take the removed 50 characters, add the suffix, and generally not exceed 255 characters)
-        详细信息请参考: https://en.wikipedia.org/wiki/Filename#Length
-        (For more information, please refer to: https://en.wikipedia.org/wiki/Filename#Length)
-
-    Returns:
-        str: 格式化的文件名 (Formatted file name)
-    """
 
     # 为不同系统设置不同的文件名长度限制
     os_limit = {
@@ -649,24 +567,6 @@ def format_file_name(
 
 
 def create_user_folder(kwargs: dict, nickname: Union[str, int]) -> Path:
-    """
-    根据提供的配置文件和昵称，创建对应的保存目录。
-    (Create the corresponding save directory according to the provided conf file and nickname.)
-
-    Args:
-        kwargs (dict): 配置文件，字典格式。(Conf file, dict format)
-        nickname (Union[str, int]): 用户的昵称，允许字符串或整数。  (User nickname, allow strings or integers)
-
-    Note:
-        如果未在配置文件中指定路径，则默认为 "Download"。
-        (If the path is not specified in the conf file, it defaults to "Download".)
-        支持绝对与相对路径。
-        (Support absolute and relative paths)
-
-    Raises:
-        TypeError: 如果 kwargs 不是字典格式，将引发 TypeError。
-        (If kwargs is not in dict format, TypeError will be raised.)
-    """
 
     # 确定函数参数是否正确
     if not isinstance(kwargs, dict):
@@ -690,17 +590,6 @@ def create_user_folder(kwargs: dict, nickname: Union[str, int]) -> Path:
 
 
 def rename_user_folder(old_path: Path, new_nickname: str) -> Path:
-    """
-    重命名用户目录 (Rename User Folder).
-
-    Args:
-        old_path (Path): 旧的用户目录路径 (Path of the old user folder)
-        new_nickname (str): 新的用户昵称 (New user nickname)
-
-    Returns:
-        Path: 重命名后的用户目录路径 (Path of the renamed user folder)
-    """
-    # 获取目标目录的父目录 (Get the parent directory of the target folder)
     parent_directory = old_path.parent
 
     # 构建新目录路径 (Construct the new directory path)
@@ -712,17 +601,6 @@ def rename_user_folder(old_path: Path, new_nickname: str) -> Path:
 def create_or_rename_user_folder(
         kwargs: dict, local_user_data: dict, current_nickname: str
 ) -> Path:
-    """
-    创建或重命名用户目录 (Create or rename user directory)
-
-    Args:
-        kwargs (dict): 配置参数 (Conf parameters)
-        local_user_data (dict): 本地用户数据 (Local user data)
-        current_nickname (str): 当前用户昵称 (Current user nickname)
-
-    Returns:
-        user_path (Path): 用户目录路径 (User directory path)
-    """
     user_path = create_user_folder(kwargs, current_nickname)
 
     if not local_user_data:
@@ -736,14 +614,6 @@ def create_or_rename_user_folder(
 
 
 def show_qrcode(qrcode_url: str, show_image: bool = False) -> None:
-    """
-    显示二维码 (Show QR code)
-
-    Args:
-        qrcode_url (str): 登录二维码链接 (Login QR code link)
-        show_image (bool): 是否显示图像，True 表示显示，False 表示在控制台显示
-        (Whether to display the image, True means display, False means display in the console)
-    """
     if show_image:
         # 创建并显示QR码图像
         qr_code_img = qrcode.make(qrcode_url)
@@ -758,16 +628,6 @@ def show_qrcode(qrcode_url: str, show_image: bool = False) -> None:
 
 
 def json_2_lrc(data: Union[str, list, dict]) -> str:
-    """
-    从抖音原声json格式歌词生成lrc格式歌词
-    (Generate lrc lyrics format from Douyin original json lyrics format)
-
-    Args:
-        data (Union[str, list, dict]): 抖音原声json格式歌词 (Douyin original json lyrics format)
-
-    Returns:
-        str: 生成的lrc格式歌词 (Generated lrc format lyrics)
-    """
     try:
         lrc_lines = []
         for item in data:
@@ -785,3 +645,4 @@ def json_2_lrc(data: Union[str, list, dict]) -> str:
     except TypeError as e:
         raise TypeError("歌词数据类型错误：{0}".format(e))
     return "\n".join(lrc_lines)
+

@@ -46,10 +46,6 @@ class TokenManager:
 
     @classmethod
     def gen_real_msToken(cls) -> str:
-        """
-        生成真实的msToken,当出现错误时返回虚假的值
-        (Generate a real msToken and return a false value when an error occurs)
-        """
 
         payload = json.dumps(
             {
@@ -79,23 +75,15 @@ class TokenManager:
                 return msToken
 
             # except httpx.RequestError as exc:
-            #     # 捕获所有与 httpx 请求相关的异常情况 (Captures all httpx request-related exceptions)
-            #     raise APIConnectionError("请求端点失败，请检查当前网络环境。 链接：{0}，代理：{1}，异常类名：{2}，异常详细信息：{3}"
-            #                              .format(cls.token_conf["url"], cls.proxies, cls.__name__, exc)
             #                              )
             #
             # except httpx.HTTPStatusError as e:
-            #     # 捕获 httpx 的状态代码错误 (captures specific status code errors from httpx)
             #     if response.status_code == 401:
-            #         raise APIUnauthorizedError("参数验证失败，请更新 Douyin_TikTok_Download_API 配置文件中的 {0}，以匹配 {1} 新规则"
             #                                    .format("msToken", "tiktok")
             #                                    )
             #
             #     elif response.status_code == 404:
-            #         raise APINotFoundError("{0} 无法找到API端点".format("msToken"))
             #     else:
-            #         raise APIResponseError("链接：{0}，状态码 {1}：{2} ".format(
-            #             e.response.url, e.response.status_code, e.response.text
             #         )
             #         )
 
@@ -114,9 +102,6 @@ class TokenManager:
 
     @classmethod
     def gen_ttwid(cls, cookie: str) -> str:
-        """
-        生成请求必带的ttwid (Generate the essential ttwid for requests)
-        """
         transport = httpx.HTTPTransport(retries=5)
         with httpx.Client(transport=transport, proxies=cls.proxies) as client:
             try:
@@ -140,13 +125,11 @@ class TokenManager:
                 return ttwid
 
             except httpx.RequestError as exc:
-                # 捕获所有与 httpx 请求相关的异常情况 (Captures all httpx request-related exceptions)
                 raise APIConnectionError("请求端点失败，请检查当前网络环境。 链接：{0}，代理：{1}，异常类名：{2}，异常详细信息：{3}"
                                          .format(cls.ttwid_conf["url"], cls.proxies, cls.__name__, exc)
                                          )
 
             except httpx.HTTPStatusError as e:
-                # 捕获 httpx 的状态代码错误 (captures specific status code errors from httpx)
                 if response.status_code == 401:
                     raise APIUnauthorizedError("参数验证失败，请更新 Douyin_TikTok_Download_API 配置文件中的 {0}，以匹配 {1} 新规则"
                                                .format("ttwid", "tiktok")
@@ -162,9 +145,6 @@ class TokenManager:
 
     @classmethod
     def gen_odin_tt(cls):
-        """
-        生成请求必带的odin_tt (Generate the essential odin_tt for requests)
-        """
         transport = httpx.HTTPTransport(retries=5)
         with httpx.Client(transport=transport, proxies=cls.proxies) as client:
             try:
@@ -179,13 +159,11 @@ class TokenManager:
                 return odin_tt
 
             except httpx.RequestError as exc:
-                # 捕获所有与 httpx 请求相关的异常情况 (Captures all httpx request-related exceptions)
                 raise APIConnectionError("请求端点失败，请检查当前网络环境。 链接：{0}，代理：{1}，异常类名：{2}，异常详细信息：{3}"
                                          .format(cls.odin_tt_conf["url"], cls.proxies, cls.__name__, exc)
                                          )
 
             except httpx.HTTPStatusError as e:
-                # 捕获 httpx 的状态代码错误 (captures specific status code errors from httpx)
                 if response.status_code == 401:
                     raise APIUnauthorizedError("参数验证失败，请更新 Douyin_TikTok_Download_API 配置文件中的 {0}，以匹配 {1} 新规则"
                                                .format("odin_tt", "tiktok")
@@ -232,7 +210,6 @@ class BogusManager:
         except Exception as e:
             raise RuntimeError("生成X-Bogus失败: {0})".format(e))
 
-        # 检查base_endpoint是否已有查询参数 (Check if base_endpoint already has query parameters)
         separator = "&" if "?" in base_endpoint else "?"
 
         final_endpoint = f"{base_endpoint}{separator}{param_str}&X-Bogus={xb_value[1]}"
@@ -250,13 +227,6 @@ class SecUserIdFetcher:
 
     @classmethod
     async def get_secuid(cls, url: str) -> str:
-        """
-        获取TikTok用户sec_uid
-        Args:
-            url: 用户主页链接
-        Return:
-            sec_uid: 用户唯一标识
-        """
 
         # 进行参数检查
         if not isinstance(url, str):
@@ -276,7 +246,6 @@ class SecUserIdFetcher:
         ) as client:
             try:
                 response = await client.get(url, follow_redirects=True)
-                # 444一般为Nginx拦截，不返回状态 (444 is generally intercepted by Nginx and does not return status)
                 if response.status_code in {200, 444}:
                     if cls._TIKTOK_NOTFOUND_PARREN.search(str(response.url)):
                         raise APINotFoundError("页面不可用，可能是由于区域限制（代理）造成的。类名: {0}"
@@ -306,22 +275,12 @@ class SecUserIdFetcher:
                     raise ConnectionError("接口状态码异常, 请检查重试")
 
             except httpx.RequestError as exc:
-                # 捕获所有与 httpx 请求相关的异常情况 (Captures all httpx request-related exceptions)
                 raise APIConnectionError("请求端点失败，请检查当前网络环境。 链接：{0}，代理：{1}，异常类名：{2}，异常详细信息：{3}"
                                          .format(url, TokenManager.proxies, cls.__name__, exc)
                                          )
 
     @classmethod
     async def get_all_secuid(cls, urls: list) -> list:
-        """
-        获取列表secuid列表 (Get list sec_user_id list)
-
-        Args:
-            urls: list: 用户url列表 (User url list)
-
-        Return:
-            secuids: list: 用户secuid列表 (User secuid list)
-        """
 
         if not isinstance(urls, list):
             raise TypeError("参数必须是列表类型")
@@ -341,13 +300,6 @@ class SecUserIdFetcher:
 
     @classmethod
     async def get_uniqueid(cls, url: str) -> str:
-        """
-        获取TikTok用户unique_id
-        Args:
-            url: 用户主页链接
-        Return:
-            unique_id: 用户唯一id
-        """
 
         # 进行参数检查
         if not isinstance(url, str):
@@ -400,15 +352,6 @@ class SecUserIdFetcher:
 
     @classmethod
     async def get_all_uniqueid(cls, urls: list) -> list:
-        """
-        获取列表unique_id列表 (Get list sec_user_id list)
-
-        Args:
-            urls: list: 用户url列表 (User url list)
-
-        Return:
-            unique_ids: list: 用户unique_id列表 (User unique_id list)
-        """
 
         if not isinstance(urls, list):
             raise TypeError("参数必须是列表类型")
@@ -428,9 +371,6 @@ class SecUserIdFetcher:
 
 
 class AwemeIdFetcher:
-    # https://www.tiktok.com/@scarlettjonesuk/video/7255716763118226715
-    # https://www.tiktok.com/@scarlettjonesuk/video/7255716763118226715?is_from_webapp=1&sender_device=pc&web_id=7306060721837852167
-    # https://www.tiktok.com/@zoyapea5/photo/7370061866879454469
 
     # 预编译正则表达式
     _TIKTOK_AWEMEID_PATTERN = re.compile(r"video/(\d+)")
@@ -439,13 +379,6 @@ class AwemeIdFetcher:
 
     @classmethod
     async def get_aweme_id(cls, url: str) -> str:
-        """
-        获取TikTok作品aweme_id或photo_id
-        Args:
-            url: 作品链接
-        Return:
-            aweme_id: 作品唯一标识
-        """
 
         # 进行参数检查
         if not isinstance(url, str):
@@ -511,15 +444,6 @@ class AwemeIdFetcher:
 
     @classmethod
     async def get_all_aweme_id(cls, urls: list) -> list:
-        """
-        获取视频aweme_id,传入列表url都可以解析出aweme_id (Get video aweme_id, pass in the list url can parse out aweme_id)
-
-        Args:
-            urls: list: 列表url (list url)
-
-        Return:
-            aweme_ids: list: 视频的唯一标识，返回列表 (The unique identifier of the video, return list)
-        """
 
         if not isinstance(urls, list):
             raise TypeError("参数必须是列表类型")
@@ -543,28 +467,6 @@ def format_file_name(
         aweme_data: dict = {},
         custom_fields: dict = {},
 ) -> str:
-    """
-    根据配置文件的全局格式化文件名
-    (Format file name according to the global conf file)
-
-    Args:
-        aweme_data (dict): 抖音数据的字典 (dict of douyin data)
-        naming_template (str): 文件的命名模板, 如 "{create}_{desc}" (Naming template for files, such as "{create}_{desc}")
-        custom_fields (dict): 用户自定义字段, 用于替代默认的字段值 (Custom fields for replacing default field values)
-
-    Note:
-        windows 文件名长度限制为 255 个字符, 开启了长文件名支持后为 32,767 个字符
-        (Windows file name length limit is 255 characters, 32,767 characters after long file name support is enabled)
-        Unix 文件名长度限制为 255 个字符
-        (Unix file name length limit is 255 characters)
-        取去除后的50个字符, 加上后缀, 一般不会超过255个字符
-        (Take the removed 50 characters, add the suffix, and generally not exceed 255 characters)
-        详细信息请参考: https://en.wikipedia.org/wiki/Filename#Length
-        (For more information, please refer to: https://en.wikipedia.org/wiki/Filename#Length)
-
-    Returns:
-        str: 格式化的文件名 (Formatted file name)
-    """
 
     # 为不同系统设置不同的文件名长度限制
     os_limit = {
@@ -593,24 +495,6 @@ def format_file_name(
 
 
 def create_user_folder(kwargs: dict, nickname: Union[str, int]) -> Path:
-    """
-    根据提供的配置文件和昵称，创建对应的保存目录。
-    (Create the corresponding save directory according to the provided conf file and nickname.)
-
-    Args:
-        kwargs (dict): 配置文件，字典格式。(Conf file, dict format)
-        nickname (Union[str, int]): 用户的昵称，允许字符串或整数。  (User nickname, allow strings or integers)
-
-    Note:
-        如果未在配置文件中指定路径，则默认为 "Download"。
-        (If the path is not specified in the conf file, it defaults to "Download".)
-        仅支持相对路径。
-        (Only relative paths are supported.)
-
-    Raises:
-        TypeError: 如果 kwargs 不是字典格式，将引发 TypeError。
-        (If kwargs is not in dict format, TypeError will be raised.)
-    """
 
     # 确定函数参数是否正确
     if not isinstance(kwargs, dict):
@@ -634,17 +518,6 @@ def create_user_folder(kwargs: dict, nickname: Union[str, int]) -> Path:
 
 
 def rename_user_folder(old_path: Path, new_nickname: str) -> Path:
-    """
-    重命名用户目录 (Rename User Folder).
-
-    Args:
-        old_path (Path): 旧的用户目录路径 (Path of the old user folder)
-        new_nickname (str): 新的用户昵称 (New user nickname)
-
-    Returns:
-        Path: 重命名后的用户目录路径 (Path of the renamed user folder)
-    """
-    # 获取目标目录的父目录 (Get the parent directory of the target folder)
     parent_directory = old_path.parent
 
     # 构建新目录路径 (Construct the new directory path)
@@ -656,17 +529,6 @@ def rename_user_folder(old_path: Path, new_nickname: str) -> Path:
 def create_or_rename_user_folder(
         kwargs: dict, local_user_data: dict, current_nickname: str
 ) -> Path:
-    """
-    创建或重命名用户目录 (Create or rename user directory)
-
-    Args:
-        kwargs (dict): 配置参数 (Conf parameters)
-        local_user_data (dict): 本地用户数据 (Local user data)
-        current_nickname (str): 当前用户昵称 (Current user nickname)
-
-    Returns:
-        user_path (Path): 用户目录路径 (User directory path)
-    """
     user_path = create_user_folder(kwargs, current_nickname)
 
     if not local_user_data:
@@ -677,3 +539,4 @@ def create_or_rename_user_folder(
         user_path = rename_user_folder(user_path, current_nickname)
 
     return user_path
+

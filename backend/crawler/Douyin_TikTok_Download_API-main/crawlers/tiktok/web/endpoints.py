@@ -1,7 +1,4 @@
 class TikTokAPIEndpoints:
-    """
-    API Endpoints for TikTok
-    """
 
     # 抖音域名 (Tiktok Domain)
     TIKTOK_DOMAIN = "https://www.tiktok.com"
@@ -50,3 +47,4 @@ class TikTokAPIEndpoints:
 
     # 作品评论回复 (Post Comment Reply)
     POST_COMMENT_REPLY = f"{TIKTOK_DOMAIN}/api/comment/list/reply/"
+

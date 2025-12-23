@@ -156,3 +156,4 @@ class UserFollow(BaseRequestModel):
     maxCursor: int = 0
     minCursor: int = 0
     scene: int = 21
+

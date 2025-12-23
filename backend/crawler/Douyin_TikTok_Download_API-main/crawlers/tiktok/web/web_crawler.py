@@ -1,19 +1,10 @@
-# ==============================================================================
 # Copyright (C) 2021 Evil0ctal
 #
-# This file is part of the Douyin_TikTok_Download_API project.
 #
-# This project is licensed under the Apache License 2.0 (the "License");
-# you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at:
 # http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
 # limitations under the License.
-# ==============================================================================
 # 　　　　 　　  ＿＿
 # 　　　 　　 ／＞　　フ
 # 　　　 　　| 　_　 _ l
@@ -24,13 +15,11 @@
 # 　／￣|　　 |　|　|
 # 　| (￣ヽ＿_ヽ_)__)
 # 　＼二つ
-# ==============================================================================
 #
 # Contributor Link:
 # - https://github.com/Evil0ctal
 # - https://github.com/Johnserf-Seed
 #
-# ==============================================================================
 
 
 import asyncio  # 异步I/O
@@ -132,7 +121,6 @@ class TikTokWebCrawler:
     async def fetch_user_post(self, secUid: str, cursor: int = 0, count: int = 35, coverFormat: int = 2):
         # 获取TikTok的实时Cookie
         kwargs = await self.get_tiktok_headers()
-        # proxies = {"http://": 'http://43.159.29.191:24144', "https://": 'http://43.159.29.191:24144'}
         # 创建一个基础爬虫
         base_crawler = BaseCrawler(proxies=kwargs["proxies"], crawler_headers=kwargs["headers"])
         async with base_crawler as crawler:
@@ -215,7 +203,6 @@ class TikTokWebCrawler:
     async def fetch_post_comment(self, aweme_id: str, cursor: int = 0, count: int = 20, current_region: str = ""):
         # 获取TikTok的实时Cookie
         kwargs = await self.get_tiktok_headers()
-        # proxies = {"http://": 'http://43.159.18.174:25263', "https://": 'http://43.159.18.174:25263'}
         # 创建一个基础爬虫
         base_crawler = BaseCrawler(proxies=kwargs["proxies"], crawler_headers=kwargs["headers"])
         async with base_crawler as crawler:
@@ -349,48 +336,37 @@ class TikTokWebCrawler:
         # print(response)
 
         # 获取用户的个人信息
-        # secUid = "MS4wLjABAAAAfDPs6wbpBcMMb85xkvDGdyyyVAUS2YoVCT9P6WQ1bpuwEuPhL9eFtTmGvxw1lT2C"
         # uniqueId = "c4shjaz"
-        # response = await self.fetch_user_profile(secUid, uniqueId)
         # print(response)
 
         # 获取用户的作品列表
-        # secUid = "MS4wLjABAAAAfDPs6wbpBcMMb85xkvDGdyyyVAUS2YoVCT9P6WQ1bpuwEuPhL9eFtTmGvxw1lT2C"
         # cursor = 0
         # count = 35
         # coverFormat = 2
-        # response = await self.fetch_user_post(secUid, cursor, count, coverFormat)
         # print(response)
 
         # 获取用户的点赞列表
-        # secUid = "MS4wLjABAAAAq1iRXNduFZpY301UkVpJ1eQT60_NiWS9QQSeNqmNQEDJp0pOF8cpleNEdiJx5_IU"
         # cursor = 0
         # count = 30
         # coverFormat = 2
-        # response = await self.fetch_user_like(secUid, cursor, count, coverFormat)
         # print(response)
 
         # 获取用户的收藏列表
         # cookie = "put your cookie here"
-        # secUid = "MS4wLjABAAAAq1iRXNduFZpY301UkVpJ1eQT60_NiWS9QQSeNqmNQEDJp0pOF8cpleNEdiJx5_IU"
         # cursor = 0
         # count = 30
         # coverFormat = 2
-        # response = await self.fetch_user_collect(cookie, secUid, cursor, count, coverFormat)
         # print(response)
 
         # 获取用户的播放列表
-        # secUid = "MS4wLjABAAAAtGboV-mJHSIQqh-SsG30QKweGhSqkr4xJLq1qqgAWDzu3vDO5LUhUcCP4UEY5LwC"
         # cursor = 0
         # count = 30
-        # response = await self.fetch_user_play_list(secUid, cursor, count)
         # print(response)
 
         # 获取用户的合辑列表
         # mixId = "7101538765474106158"
         # cursor = 0
         # count = 30
-        # response = await self.fetch_user_mix(mixId, cursor, count)
         # print(response)
 
         # 获取作品的评论列表
@@ -398,7 +374,6 @@ class TikTokWebCrawler:
         # cursor = 0
         # count = 20
         # current_region = ""
-        # response = await self.fetch_post_comment(aweme_id, cursor, count, current_region)
         # print(response)
 
         # 获取作品的评论回复列表
@@ -407,23 +382,18 @@ class TikTokWebCrawler:
         # cursor = 0
         # count = 20
         # current_region = ""
-        # response = await self.fetch_post_comment_reply(item_id, comment_id, cursor, count, current_region)
         # print(response)
 
         # 获取用户的关注列表
-        # secUid = "MS4wLjABAAAAtGboV-mJHSIQqh-SsG30QKweGhSqkr4xJLq1qqgAWDzu3vDO5LUhUcCP4UEY5LwC"
         # count = 30
         # maxCursor = 0
         # minCursor = 0
-        # response = await self.fetch_user_follow(secUid, count, maxCursor, minCursor)
         # print(response)
 
         # 获取用户的粉丝列表
-        # secUid = "MS4wLjABAAAAtGboV-mJHSIQqh-SsG30QKweGhSqkr4xJLq1qqgAWDzu3vDO5LUhUcCP4UEY5LwC"
         # count = 30
         # maxCursor = 0
         # minCursor = 0
-        # response = await self.fetch_user_fans(secUid, count, maxCursor, minCursor)
         # print(response)
 
         """-------------------------------------------------------utils接口列表-------------------------------------------------------"""
@@ -438,8 +408,6 @@ class TikTokWebCrawler:
         # print(response)
 
         # 生成xbogus
-        # url = "https://www.tiktok.com/api/item/detail/?WebIdLastTime=1712665533&aid=1988&app_language=en&app_name=tiktok_web&browser_language=en-US&browser_name=Mozilla&browser_online=true&browser_platform=Win32&browser_version=5.0%20%28Windows%29&channel=tiktok_web&cookie_enabled=true&device_id=7349090360347690538&device_platform=web_pc&focus_state=true&from_page=user&history_len=4&is_fullscreen=false&is_page_visible=true&language=en&os=windows&priority_region=US&referer=&region=US&root_referer=https%3A%2F%2Fwww.tiktok.com%2F&screen_height=1080&screen_width=1920&webcast_language=en&tz_name=America%2FTijuana&msToken=AYFCEapCLbMrS8uTLBoYdUMeeVLbCdFQ_QF_-OcjzJw1CPr4JQhWUtagy0k4a9IITAqi5Qxr2Vdh9mgCbyGxTnvWLa4ZVY6IiSf6lcST-tr0IXfl-r_ZTpzvWDoQfqOVsWCTlSNkhAwB-tap5g==&itemId=7339393672959757570"
-        # user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
         # response = await self.gen_xbogus(url, user_agent)
         # print(response)
 
@@ -449,17 +417,14 @@ class TikTokWebCrawler:
         # print(response)
 
         # 提取多个用户secUid
-        # urls = ["https://www.tiktok.com/@tiktok", "https://www.tiktok.com/@taylorswift"]
         # response = await self.get_all_sec_user_id(urls)
         # print(response)
 
         # 提取单个作品id
-        # url = "https://www.tiktok.com/@taylorswift/video/7162153915952352558"
         # response = await self.get_aweme_id(url)
         # print(response)
 
         # 提取多个作品id
-        # urls = ["https://www.tiktok.com/@taylorswift/video/7162153915952352558", "https://www.tiktok.com/@taylorswift/video/7137077445680745771"]
         # response = await self.get_all_aweme_id(urls)
         # print(response)
 
@@ -469,7 +434,6 @@ class TikTokWebCrawler:
         # print(response)
 
         # 获取多个用户unique_id
-        # urls = ["https://www.tiktok.com/@tiktok", "https://www.tiktok.com/@taylorswift"]
         # response = await self.get_all_unique_id(urls)
         # print(response)
 
@@ -489,3 +453,4 @@ if __name__ == "__main__":
     # 结束时间
     end = time.time()
     print(f"耗时：{end - start}")
+

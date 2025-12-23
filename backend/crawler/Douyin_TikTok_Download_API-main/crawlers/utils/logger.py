@@ -1,19 +1,10 @@
-# ==============================================================================
 # Copyright (C) 2021 Evil0ctal
 #
-# This file is part of the Douyin_TikTok_Download_API project.
 #
-# This project is licensed under the Apache License 2.0 (the "License");
-# you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at:
 # http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
 # limitations under the License.
-# ==============================================================================
 # 　　　　 　　  ＿＿
 # 　　　 　　 ／＞　　フ
 # 　　　 　　| 　_　 _ l
@@ -24,13 +15,11 @@
 # 　／￣|　　 |　|　|
 # 　| (￣ヽ＿_ヽ_)__)
 # 　＼二つ
-# ==============================================================================
 #
 # Contributor Link:
 # - https://github.com/Evil0ctal
 # - https://github.com/Johnserf-Seed
 #
-# ==============================================================================
 
 
 import threading
@@ -51,10 +40,6 @@ class Singleton(type):
         super().__init__(*args, **kwargs)
 
     def __call__(cls, *args, **kwargs):
-        """
-        重写默认的类实例化方法。当尝试创建类的一个新实例时，此方法将被调用。
-        如果已经有一个与参数匹配的实例存在，则返回该实例；否则创建一个新实例。
-        """
         key = (cls, args, frozenset(kwargs.items()))
         with cls._lock:
             if key not in cls._instances:
@@ -64,10 +49,6 @@ class Singleton(type):
 
     @classmethod
     def reset_instance(cls, *args, **kwargs):
-        """
-        重置指定参数的实例。这只是从 _instances 字典中删除实例的引用，
-        并不真正删除该实例。如果其他地方仍引用该实例，它仍然存在且可用。
-        """
         key = (cls, args, frozenset(kwargs.items()))
         with cls._lock:
             if key in cls._instances:
@@ -167,3 +148,4 @@ def log_setup(log_to_console=True):
 
 
 logger = log_setup()
+

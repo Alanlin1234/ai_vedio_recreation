@@ -1,19 +1,10 @@
-# ==============================================================================
 # Copyright (C) 2021 Evil0ctal
 #
-# This file is part of the Douyin_TikTok_Download_API project.
 #
-# This project is licensed under the Apache License 2.0 (the "License");
-# you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at:
 # http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
 # limitations under the License.
-# ==============================================================================
 # 　　　　 　　  ＿＿
 # 　　　 　　 ／＞　　フ
 # 　　　 　　| 　_　 _ l
@@ -24,13 +15,11 @@
 # 　／￣|　　 |　|　|
 # 　| (￣ヽ＿_ヽ_)__)
 # 　＼二つ
-# ==============================================================================
 #
 # Contributor Link:
 # - https://github.com/Evil0ctal
 # - https://github.com/Johnserf-Seed
 #
-# ==============================================================================
 
 
 import time
@@ -59,10 +48,6 @@ class XBogus:
         )
 
     def md5_str_to_array(self, md5_str):
-        """
-        将字符串使用md5哈希算法转换为整数数组。
-        Convert a string to an array of integers using the md5 hashing algorithm.
-        """
         if isinstance(md5_str, str) and len(md5_str) > 32:
             return [ord(char) for char in md5_str]
         else:
@@ -77,20 +62,12 @@ class XBogus:
             return array
 
     def md5_encrypt(self, url_path):
-        """
-        使用多轮md5哈希算法对URL路径进行加密。
-        Encrypt the URL path using multiple rounds of md5 hashing.
-        """
         hashed_url_path = self.md5_str_to_array(
             self.md5(self.md5_str_to_array(self.md5(url_path)))
         )
         return hashed_url_path
 
     def md5(self, input_data):
-        """
-        计算输入数据的md5哈希值。
-        Calculate the md5 hash value of the input data.
-        """
         if isinstance(input_data, str):
             array = self.md5_str_to_array(input_data)
         elif isinstance(input_data, list):
@@ -105,10 +82,6 @@ class XBogus:
     def encoding_conversion(
         self, a, b, c, e, d, t, f, r, n, o, i, _, x, u, s, l, v, h, p
     ):
-        """
-        第一次编码转换。
-        Perform encoding conversion.
-        """
         y = [a]
         y.append(int(i))
         y.extend([b, _, c, x, e, u, d, s, t, l, f, v, r, h, n, p, o])
@@ -116,17 +89,9 @@ class XBogus:
         return re
 
     def encoding_conversion2(self, a, b, c):
-        """
-        第二次编码转换。
-        Perform an encoding conversion on the given input values and return the result.
-        """
         return chr(a) + chr(b) + c
 
     def rc4_encrypt(self, key, data):
-        """
-        使用RC4算法对数据进行加密。
-        Encrypt data using the RC4 algorithm.
-        """
         S = list(range(256))
         j = 0
         encrypted_data = bytearray()
@@ -150,10 +115,6 @@ class XBogus:
         return encrypted_data
 
     def calculation(self, a1, a2, a3):
-        """
-        对给定的输入值执行位运算计算，并返回结果。
-        Perform a calculation using bitwise operations on the given input values and return the result.
-        """
         x1 = (a1 & 255) << 16
         x2 = (a2 & 255) << 8
         x3 = x1 | x2 | a3
@@ -165,10 +126,6 @@ class XBogus:
         )
 
     def getXBogus(self, url_path):
-        """
-        获取 X-Bogus 值。
-        Get the X-Bogus value.
-        """
 
         array1 = self.md5_str_to_array(
             self.md5(
@@ -240,7 +197,6 @@ class XBogus:
 
 if __name__ == "__main__":
     url_path = "https://www.douyin.com/aweme/v1/web/aweme/post/?device_platform=webapp&aid=6383&channel=channel_pc_web&sec_user_id=MS4wLjABAAAAW9FWcqS7RdQAWPd2AA5fL_ilmqsIFUCQ_Iym6Yh9_cUa6ZRqVLjVQSUjlHrfXY1Y&max_cursor=0&locate_query=false&show_live_replay_strategy=1&need_time_list=1&time_list_query=0&whale_cut_token=&cut_version=1&count=18&publish_video_strategy_type=2&pc_client_type=1&version_code=170400&version_name=17.4.0&cookie_enabled=true&screen_width=1920&screen_height=1080&browser_language=zh-CN&browser_platform=Win32&browser_name=Edge&browser_version=122.0.0.0&browser_online=true&engine_name=Blink&engine_version=122.0.0.0&os_name=Windows&os_version=10&cpu_core_num=12&device_memory=8&platform=PC&downlink=10&effective_type=4g&round_trip_time=50&webid=7335414539335222835&msToken=p9Y7fUBuq9DKvAuN27Peml6JbaMqG2ZcXfFiyDv1jcHrCN00uidYqUgSuLsKl1onC-E_n82m-aKKYE0QGEmxIWZx9iueQ6WLbvzPfqnMk4GBAlQIHcDzxb38FLXXQxAm"
-    # ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0"
     ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"
 
     XB = XBogus(user_agent=ua)

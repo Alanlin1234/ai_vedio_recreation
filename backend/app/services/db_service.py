@@ -7,7 +7,6 @@ import json
 class DBService:
     """使用SQLAlchemy ORM的数据库服务层"""
     
-    # ==================== 作者相关操作 ====================
     
     @staticmethod
     def create_author(author_data):
@@ -180,6 +179,7 @@ class DBService:
     
     @staticmethod
     def delete_video(video_id):
+        
         """删除视频"""
         try:
             video = DouyinVideo.query.filter_by(video_id=video_id).first()

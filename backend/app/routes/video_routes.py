@@ -8,11 +8,9 @@ video_bp = Blueprint('video', __name__)
 #     data = request.get_json()
 #     try:
 #         video_id = VideoService.create_video(data)
-#         return jsonify({'success': True, 'video_id': video_id})
 #     except Exception as e:
 #         return jsonify({'error': str(e)}), 500
 
-# @video_bp.route('/videos/<video_id>', methods=['GET'])
 # def get_video(video_id):
 #     try:
 #         video = VideoService.get_video_by_id(video_id)

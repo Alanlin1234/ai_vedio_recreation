@@ -102,3 +102,4 @@ class ResponseAnalyzer:
         else:
             logger.warning("该用户收藏夹为空/用户设置为不可见")
             return {"code": 1, "message": "该用户收藏夹为空/用户设置为不可见"}
+

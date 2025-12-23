@@ -265,7 +265,6 @@ class UserFollowing(BaseRequestModel):
     min_time: int = 0
     max_time: int = 0
     count: int = 20
-    # source_type = 1: 最近关注 需要指定max_time(s) 3: 最早关注 需要指定min_time(s) 4: 综合排序
     source_type: int = 4
     gps_access: int = 0
     address_book_access: int = 0
@@ -275,11 +274,10 @@ class UserFollowing(BaseRequestModel):
 class UserFollower(BaseRequestModel):
     user_id: str
     sec_user_id: str
-    offset: int = 0  # 相当于cursor 但只对source_type: = 2 有效，其他情况为 0 即可
+    offset: int = 0
     min_time: int = 0
     max_time: int = 0
     count: int = 20
-    # source_type = 1: 最近关注 需要指定max_time(s) 2: 综合关注(意义不明)
     source_type: int = 1
     gps_access: int = 0
     address_book_access: int = 0
@@ -293,4 +291,5 @@ class URL_List(BaseModel):
         "https://test.example.com/yyyyy/",
         "https://test.example.com/zzzzz/"
     ]
+
 

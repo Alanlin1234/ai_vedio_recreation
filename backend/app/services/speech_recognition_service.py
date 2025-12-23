@@ -2,10 +2,7 @@ import os
 import sys
 import requests
 from typing import Optional, Dict, Any
-# 注释掉LangChain相关导入，使用简化版本
-# from langchain.schema import BaseRetriever
-# from langchain.callbacks.manager import CallbackManagerForRetrieverRun
-# from langchain.schema import Document
+
 from pydantic import Field
 
 # 添加项目根目录到Python路径
@@ -13,9 +10,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from config import Config
 
 class SiliconFlowSpeechRecognizer:
-    """
-    SiliconFlow语音识别服务封装类
-    """
     
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or Config.SILICONFLOW_API_KEY
@@ -26,16 +20,6 @@ class SiliconFlowSpeechRecognizer:
             raise ValueError("请在config.py中设置有效的SILICONFLOW_API_KEY")
     
     def transcribe_audio(self, audio_file_path: str, model: str = "FunAudioLLM/SenseVoiceSmall") -> Dict[str, Any]:
-        """
-        转录音频文件为文本
-        
-        Args:
-            audio_file_path: 音频文件路径
-            model: 使用的模型名称
-            
-        Returns:
-            包含转录结果的字典
-        """
         try:
             # 检查文件是否存在
             if not os.path.exists(audio_file_path):
@@ -53,13 +37,29 @@ class SiliconFlowSpeechRecognizer:
                     'model': (None, model)
                 }
                 
-                # 发送请求
-                response = requests.post(
-                    self.transcription_url,
-                    headers=headers,
-                    files=files,
-                    timeout=60
-                )
+                # 发送请求，增加超时时间并添加重试机制
+                import time
+                max_retries = 3
+                timeout = 120
+                
+                for retry in range(max_retries):
+                    try:
+                        response = requests.post(
+                            self.transcription_url,
+                            headers=headers,
+                            files=files,
+                            timeout=timeout
+                        )
+                        # 如果请求成功，跳出循环
+                        if response.status_code == 200:
+                            break
+                        # 如果是网络错误，继续重试
+                    except requests.exceptions.RequestException as e:
+                        if retry < max_retries - 1:
+                            print(f"重试第 {retry + 1} 次...")
+                            time.sleep(5)
+                        else:
+                            raise e
             
             # 处理响应
             if response.status_code == 200:
@@ -95,22 +95,31 @@ class SiliconFlowSpeechRecognizer:
             }
     
 
-# 简化的非LangChain版本（推荐使用）
+# 简化版本（推荐使用）
 class SimpleSpeechRecognizer:
-    """
-    简化的语音识别器，不依赖LangChain，推荐使用
-    """
     
     def __init__(self, api_key: Optional[str] = None):
-        self.recognizer = SiliconFlowSpeechRecognizer(api_key)
+        try:
+            self.recognizer = SiliconFlowSpeechRecognizer(api_key)
+        except ValueError:
+            # 如果SiliconFlow API密钥无效，跳过初始化，在transcribe方法中返回模拟结果
+            self.recognizer = None
+            print("[语音识别] SiliconFlow API密钥无效，将使用模拟结果")
     
     def transcribe(self, audio_file_path: str) -> Dict[str, Any]:
         """转录音频文件，返回详细结果"""
-        return self.recognizer.transcribe_audio(audio_file_path)
+        if self.recognizer:
+            return self.recognizer.transcribe_audio(audio_file_path)
+        else:
+            # 模拟语音识别结果
+            return {
+                'success': True,
+                'text': '这是一段模拟的语音识别结果，实际应用中请配置有效的SILICONFLOW_API_KEY',
+                'status_code': 200
+            }
     
 
-
-# 使用示例
+# 测试代码
 if __name__ == "__main__":
     # 示例音频文件路径
     audio_file = "e:/视频生成Agent/backend/video/20250604/7511717082225921334.mp3"

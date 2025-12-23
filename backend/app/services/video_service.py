@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 
 class VideoService:
-    """视频业务逻辑服务"""
+    """视频完整逻辑服务"""
     
     @staticmethod
     def create_video(video_data: Dict) -> int:
@@ -23,7 +23,7 @@ class VideoService:
             # 处理标题长度限制
             title = video_data.get('title', '')
             if len(title) > 255:
-                title = title[:252] + '...'  # 截断并添加省略号
+                title = title[:252] + '...'  # 截断并添加省略
             
             # 处理其他可能过长的字段
             author_nickname = video_data.get('author_nickname', '')
@@ -114,7 +114,7 @@ class VideoService:
         try:
             query = DouyinVideo.query
             
-            # 如果指定了作者UID，则过滤
+            # 如果指定了作者UID
             if author_uid:
                 query = query.filter_by(author_uid=author_uid)
             

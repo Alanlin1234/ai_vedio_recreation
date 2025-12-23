@@ -21,8 +21,8 @@ def api_document_pop_window():
             t("[TikHub.io](https://beta-web.tikhub.io/en-us/users/signin)是一个API平台，提供包括Douyin、TikTok在内的各种公开数据接口，如果您想支持 [Douyin_TikTok_Download_API](https://github.com/Evil0ctal/Douyin_TikTok_Download_API) 项目的开发，我们强烈建议您选择[TikHub.io](https://beta-web.tikhub.io/en-us/users/signin)。",
               "[TikHub.io](https://beta-web.tikhub.io/en-us/users/signin) is an API platform that provides various public data interfaces including Douyin and TikTok. If you want to support the development of the [Douyin_TikTok_Download_API](https://github.com/Evil0ctal/Douyin_TikTok_Download_API) project, we strongly recommend that you choose [TikHub.io](https://beta-web.tikhub.io/en-us/users/signin)."))
         put_markdown(
-            t("#### 特点：",
-              "#### Features:"))
+            t("  # ### 特点：",
+              "  # ### Features:"))
         put_markdown(
             t("> 📦 开箱即用",
               "> 📦 Ready to use"))
@@ -48,8 +48,8 @@ def api_document_pop_window():
             t("TikHub的部分源代码会开源在Github上，并且会赞助一些开源项目的作者。",
               "Some of TikHub's source code will be open sourced on Github, and will sponsor some open source project authors."))
         put_markdown(
-            t("#### 链接：",
-              "#### Links:"))
+            t("  # ### 链接：",
+              "  # ### Links:"))
         put_markdown(
             t("- Github: [TikHub Github](https://github.com/TikHubIO)",
                 "- Github: [TikHub Github](https://github.com/TikHubIO)"))
@@ -63,3 +63,4 @@ def api_document_pop_window():
             t("- API Docs: [TikHub API Docs](https://api.tikhub.io/)",
               "- API Docs: [TikHub API Docs](https://api.tikhub.io/)"))
         put_markdown("----")
+

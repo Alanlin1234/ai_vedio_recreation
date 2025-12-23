@@ -39,3 +39,4 @@ class iOS_Shortcut(BaseModel):
     link_en: str
     note: str
     note_en: str
+

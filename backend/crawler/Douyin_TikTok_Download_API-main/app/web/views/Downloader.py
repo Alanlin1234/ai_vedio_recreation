@@ -16,3 +16,4 @@ def downloader_pop_window():
                        "1. Please pay attention to the use specifications of the downloader and do not use it for illegal purposes."))
         put_markdown(t("2. 下载器相关问题请咨询对应项目的开发者。",
                        "2. For issues related to the downloader, please consult the developer of the corresponding project."))
+

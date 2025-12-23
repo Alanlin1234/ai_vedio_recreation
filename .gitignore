@@ -48,6 +48,15 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+test_*.py
+*_test.py
+backend/test_*.py
+compose_videos_script.py
+compress_core_code.py
+simplify_backend_comments.py
+simplify_video_consistency_comments.py
+compose_videos_script.py
+nano_banana_service.py
 
 # Build
 build/

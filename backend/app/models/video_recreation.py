@@ -8,6 +8,8 @@ class VideoRecreation(db.Model):
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     original_video_id = db.Column(db.String(255), nullable=False, comment='原视频ID')
+    original_video_path = db.Column(db.String(500), nullable=False, comment='原视频路径')
+    original_video_hash = db.Column(db.String(64), nullable=True, comment='原视频哈希值')
     recreation_name = db.Column(db.String(255), comment='二创项目名称')
     status = db.Column(db.Enum('pending', 'processing', 'completed', 'failed'), default='pending', comment='处理状态')
     
@@ -52,6 +54,8 @@ class VideoRecreation(db.Model):
         return {
             'id': self.id,
             'original_video_id': self.original_video_id,
+            'original_video_path': self.original_video_path,
+            'original_video_hash': self.original_video_hash,
             'recreation_name': self.recreation_name,
             'status': self.status,
             'video_understanding': self.video_understanding,

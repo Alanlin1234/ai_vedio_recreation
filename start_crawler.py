@@ -14,7 +14,7 @@ from pathlib import Path
 def check_crawler_service():
     """检查爬虫服务是否正常运行"""
     try:
-        response = requests.get("http://localhost:88/api/hybrid/video_data", timeout=5)
+        response = requests.get("http://localhost:8081/api/douyin/web/fetch_hot_search_result", timeout=5)
         return response.status_code == 200
     except:
         return False
@@ -62,8 +62,8 @@ def start_crawler_service():
         for i in range(30):  # 最多等待30秒
             if check_crawler_service():
                 print("✅ 爬虫服务启动成功！")
-                print(f"📊 服务地址: http://localhost:88")
-                print(f"📚 API文档: http://localhost:88/docs")
+                print(f"📊 服务地址: http://localhost:80")
+                print(f"📚 API文档: http://localhost:80/docs")
                 return True
             time.sleep(1)
         

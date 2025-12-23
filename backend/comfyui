@@ -1,0 +1,4 @@
+from nodes import CLIPTextEncode, CheckpointLoaderSimple, KSampler, VAEDecode, SaveImage
+checkpoint_loader = CheckpointLoaderSimple()
+model, clip, vae = checkpoint_loader.load_checkpoint("stable_diffusion-xl-base-1.0.safetensors")
+#

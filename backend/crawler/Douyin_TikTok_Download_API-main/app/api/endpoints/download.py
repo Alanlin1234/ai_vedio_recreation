@@ -51,9 +51,6 @@ async def fetch_data_stream(url: str, request:Request , headers: dict = None, fi
             return True
 
 async def merge_bilibili_video_audio(video_url: str, audio_url: str, request: Request, output_path: str, headers: dict) -> bool:
-    """
-    下载并合并 Bilibili 的视频流和音频流
-    """
     try:
         # 创建临时文件
         with tempfile.NamedTemporaryFile(suffix='.m4v', delete=False) as video_temp:
@@ -77,7 +74,7 @@ async def merge_bilibili_video_audio(video_url: str, audio_url: str, request: Re
             '-i', audio_temp_path,  # 音频输入
             '-c:v', 'copy',  # 复制视频编码，不重新编码
             '-c:a', 'copy',  # 复制音频编码，不重新编码（保持原始质量）
-            '-f', 'mp4',     # 确保输出格式为MP4
+            '-f', 'mp4',  # 确保输出格式为MP4
             output_path
         ]
         
@@ -115,38 +112,6 @@ async def download_file_hybrid(request: Request,
                                    description="视频或图片的URL地址，支持抖音|TikTok|Bilibili的分享链接，例如：https://v.douyin.com/e4J8Q7A/ 或 https://www.bilibili.com/video/BV1xxxxxxxxx"),
                                prefix: bool = True,
                                with_watermark: bool = False):
-    """
-    # [中文]
-    ### 用途:
-    - 在线下载抖音|TikTok|Bilibili 无水印或有水印的视频/图片
-    - 通过传入的视频URL参数，获取对应的视频或图片数据，然后下载到本地。
-    - 如果你在尝试直接访问TikTok单一视频接口的JSON数据中的视频播放地址时遇到HTTP403错误，那么你可以使用此接口来下载视频。
-    - Bilibili视频会自动合并视频流和音频流，确保下载的视频有声音。
-    - 这个接口会占用一定的服务器资源，所以在Demo站点是默认关闭的，你可以在本地部署后调用此接口。
-    ### 参数:
-    - url: 视频或图片的URL地址，支持抖音|TikTok|Bilibili的分享链接，例如：https://v.douyin.com/e4J8Q7A/ 或 https://www.bilibili.com/video/BV1xxxxxxxxx
-    - prefix: 下载文件的前缀，默认为True，可以在配置文件中修改。
-    - with_watermark: 是否下载带水印的视频或图片，默认为False。(注意：Bilibili没有水印概念)
-    ### 返回:
-    - 返回下载的视频或图片文件响应。
-
-    # [English]
-    ### Purpose:
-    - Download Douyin|TikTok|Bilibili video/image with or without watermark online.
-    - By passing the video URL parameter, get the corresponding video or image data, and then download it to the local.
-    - If you encounter an HTTP403 error when trying to access the video playback address in the JSON data of the TikTok single video interface directly, you can use this interface to download the video.
-    - Bilibili videos will automatically merge video and audio streams to ensure downloaded videos have sound.
-    - This interface will occupy a certain amount of server resources, so it is disabled by default on the Demo site, you can call this interface after deploying it locally.
-    ### Parameters:
-    - url: The URL address of the video or image, supports Douyin|TikTok|Bilibili sharing links, for example: https://v.douyin.com/e4J8Q7A/ or https://www.bilibili.com/video/BV1xxxxxxxxx
-    - prefix: The prefix of the downloaded file, the default is True, and can be modified in the configuration file.
-    - with_watermark: Whether to download videos or images with watermarks, the default is False. (Note: Bilibili has no watermark concept)
-    ### Returns:
-    - Return the response of the downloaded video or image file.
-
-    # [示例/Example]
-    url: https://www.bilibili.com/video/BV1U5efz2Egn
-    """
     # 是否开启此端点/Whether to enable this endpoint
     if not config["API"]["Download_Switch"]:
         code = 400
@@ -218,7 +183,6 @@ async def download_file_hybrid(request: Request,
                     )
 
             # # 保存文件
-            # async with aiofiles.open(file_path, 'wb') as out_file:
             #     await out_file.write(response.content)
 
             # 返回文件内容
@@ -265,3 +229,4 @@ async def download_file_hybrid(request: Request,
         print(e)
         code = 400
         return ErrorResponseModel(code=code, message=str(e), router=request.url.path, params=dict(request.query_params))
+

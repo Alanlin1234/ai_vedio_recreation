@@ -1,5 +1,11 @@
 from flask import Flask
 from flask_cors import CORS
+import sys
+import os
+
+# 添加backend目录到Python路径
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from config import Config
 from app.models import db
 
@@ -19,13 +25,14 @@ def create_app():
     from app.routes.author_routes import author_bp
     from app.routes.douyin_routes import douyin_bp
     from app.routes.video_recreation_routes import video_recreation_bp
-    from app.routes.agent_routes import agent_bp
+    # 暂时注释掉agent_bp，因为有导入错误
+    # from app.routes.agent_routes import agent_bp
     
     app.register_blueprint(video_bp, url_prefix='/api')
     app.register_blueprint(author_bp, url_prefix='/api')
     app.register_blueprint(douyin_bp, url_prefix='/api')
     app.register_blueprint(video_recreation_bp, url_prefix='/api')
-    app.register_blueprint(agent_bp)
+    # app.register_blueprint(agent_bp)
     
     # 创建数据库表
     with app.app_context():

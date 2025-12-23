@@ -197,11 +197,9 @@ def parse_video():
         scroll_to(str(url_index))
         success_count += 1
         success_list.append(url)
-        # print(success_count: {success_count}, success_list: {success_list}')
-    # 全部解析完成跳出for循环/All parsing completed, break out of for loop
     with use_scope('result_title'):
         put_row([put_html('<br>')])
-        put_markdown(ViewsUtils.t('## 📝解析结果:', '## 📝Parsing results:'))
+        put_markdown(ViewsUtils.t('
         put_row([put_html('<br>')])
     with use_scope('result'):
         # 清除进度条
@@ -236,3 +234,4 @@ def parse_video():
                    outline=True)
         # 返回主页链接
         put_link(ViewsUtils.t('再来一波 (つ´ω`)つ', 'Another wave (つ´ω`)つ'), '/')
+

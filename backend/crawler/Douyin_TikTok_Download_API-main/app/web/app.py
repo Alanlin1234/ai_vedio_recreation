@@ -39,9 +39,6 @@ class MainView:
         with use_scope('main'):
             # 设置favicon/Set favicon
             favicon_url = _config['Web']['Favicon']
-            session.run_js(f"""
-                            $('head').append('<link rel="icon" type="image/png" href="{favicon_url}">')
-                            """)
             # 修改footer/Remove footer
             session.run_js("""$('footer').remove()""")
             # 设置不允许referrer/Set no referrer
@@ -49,12 +46,6 @@ class MainView:
             # 设置标题/Set title
             title = self.utils.t("TikTok/抖音无水印在线解析下载",
                                  "Douyin/TikTok online parsing and download without watermark")
-            put_html(f"""
-                    <div align="center">
-                    <a href="/" alt="logo" ><img src="{favicon_url}" width="100"/></a>
-                    <h1 align="center">{title}</h1>
-                    </div>
-                    """)
             # 设置导航栏/Navbar
             put_row(
                 [
@@ -90,3 +81,4 @@ class MainView:
                 put_markdown(self.utils.t('暂未开放，敬请期待~', 'Not yet open, please look forward to it~'))
             elif select_options == options[2]:
                 a() if _config['Web']['Easter_Egg'] else put_markdown(self.utils.t('没有小彩蛋哦~', 'No Easter Egg~'))
+

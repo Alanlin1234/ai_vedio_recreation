@@ -1,24 +1,16 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from app.services.video_recreation_service import VideoRecreationService
 from app.services.video_service import VideoService
-from app.models import db, VideoRecreation, RecreationScene, RecreationLog
+from app.models import db, VideoRecreation, RecreationScene, RecreationLog, DouyinVideo
 from datetime import datetime
 import os
 import traceback
+import uuid
 
 video_recreation_bp = Blueprint('video_recreation', __name__)
 
 @video_recreation_bp.route('/videos/<video_id>/recreate', methods=['POST'])
 def recreate_video(video_id):
-    """
-    视频二创接口
-    
-    Args:
-        video_id: 视频ID
-        
-    Returns:
-        二创结果
-    """
     try:
         # 获取视频信息
         video = VideoService.get_video_by_id(video_id)
@@ -113,15 +105,6 @@ def recreate_video(video_id):
 
 @video_recreation_bp.route('/recreations/<int:recreation_id>', methods=['GET'])
 def get_recreation_status(recreation_id):
-    """
-    获取二创状态
-    
-    Args:
-        recreation_id: 二创ID
-        
-    Returns:
-        二创状态信息
-    """
     try:
         recreation = VideoRecreation.query.get(recreation_id)
         if not recreation:
@@ -142,14 +125,94 @@ def get_recreation_status(recreation_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@video_recreation_bp.route('/videos/upload', methods=['POST'])
+def upload_video():
+    try:
+        # 检查是否有文件上传
+        if 'video' not in request.files:
+            return jsonify({'error': '没有找到视频文件'}), 400
+        
+        video_file = request.files['video']
+        if video_file.filename == '':
+            return jsonify({'error': '没有选择视频文件'}), 400
+        
+        # 保存视频文件到本地
+        upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'local_videos')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # 生成唯一文件名
+        file_ext = os.path.splitext(video_file.filename)[1]
+        unique_filename = f"local_{uuid.uuid4().hex[:8]}{file_ext}"
+        video_path = os.path.join(upload_dir, unique_filename)
+        
+        # 保存文件
+        video_file.save(video_path)
+        
+        # 创建视频记录
+        video_data = {
+            'video_id': f"local_{uuid.uuid4().hex}",
+            'title': os.path.splitext(video_file.filename)[0],
+            'description': '本地上传视频',
+            'duration': 0,  # 将在处理时更新
+            'local_file_path': video_path,
+            'create_time': datetime.now()
+        }
+        
+        # 使用VideoService创建视频记录
+        video_id = VideoService.create_video(video_data)
+        
+        # 调用二创处理
+        return recreate_video(video_id)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+@video_recreation_bp.route('/local-video/recreate', methods=['POST'])
+def recreate_local_video():
+    try:
+        data = request.get_json()
+        if not data or 'video_path' not in data:
+            return jsonify({'error': '缺少视频路径参数'}), 400
+        
+        video_path = data['video_path']
+        if not os.path.exists(video_path):
+            return jsonify({'error': '视频文件不存在'}), 400
+        
+        # 检查文件是否为视频文件
+        valid_extensions = ['.mp4', '.avi', '.mov', '.flv', '.wmv', '.mkv']
+        file_ext = os.path.splitext(video_path)[1].lower()
+        if file_ext not in valid_extensions:
+            return jsonify({'error': '不支持的视频格式'}), 400
+        
+        # 创建视频记录
+        video_data = {
+            'video_id': f"local_{uuid.uuid4().hex}",
+            'title': os.path.basename(video_path),
+            'description': '本地视频',
+            'duration': 0,  # 将在处理时更新
+            'local_file_path': video_path,
+            'create_time': datetime.now()
+        }
+        
+        # 使用VideoService创建视频记录
+        video_id = VideoService.create_video(video_data)
+        
+        # 调用二创处理
+        return recreate_video(video_id)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 @video_recreation_bp.route('/recreations', methods=['GET'])
 def get_recreations():
-    """
-    获取二创列表
-    
-    Returns:
-        二创列表
-    """
     try:
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 10, type=int)
@@ -176,15 +239,6 @@ def get_recreations():
         return jsonify({'error': str(e)}), 500
 
 def log_step(recreation_id: int, step: str, status: str, message: str):
-    """
-    记录处理步骤日志
-    
-    Args:
-        recreation_id: 二创ID
-        step: 步骤名称
-        status: 状态
-        message: 消息
-    """
     try:
         log = RecreationLog(
             recreation_id=recreation_id,

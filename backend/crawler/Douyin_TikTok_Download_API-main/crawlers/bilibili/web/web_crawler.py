@@ -1,19 +1,10 @@
-# ==============================================================================
 # Copyright (C) 2021 Evil0ctal
 #
-# This file is part of the Douyin_TikTok_Download_API project.
 #
-# This project is licensed under the Apache License 2.0 (the "License");
-# you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at:
 # http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
 # limitations under the License.
-# ==============================================================================
 # 　　　　 　　  ＿＿
 # 　　　 　　 ／＞　　フ
 # 　　　 　　| 　_　 _ l
@@ -24,13 +15,11 @@
 # 　／￣|　　 |　|　|
 # 　| (￣ヽ＿_ヽ_)__)
 # 　＼二つ
-# ==============================================================================
 #
 # Contributor Link:
 #
 # - https://github.com/Koyomi781
 #
-# ==============================================================================
 
 import asyncio  # 异步I/O
 import os  # 系统操作
@@ -103,11 +92,6 @@ class BilibiliWebCrawler:
 
     # 获取用户发布视频作品数据
     async def fetch_user_post_videos(self, uid: str, pn: int) -> dict:
-        """
-        :param uid: 用户uid
-        :param pn: 页码
-        :return:
-        """
         # 获取请求头信息
         kwargs = await self.get_bilibili_headers()
         # 创建基础爬虫对象
@@ -139,11 +123,6 @@ class BilibiliWebCrawler:
 
     # 获取指定收藏夹内视频数据
     async def fetch_folder_videos(self, folder_id: str, pn: int) -> dict:
-        """
-        :param folder_id: 收藏夹id-- 可从<获取用户所有收藏夹信息>获得
-        :param pn: 页码
-        :return:
-        """
         # 获取请求头信息
         kwargs = await self.get_bilibili_headers()
         # 创建基础爬虫对象
@@ -203,12 +182,6 @@ class BilibiliWebCrawler:
 
     # 获取视频下指定评论的回复
     async def fetch_comment_reply(self, bv_id: str, pn: int, rpid: str) -> dict:
-        """
-        :param bv_id: 目标视频bv号
-        :param pn: 页码
-        :param rpid: 目标评论id，可通过fetch_video_comments获得
-        :return:
-        """
         # 获取请求头信息
         kwargs = await self.get_bilibili_headers()
         # 创建基础爬虫对象
@@ -335,13 +308,11 @@ class BilibiliWebCrawler:
         # 获取视频流地址
         # bv_id = 'BV1y7411Q7Eq'
         # cid = '171776208'
-        # result = await self.fetch_video_playurl(bv_id=bv_id, cid=cid)
         # print(result)
 
         # 获取用户发布作品数据
         # uid = '94510621'
         # pn = 1
-        # result = await self.fetch_user_post_videos(uid=uid, pn=pn)
         # print(result)
 
         # 获取用户所有收藏夹信息
@@ -350,9 +321,7 @@ class BilibiliWebCrawler:
         # print(reslut)
 
         # 获取用户指定收藏夹内视频数据
-        # folder_id = '1756059545'  # 收藏夹id，可从<获取用户所有收藏夹信息>获得
         # pn = 1
-        # result = await self.fetch_folder_videos(folder_id=folder_id, pn=pn)
         # print(result)
 
         # 获取指定用户的信息
@@ -368,20 +337,17 @@ class BilibiliWebCrawler:
         # 获取指定视频的评论(不登录只能获取一页的评论)
         # bv_id = "BV1M1421t7hT"
         # pn = 1
-        # result = await self.fetch_video_comments(bv_id=bv_id, pn=pn)
         # print(result)
 
         # 获取视频下指定评论的回复(不登录只能获取一页的评论)
         # bv_id = "BV1M1421t7hT"
         # rpid = "237109455120"
         # pn = 1
-        # result = await self.fetch_comment_reply(bv_id=bv_id, pn=pn, rpid=rpid)
         # print(result)
 
         # 获取指定用户动态
         # uid = "16015678"
         # offset = ""     # 翻页索引，为空即从最新动态开始
-        # result = await self.fetch_user_dynamic(uid=uid, offset=offset)
         # print(result)
 
         # 获取视频实时弹幕
@@ -391,12 +357,10 @@ class BilibiliWebCrawler:
 
         # 获取指定直播间信息
         # room_id = "1815229528"
-        # result = await self.fetch_live_room_detail(room_id=room_id)
         # print(result)
 
         # 获取直播间视频流
         # room_id = "1815229528"
-        # result = await self.fetch_live_videos(room_id=room_id)
         # print(result)
 
         # 获取指定分区正在直播的主播
@@ -433,3 +397,4 @@ if __name__ == '__main__':
     # 结束时间
     end = time.time()
     print(f"耗时：{end - start}")
+

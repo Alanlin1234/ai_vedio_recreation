@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-AI视频生成系统 - 视频生成脚本
-直接调用Agent系统生成视频，无需API调用
-"""
+
+
+#AI视频生成系统 - 视频生成脚本
+
+
 
 import sys
 import os

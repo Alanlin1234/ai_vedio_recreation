@@ -14,26 +14,6 @@ TikTokAPPCrawler = TikTokAPPCrawler()
             )
 async def fetch_one_video(request: Request,
                           aweme_id: str = Query(example="7350810998023949599", description="作品id/Video id")):
-    """
-    # [中文]
-    ### 用途:
-    - 获取单个作品数据
-    ### 参数:
-    - aweme_id: 作品id
-    ### 返回:
-    - 作品数据
-
-    # [English]
-    ### Purpose:
-    - Get single video data
-    ### Parameters:
-    - aweme_id: Video id
-    ### Return:
-    - Video data
-
-    # [示例/Example]
-    aweme_id = "7350810998023949599"
-    """
     try:
         data = await TikTokAPPCrawler.fetch_one_video(aweme_id)
         return ResponseModel(code=200,

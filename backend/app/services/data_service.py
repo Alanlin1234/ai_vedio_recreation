@@ -51,26 +51,6 @@ class DataService:
 
     @staticmethod
     def save_to_database(data):
-        insert_sql = """
-        INSERT INTO douyin_videos (
-            title, description, create_time, duration, video_id, video_uri,
-            play_count, digg_count, comment_count, share_count, collect_count,
-            author_nickname, author_unique_id, author_uid, author_signature,
-            author_follower_count, author_following_count, author_total_favorited
-        ) VALUES (
-            %s, %s, %s, %s, %s, %s,
-            %s, %s, %s, %s, %s,
-            %s, %s, %s, %s,
-            %s, %s, %s
-        )
-        ON DUPLICATE KEY UPDATE
-            play_count = VALUES(play_count),
-            digg_count = VALUES(digg_count),
-            comment_count = VALUES(comment_count),
-            share_count = VALUES(share_count),
-            collect_count = VALUES(collect_count),
-            updated_at = CURRENT_TIMESTAMP
-        """
         
         video_info = data["video_info"]
         statistics = data["statistics"]
@@ -107,19 +87,6 @@ class DataService:
     @staticmethod
     def create_video(data):
         """新增视频数据"""
-        insert_sql = """
-        INSERT INTO douyin_videos (
-            title, description, create_time, duration, video_id, video_uri,
-            play_count, digg_count, comment_count, share_count, collect_count,
-            author_nickname, author_unique_id, author_uid, author_signature,
-            author_follower_count, author_following_count, author_total_favorited
-        ) VALUES (
-            %s, %s, %s, %s, %s, %s,
-            %s, %s, %s, %s, %s,
-            %s, %s, %s, %s,
-            %s, %s, %s
-        )
-        """
         try:
             DBService.execute_update(insert_sql, DataService._prepare_params(data))
             return True
@@ -139,18 +106,6 @@ class DataService:
     @staticmethod
     def update_video(video_id, data):
         """更新视频数据"""
-        update_sql = """
-        UPDATE douyin_videos SET
-            title = %s,
-            description = %s,
-            play_count = %s,
-            digg_count = %s,
-            comment_count = %s,
-            share_count = %s,
-            collect_count = %s,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE video_id = %s
-        """
         try:
             params = DataService._prepare_params(data)
             params.append(video_id)
@@ -201,13 +156,6 @@ class DataService:
     @staticmethod
     def create_author(data):
         """新增作者数据"""
-        insert_sql = """
-        INSERT INTO douyin_authors (
-            author_uid, author_nickname, author_unique_id, author_signature,
-            author_follower_count, author_following_count, 
-            author_total_favorited, author_aweme_count
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """
         try:
             DBService.execute_update(insert_sql, DataService._prepare_author_params(data))
             return True
@@ -227,18 +175,6 @@ class DataService:
     @staticmethod
     def update_author(author_uid, data):
         """更新作者数据"""
-        update_sql = """
-        UPDATE douyin_authors SET
-            author_nickname = %s,
-            author_unique_id = %s,
-            author_signature = %s,
-            author_follower_count = %s,
-            author_following_count = %s,
-            author_total_favorited = %s,
-            author_aweme_count = %s,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE author_uid = %s
-        """
         try:
             params = DataService._prepare_author_params(data)
             params.append(author_uid)
@@ -291,12 +227,6 @@ class DataService:
         try:
             from service.db_service import DBService
             
-            query_sql = """
-            SELECT DISTINCT author_unique_id, author_nickname 
-            FROM douyin_videos 
-            WHERE author_unique_id IS NOT NULL 
-            AND author_unique_id != ''
-            """
             
             result = DBService.execute_query(query_sql)
             

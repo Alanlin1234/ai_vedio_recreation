@@ -24,15 +24,6 @@ def is_recent_time(time_str):
 
 
 def is_today(date_str):
-    """
-    判断给定的日期字符串是否是当天
-    
-    参数:
-    date_str: 日期字符串，格式如 "2025-05-30 09:00:22" 或 "2025-05-30"
-    
-    返回:
-    bool: 如果是当天返回True，否则返回False
-    """
     from datetime import datetime
     
     try:

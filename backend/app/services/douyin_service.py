@@ -24,27 +24,47 @@ class DouyinCrawlerClient:
     """抖音爬虫服务客户端"""
     
     def __init__(self, base_url=None, timeout=None):
-        self.base_url = base_url or crawler_config.CRAWLER_BASE_URL
-        self.timeout = timeout or crawler_config.REQUEST_TIMEOUT
+        # 直接硬编码正确的爬虫服务URL，避免配置问题
+        self.base_url = base_url or "http://localhost:8081"
+        self.timeout = timeout or 30
         self.client = None
     
-    async def get_video_info(self, aweme_id: str):
-        """获取单个视频信息"""
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                url = f"{self.base_url}/fetch_one_video"
-                params = {"aweme_id": aweme_id}
-                
-                response = await client.get(url, params=params)
-                if response.status_code == 200:
-                    data = response.json()
-                    return self._parse_video_data(data)
+    async def get_video_info(self, aweme_id_or_url: str, max_retries=3, retry_delay=1):
+        """获取单个视频信息，带有重试机制"""
+        for retry in range(max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    url = f"{self.base_url}/api/hybrid/video_data"
+                    
+                    # 判断输入是视频ID还是完整URL
+                    if aweme_id_or_url.startswith("http"):
+                        # 如果是完整URL（包括短链接），直接使用
+                        video_url = aweme_id_or_url
+                    else:
+                        # 如果是视频ID，构建完整URL
+                        video_url = f"https://www.douyin.com/video/{aweme_id_or_url}"
+                    
+                    params = {"url": video_url}
+                    
+                    response = await client.get(url, params=params)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        return self._parse_video_data(data)
+                    else:
+                        print(f"获取视频信息失败: {response.status_code}")
+                        if retry < max_retries - 1:
+                            print(f"{retry+1}次重试失败，{retry_delay}秒后重试...")
+                            await asyncio.sleep(retry_delay)
+                        else:
+                            return None
+            except Exception as e:
+                print(f"调用爬虫服务异常: {e}")
+                if retry < max_retries - 1:
+                    print(f"{retry+1}次重试失败，{retry_delay}秒后重试...")
+                    await asyncio.sleep(retry_delay)
                 else:
-                    print(f"获取视频信息失败: {response.status_code}")
                     return None
-        except Exception as e:
-            print(f"调用爬虫服务异常: {e}")
-            return None
     
     async def get_user_videos(self, sec_user_id: str, count: int = 20):
         """获取用户主页作品"""
@@ -179,7 +199,7 @@ class DouyinService:
     
     @staticmethod
     def get_video_link(url):
-        api_url = "http://localhost:88/api/hybrid/video_data"
+        api_url = f"{crawler_config.CRAWLER_BASE_URL}/api/hybrid/video_data"
         try:
             response = requests.get(api_url, params={"url": url})
             response.raise_for_status()
@@ -244,7 +264,7 @@ class DouyinService:
     @staticmethod
     def fetch_author_info(sec_uid):
         """根据sec_uid获取作者信息"""
-        api_url = "http://localhost:88/api/douyin/web/handler_user_profile"
+        api_url = f"{crawler_config.CRAWLER_BASE_URL}/api/douyin/web/handler_user_profile"
         
         try:
             # 调用外部API获取作者信息
@@ -370,7 +390,7 @@ class DouyinService:
                         'create_time': crawler_data.get('create_time', 0),
                         'duration': crawler_data.get('duration', 0),
                         'video_id': crawler_data.get('aweme_id', ''),
-                        'video_uri': crawler_data.get('video_url', ''),
+                        'video_url': crawler_data.get('video_url', ''),
                         'play_count': crawler_data.get('statistics', {}).get('play_count', 0),
                         'digg_count': crawler_data.get('statistics', {}).get('digg_count', 0),
                         'comment_count': crawler_data.get('statistics', {}).get('comment_count', 0),
@@ -393,13 +413,13 @@ class DouyinService:
                 print(f"爬虫服务获取视频信息失败，回退到原有API: {e}")
         
         # 回退到原有API
-        api_url = "http://localhost:88/api/hybrid/video_data"
+        api_url = f"{crawler_config.CRAWLER_BASE_URL}/api/hybrid/video_data"
         try:
             response = requests.get(api_url, params={"url": video_url})
             response.raise_for_status()
             
             data = response.json()["data"]
-            
+        
             # 处理视频数据 - 使用正确的DataService
             processed_data = DataService.process_video_data({"data": data})
             
@@ -614,7 +634,7 @@ class DouyinService:
                 print(f"爬虫服务获取用户发布视频失败，回退到原有API: {e}")
         
         # 回退到原有API
-        api_url = "http://localhost:88/api/hybrid/user_post_videos"
+        api_url = f"{crawler_config.CRAWLER_BASE_URL}/api/hybrid/user_post_videos"
         try:
             response = requests.get(api_url, params={
                 "url": user_url,
@@ -623,7 +643,7 @@ class DouyinService:
             response.raise_for_status()
             
             data = response.json()["data"]
-            
+        
             # 处理视频数据
             processed_data = DataService.process_video_data({"data": data})
             

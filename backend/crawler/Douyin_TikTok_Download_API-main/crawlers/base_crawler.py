@@ -1,19 +1,10 @@
-# ==============================================================================
 # Copyright (C) 2021 Evil0ctal
 #
-# This file is part of the Douyin_TikTok_Download_API project.
 #
-# This project is licensed under the Apache License 2.0 (the "License");
-# you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at:
 # http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
 # limitations under the License.
-# ==============================================================================
 # 　　　　 　　  ＿＿
 # 　　　 　　 ／＞　　フ
 # 　　　 　　| 　_　 _ l
@@ -24,13 +15,11 @@
 # 　／￣|　　 |　|　|
 # 　| (￣ヽ＿_ヽ_)__)
 # 　＼二つ
-# ==============================================================================
 #
 # Contributor Link:
 # - https://github.com/Evil0ctal
 # - https://github.com/Johnserf-Seed
 #
-# ==============================================================================
 
 import httpx
 import json
@@ -54,9 +43,6 @@ from crawlers.utils.api_exceptions import (
 
 
 class BaseCrawler:
-    """
-    基础爬虫客户端 (Base crawler client)
-    """
 
     def __init__(
             self,
@@ -102,49 +88,21 @@ class BaseCrawler:
         )
 
     async def fetch_response(self, endpoint: str) -> Response:
-        """获取数据 (Get data)
-
-        Args:
-            endpoint (str): 接口地址 (Endpoint URL)
-
-        Returns:
-            Response: 原始响应对象 (Raw response object)
-        """
+# 获取数据 (Get data)
         return await self.get_fetch_data(endpoint)
 
     async def fetch_get_json(self, endpoint: str) -> dict:
-        """获取 JSON 数据 (Get JSON data)
-
-        Args:
-            endpoint (str): 接口地址 (Endpoint URL)
-
-        Returns:
-            dict: 解析后的JSON数据 (Parsed JSON data)
-        """
+# 获取 JSON 数据 (Get JSON data)
         response = await self.get_fetch_data(endpoint)
         return self.parse_json(response)
 
     async def fetch_post_json(self, endpoint: str, params: dict = {}, data=None) -> dict:
-        """获取 JSON 数据 (Post JSON data)
-
-        Args:
-            endpoint (str): 接口地址 (Endpoint URL)
-
-        Returns:
-            dict: 解析后的JSON数据 (Parsed JSON data)
-        """
+# 获取 JSON 数据 (Post JSON data)
         response = await self.post_fetch_data(endpoint, params, data)
         return self.parse_json(response)
 
     def parse_json(self, response: Response) -> dict:
-        """解析JSON响应对象 (Parse JSON response object)
-
-        Args:
-            response (Response): 原始响应对象 (Raw response object)
-
-        Returns:
-            dict: 解析后的JSON数据 (Parsed JSON data)
-        """
+# 解析JSON响应对象 (Parse JSON response object)
         if (
                 response is not None
                 and isinstance(response, Response)
@@ -172,15 +130,6 @@ class BaseCrawler:
             raise APIResponseError("获取数据失败")
 
     async def get_fetch_data(self, url: str):
-        """
-        获取GET端点数据 (Get GET endpoint data)
-
-        Args:
-            url (str): 端点URL (Endpoint URL)
-
-        Returns:
-            response: 响应内容 (Response content)
-        """
         for attempt in range(self._max_retries):
             try:
                 response = await self.aclient.get(url, follow_redirects=True)
@@ -199,7 +148,6 @@ class BaseCrawler:
                     await asyncio.sleep(self._timeout)
                     continue
 
-                # logger.info("响应状态码: {0}".format(response.status_code))
                 response.raise_for_status()
                 return response
 
@@ -215,16 +163,6 @@ class BaseCrawler:
                 e.display_error()
 
     async def post_fetch_data(self, url: str, params: dict = {}, data=None):
-        """
-        获取POST端点数据 (Get POST endpoint data)
-
-        Args:
-            url (str): 端点URL (Endpoint URL)
-            params (dict): POST请求参数 (POST request parameters)
-
-        Returns:
-            response: 响应内容 (Response content)
-        """
         for attempt in range(self._max_retries):
             try:
                 response = await self.aclient.post(
@@ -248,7 +186,6 @@ class BaseCrawler:
                     await asyncio.sleep(self._timeout)
                     continue
 
-                # logger.info("响应状态码: {0}".format(response.status_code))
                 response.raise_for_status()
                 return response
 
@@ -265,18 +202,8 @@ class BaseCrawler:
                 e.display_error()
 
     async def head_fetch_data(self, url: str):
-        """
-        获取HEAD端点数据 (Get HEAD endpoint data)
-
-        Args:
-            url (str): 端点URL (Endpoint URL)
-
-        Returns:
-            response: 响应内容 (Response content)
-        """
         try:
             response = await self.aclient.head(url)
-            # logger.info("响应状态码: {0}".format(response.status_code))
             response.raise_for_status()
             return response
 
@@ -293,23 +220,6 @@ class BaseCrawler:
             e.display_error()
 
     def handle_http_status_error(self, http_error, url: str, attempt):
-        """
-        处理HTTP状态错误 (Handle HTTP status error)
-
-        Args:
-            http_error: HTTP状态错误 (HTTP status error)
-            url: 端点URL (Endpoint URL)
-            attempt: 尝试次数 (Number of attempts)
-        Raises:
-            APIConnectionError: 连接端点失败 (Failed to connect to endpoint)
-            APIResponseError: 响应错误 (Response error)
-            APIUnavailableError: 服务不可用 (Service unavailable)
-            APINotFoundError: 端点不存在 (Endpoint does not exist)
-            APITimeoutError: 连接超时 (Connection timeout)
-            APIUnauthorizedError: 未授权 (Unauthorized)
-            APIRateLimitError: 请求频率过高 (Request frequency is too high)
-            APIRetryExhaustedError: 重试次数达到上限 (The number of retries has reached the upper limit)
-        """
         response = getattr(http_error, "response", None)
         status_code = getattr(response, "status_code", None)
 
@@ -347,3 +257,4 @@ class BaseCrawler:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.aclient.aclose()
+

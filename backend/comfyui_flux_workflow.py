@@ -1,12 +1,8 @@
-
 #ComfyUI Flux 工作流配置
-#本配置用于视频二创场景，确保生成的关键帧风格统一
+#本配置用于视频关键帧生成
 
-# ============================================================
-# Flux 工作流模板
-# ============================================================
 
-# 基础 Flux 工作流（需要根据你的 ComfyUI 实际配置调整）
+#  Flux 工作流
 FLUX_WORKFLOW_TEMPLATE = {
     "id": "f8e19b84-45cb-4021-b907-4726fc955c9a",
     "revision": 0,
@@ -209,15 +205,15 @@ FLUX_WORKFLOW_TEMPLATE = {
 
 # Flux 工作流节点配置
 FLUX_NODES = {
-    "model_loader": "10",          # Flux 模型加载节点
-    "positive_prompt": "6",        # 正向提示词
-    "negative_prompt": "31",       # 负向提示词
-    "sampler": "30",               # 采样器（KSampler）
-    "latent_image": "5",           # 空白潜在图像
-    "vae_decode": "8",             # VAE 解码
-    "save_image": "9",             # 保存图像
-    "lora_loader": "27",           # LoRA 加载器（可选）
-    "controlnet": "11",            # ControlNet（可选，用于参考图）
+    "model_loader": "10",  # Flux 模型加载节点
+    "positive_prompt": "6",  # 正向提示词
+    "negative_prompt": "31",  # 负向提示词
+    "sampler": "30",  # 采样器（KSampler）
+    "latent_image": "5",  # 空白潜在图像
+    "vae_decode": "8",  # VAE 解码
+    "save_image": "9",  # 保存图像
+    "lora_loader": "27",  # LoRA 加载器
+    "controlnet": "11",  # ControlNet
 }
 
 # Flux 默认参数
@@ -225,18 +221,18 @@ FLUX_DEFAULT_PARAMS = {
     "model_name": "flux_dev.safetensors",  # Flux 模型文件名
     "width": 1024,
     "height": 576,
-    "steps": 25,                    # Flux 通常需要较少步数
-    "cfg_scale": 3.5,               # Flux 推荐较低的 CFG
-    "sampler_name": "euler",        # 推荐采样器
-    "scheduler": "simple",          # 推荐调度器
+    "steps": 25,  # 步数
+    "cfg_scale": 3.5,  # CFG
+    "sampler_name": "euler",  # 推荐采样器
+    "scheduler": "simple",  # 推荐调度器
     "denoise": 1.0,
     "negative_prompt": "low quality, blurry, distorted, watermark, text, bad anatomy",
     
     # 风格一致性参数
-    "style_lora": None,             # 风格 LoRA 路径（用于保持风格一致）
-    "style_lora_strength": 0.8,     # LoRA 强度
+    "style_lora": None,  # 风格 LoRA 路径（用于保持风格一致）
+    "style_lora_strength": 0.8,  # LoRA 强度
     
-    # ControlNet 参数（用于参考图）
+    # ControlNet
     "use_controlnet": False,
     "controlnet_model": "control_v11p_sd15_canny",
     "controlnet_strength": 0.7,
@@ -250,19 +246,6 @@ def get_flux_workflow(
     style_reference: str = None,
     **kwargs
 ) -> dict:
-    """
-    获取配置好的 Flux 工作流
-    
-    Args:
-        positive_prompt: 正向提示词
-        shot_id: 镜头 ID
-        reference_image: 参考图像路径（用于 ControlNet）
-        style_reference: 风格参考（用于保持一致性）
-        **kwargs: 其他参数
-        
-    Returns:
-        配置好的工作流字典
-    """
     import copy
     
     # 深拷贝工作流
@@ -276,7 +259,6 @@ def get_flux_workflow(
         )
     
     # 转换为ComfyUI API期望的格式
-    # ComfyUI API格式: {"prompt": {"node_id": {"inputs": {...}, "class_type": "..."}}}
     comfyui_workflow = {}
     
     # 从节点列表中提取节点，转换为ComfyUI API格式
@@ -400,18 +382,6 @@ def build_style_consistent_prompt(
     style_keywords: list = None,
     previous_prompts: list = None
 ) -> str:
-    """
-    构建风格一致的提示词
-    
-    Args:
-        base_prompt: 基础提示词
-        scene_description: 场景描述
-        style_keywords: 风格关键词列表
-        previous_prompts: 之前的提示词（用于保持一致性）
-        
-    Returns:
-        优化后的提示词
-    """
     # 默认风格关键词（确保整体风格一致）
     if style_keywords is None:
         style_keywords = [
@@ -436,11 +406,7 @@ def build_style_consistent_prompt(
     return full_prompt
 
 
-# ============================================================
-# 风格一致性配置
-# ============================================================
-
-# 预定义的风格模板（用于不同类型的视频）
+# 的风格模板（用于不同类型的视频）
 STYLE_TEMPLATES = {
     "cinematic": {
         "keywords": ["cinematic", "film grain", "anamorphic", "dramatic lighting"],
@@ -466,16 +432,6 @@ STYLE_TEMPLATES = {
 
 
 def get_style_config(style_name: str) -> dict:
-    """
-    获取风格配置
-    
-    Args:
-        style_name: 风格名称
-        
-    Returns:
-        风格配置字典
-    """
     return STYLE_TEMPLATES.get(style_name, STYLE_TEMPLATES["cinematic"])
-
 
 

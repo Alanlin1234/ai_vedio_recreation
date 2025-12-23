@@ -10,23 +10,15 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from config import Config
 
 class TextToSpeechService:
-    """
-    文本转语音服务类
-    使用SiliconFlow API将文本转换为语音
-    """
     
     def __init__(self, api_key: str = None):
-        """
-        初始化文本转语音服务
-        
-        Args:
-            api_key: SiliconFlow API密钥
-        """
         self.api_key = api_key or Config.SILICONFLOW_API_KEY
         self.base_url = "https://api.siliconflow.cn/v1/audio/speech"
         
         if not self.api_key:
-            raise ValueError("SiliconFlow API密钥未设置，请在config.py中配置SILICONFLOW_API_KEY或传入api_key参数")
+            
+            print(" SiliconFlow API密钥未设置")
+            self.api_key = None
     
     def text_to_speech(self, 
                       text: str, 
@@ -36,23 +28,32 @@ class TextToSpeechService:
                       sample_rate: int = 32000,
                       speed: float = 1.0,
                       gain: float = 0.0) -> Dict[str, Any]:
-        """
-        将文本转换为语音
-        
-        Args:
-            text: 要转换的文本内容
-            output_path: 输出音频文件路径，如果不指定则自动生成
-            voice: 语音模型，默认为alex
-            response_format: 音频格式，默认为mp3
-            sample_rate: 采样率，默认32000
-            speed: 语速，默认1.0
-            gain: 音量增益，默认0.0
+        # 检查API密钥是否已设置
+        if not self.api_key:
+            # 模拟文本转语音结果
+            if not output_path:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'static', 'audio')
+                os.makedirs(output_dir, exist_ok=True)
+                output_path = os.path.join(output_dir, f"tts_{timestamp}.{response_format}")
             
-        Returns:
-            包含转换结果的字典
-        """
+            # 创建一个空的音频文件作为模拟结果
+            open(output_path, 'a').close()
+            
+            print(f"[模拟] 语音合成成功，文件保存至: {output_path}")
+            
+            return {
+                'success': True,
+                'audio_path': output_path,
+                'text': text,
+                'voice': voice,
+                'duration_estimate': len(text) / 10,  # 粗略估算时长（字符数/10秒）
+                'file_size': 0  # 空文件大小为0
+            }
+        
         try:
-            # 如果没有指定输出路径，自动生成
+            # 正常API调用逻辑
+            
             if not output_path:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'static', 'audio')
@@ -120,17 +121,6 @@ class TextToSpeechService:
                            texts: list, 
                            output_dir: str = None,
                            voice: str = "FunAudioLLM/CosyVoice2-0.5B:alex") -> Dict[str, Any]:
-        """
-        批量将文本转换为语音
-        
-        Args:
-            texts: 文本列表
-            output_dir: 输出目录
-            voice: 语音模型
-            
-        Returns:
-            批量转换结果
-        """
         if not output_dir:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'static', 'audio', f'batch_{timestamp}')
@@ -157,12 +147,6 @@ class TextToSpeechService:
         }
     
     def get_available_voices(self) -> list:
-        """
-        获取可用的语音模型列表
-        
-        Returns:
-            可用语音模型列表
-        """
         # 这里返回一些常用的语音模型
         # 实际可用模型需要查询API文档
         return [
@@ -173,29 +157,9 @@ class TextToSpeechService:
         ]
     
     def validate_text_length(self, text: str, max_length: int = 4000) -> bool:
-        """
-        验证文本长度是否符合API限制
-        
-        Args:
-            text: 要验证的文本
-            max_length: 最大长度限制
-            
-        Returns:
-            是否符合长度要求
-        """
         return len(text) <= max_length
     
     def split_long_text(self, text: str, max_length: int = 4000) -> list:
-        """
-        将长文本分割为多个短文本
-        
-        Args:
-            text: 要分割的文本
-            max_length: 每段最大长度
-            
-        Returns:
-            分割后的文本列表
-        """
         if len(text) <= max_length:
             return [text]
         

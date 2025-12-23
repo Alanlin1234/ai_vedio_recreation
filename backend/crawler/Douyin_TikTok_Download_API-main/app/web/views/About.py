@@ -21,3 +21,4 @@ def about_pop_window():
         put_html('<h3>💖WeChat</h3>')
         put_markdown('WeChat：[Evil0ctal](https://mycyberpunk.com/)')
         put_html('<hr>')
+

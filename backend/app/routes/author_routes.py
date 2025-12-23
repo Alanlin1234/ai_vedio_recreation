@@ -8,11 +8,9 @@ author_bp = Blueprint('author', __name__)
 #     data = request.get_json()
 #     try:
 #         author_id = AuthorService.create_author(data)
-#         return jsonify({'success': True, 'author_id': author_id})
 #     except Exception as e:
 #         return jsonify({'error': str(e)}), 500
 
-# @author_bp.route('/authors/<uid>', methods=['GET'])
 # def get_author(uid):
 #     try:
 #         author = AuthorService.get_author_by_uid(uid)
@@ -22,7 +20,6 @@ author_bp = Blueprint('author', __name__)
 #     except Exception as e:
 #         return jsonify({'error': str(e)}), 500
 
-# @author_bp.route('/authors/<uid>', methods=['PUT'])
 # def update_author(uid):
 #     data = request.get_json()
 #     try:

@@ -1,11 +1,8 @@
 #ComfyUI Wan2.1 工作流配置
 #本配置用于视频生成场景
 
-# ============================================================
-# Wan2.1 工作流模板
-# ============================================================
 
-# 基础 Wan2.1 工作流（从用户提供的 wan2.1_t2v.json 导入）
+
 Wan21_WORKFLOW_TEMPLATE = {
     "id": "8a815138-573d-48df-88b4-599fd7994cbb",
     "revision": 0,
@@ -53,8 +50,8 @@ Wan21_WORKFLOW_TEMPLATE = {
                 ]
             },
             "widgets_values": ["wan_2.1_vae.safetensors"],
-            "color": "#322",
-            "bgcolor": "#533"
+            "color": "  # 322",
+            "bgcolor": "  # 533"
         },
         {
             "id": 48,
@@ -176,14 +173,14 @@ Wan21_WORKFLOW_TEMPLATE = {
 
 # Wan2.1 工作流节点配置
 Wan21_NODES = {
-    "model_loader": "38",          # Wan2.1 模型加载节点
-    "vae_loader": "39",            # VAE 加载节点
-    "positive_prompt": "6",        # 正向提示词
-    "negative_prompt": "7",        # 负向提示词
-    "sampler": "8",                # 采样器
-    "latent_image": "3",           # 空白潜在图像
-    "video_saver": "28",           # 视频保存节点
-    "model_sampling": "48",        # 模型采样配置
+    "model_loader": "38",  # Wan2.1 模型加载节点
+    "vae_loader": "39",  # VAE 加载节点
+    "positive_prompt": "6",  # 正向提示词
+    "negative_prompt": "7",  # 负向提示词
+    "sampler": "8",  # 采样器
+    "latent_image": "3",  # 空白潜在图像
+    "video_saver": "28",  # 视频保存节点
+    "model_sampling": "48",  # 模型采样配置
 }
 
 # Wan2.1 默认参数
@@ -210,17 +207,6 @@ def get_wan21_workflow(
     video_id: int,
     **kwargs
 ) -> dict:
-    """
-    获取配置好的 Wan2.1 视频生成工作流
-    
-    Args:
-        positive_prompt: 正向提示词
-        video_id: 视频 ID
-        **kwargs: 其他参数
-        
-    Returns:
-        配置好的工作流字典
-    """
     import copy
     
     # 深拷贝工作流
@@ -277,3 +263,4 @@ def get_wan21_workflow(
         workflow[save_node]["inputs"]["fps"] = fps
     
     return workflow
+

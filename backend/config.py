@@ -8,29 +8,21 @@ class Config:
     DIFY_WORKFLOW_URL = 'http://localhost/v1/workflows/run'
     
     # 添加DashScope API密钥配置
-    DASHSCOPE_API_KEY = os.getenv('DASHSCOPE_API_KEY', 'sk-f635a299cd49472ebaba6613767e589e')
+    DASHSCOPE_API_KEY = os.getenv('DASHSCOPE_API_KEY', 'sk-d433c2f93eff433583a88e3bdb37289f')
     
-    # SQLAlchemy配置 - 保持MySQL数据库
-    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:123456@localhost:3306/video_agent'
+    # SQLAlchemy配置 - 使用SQLite数据库
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///video_agent.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
-        'pool_recycle': 300,
-        'echo': False,  # 设为True可以看到SQL语句
-        'pool_size': 10,
-        'max_overflow': 20
+        'echo': False  # 设为True可以看到SQL语句
     }
     
-    # 保留原有MySQL配置作为备用
-    MYSQL_HOST = 'localhost'
-    MYSQL_PORT = 3306
-    MYSQL_USER = 'root'
-    MYSQL_PASSWORD = '123456'
-    MYSQL_DB = 'video_agent'
     
     # SiliconFlow API配置
-    SILICONFLOW_API_KEY = os.getenv('SILICONFLOW_API_KEY', 'sk-vkxacmptbqpmmsnvdaayvvxzvlhfdvdxyemjfbjwscbimytd')
+    SILICONFLOW_API_KEY = os.getenv('SILICONFLOW_API_KEY', 'sk-jqfbsqxrbkgenlxcqecaewfyruosfadxrdfjgdzppbnitflj')  # 已填充新API密钥
     SILICONFLOW_BASE_URL = 'https://api.siliconflow.cn/v1'
+    
     
     # Additional API Keys
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-here'
@@ -53,27 +45,27 @@ class Config:
     DOUYIN_API_ENDPOINT = os.getenv('DOUYIN_API_ENDPOINT', '')
     
     # 大模型 API 配置
-    LLM_API_KEY = os.getenv('LLM_API_KEY', 'sk-99487777c0e1452b91c86a0237443e66')
+    LLM_API_KEY = os.getenv('LLM_API_KEY', 'sk-198a7f0f22c749adae5aef316b517e28')
     LLM_API_ENDPOINT = os.getenv('LLM_API_ENDPOINT', 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation')
-    LLM_MODEL = os.getenv('LLM_MODEL', 'qwen-plux')
+    LLM_MODEL = os.getenv('LLM_MODEL', 'qwen-omni-turbo-latest')
     
     # 图像搜索 API 配置
-    IMAGE_SEARCH_API_KEY = os.getenv('IMAGE_SEARCH_API_KEY', 'sk-f5f49d7b76ae49718387b3cbc286a008')
+    IMAGE_SEARCH_API_KEY = os.getenv('IMAGE_SEARCH_API_KEY', 'sk-198a7f0f22c749adae5aef316b517e28')
     IMAGE_SEARCH_API_ENDPOINT = os.getenv('IMAGE_SEARCH_API_ENDPOINT', '')
     
     # 本地参考图库路径
     LOCAL_LIBRARY_PATH = os.getenv('LOCAL_LIBRARY_PATH', 'data/reference_images')
     
     # 图像分析 API 配置
-    VISION_API_KEY = os.getenv('VISION_API_KEY', 'sk-235b4834dac6404289921a1a4ba71479')
+    VISION_API_KEY = os.getenv('VISION_API_KEY', 'sk-198a7f0f22c749adae5aef316b517e28')
     VISION_API_ENDPOINT = os.getenv('VISION_API_ENDPOINT', '')
     
     # 人脸识别 API 配置
-    FACE_API_KEY = os.getenv('FACE_API_KEY', 'sk-2112d012a763489cb7f93570c16a1c9e')
+    FACE_API_KEY = os.getenv('FACE_API_KEY', 'sk-198a7f0f22c749adae5aef316b517e28')
     FACE_API_ENDPOINT = os.getenv('FACE_API_ENDPOINT', '')
     
     # 图像质量评估 API 配置
-    QUALITY_API_KEY = os.getenv('QUALITY_API_KEY', 'sk-a9d85f8cd34b493d872bb9132cf04d71')
+    QUALITY_API_KEY = os.getenv('QUALITY_API_KEY', 'sk-198a7f0f22c749adae5aef316b517e28')
     QUALITY_API_ENDPOINT = os.getenv('QUALITY_API_ENDPOINT', '')
     
     # 日志配置
@@ -129,8 +121,8 @@ FLUX_DEFAULT_CONFIG = {
     'type': 'flux',
     'width': 1280,
     'height': 720,
-    'steps': 20,  # 
-    'cfg_scale': 4.0,  # 
+    'steps': 20,
+    'cfg_scale': 4.0,
     'sampler_name': 'euler',  
     'scheduler': 'simple',
     'style_prefix': 'cinematic, high quality, detailed, professional lighting',

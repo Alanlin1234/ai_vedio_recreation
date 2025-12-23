@@ -1,19 +1,10 @@
-# ==============================================================================
 # Copyright (C) 2021 Evil0ctal
 #
-# This file is part of the Douyin_TikTok_Download_API project.
 #
-# This project is licensed under the Apache License 2.0 (the "License");
-# you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at:
 # http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
 # limitations under the License.
-# ==============================================================================
 # 　　　　 　　  ＿＿
 # 　　　 　　 ／＞　　フ
 # 　　　 　　| 　_　 _ l
@@ -24,12 +15,10 @@
 # 　／￣|　　 |　|　|
 # 　| (￣ヽ＿_ヽ_)__)
 # 　＼二つ
-# ==============================================================================
 #
 # Contributor Link:
 # - https://github.com/Evil0ctal
 #
-# ==============================================================================
 
 import asyncio
 import re
@@ -39,6 +28,7 @@ from crawlers.douyin.web.web_crawler import DouyinWebCrawler  # 导入抖音Web�
 from crawlers.tiktok.web.web_crawler import TikTokWebCrawler  # 导入TikTok Web爬虫
 from crawlers.tiktok.app.app_crawler import TikTokAPPCrawler  # 导入TikTok App爬虫
 from crawlers.bilibili.web.web_crawler import BilibiliWebCrawler  # 导入Bilibili Web爬虫
+from crawlers.utils.logger import logger  # 导入日志记录器
 
 
 class HybridCrawler:
@@ -49,9 +39,6 @@ class HybridCrawler:
         self.BilibiliWebCrawler = BilibiliWebCrawler()
 
     async def get_bilibili_bv_id(self, url: str) -> str:
-        """
-        从 Bilibili URL 中提取 BV 号，支持短链重定向
-        """
         # 如果是 b23.tv 短链，需要重定向获取真实URL
         if "b23.tv" in url:
             async with httpx.AsyncClient() as client:
@@ -70,18 +57,35 @@ class HybridCrawler:
         # 解析抖音视频/Parse Douyin video
         if "douyin" in url:
             platform = "douyin"
+            logger.info(f"开始处理抖音视频: {url}")
             aweme_id = await self.DouyinWebCrawler.get_aweme_id(url)
+            logger.info(f"获取到抖音视频ID: {aweme_id}")
             data = await self.DouyinWebCrawler.fetch_one_video(aweme_id)
-            data = data.get("aweme_detail")
+            logger.debug(f"抖音API原始响应: {data}")
+            
+            # 检查API响应是否包含错误信息
+            if isinstance(data, dict):
+                # 检查filter_detail中的错误信息
+                if data.get("filter_detail"):
+                    filter_detail = data.get("filter_detail")
+                    error_msg = filter_detail.get("detail_msg", "未知错误")
+                    logger.error(f"抖音API返回错误信息: {error_msg}")
+                    logger.error(f"错误详情: {filter_detail}")
+                    raise ValueError(f"抖音API返回错误: {error_msg}")
+                
+                # 获取视频详情
+                data = data.get("aweme_detail")
+                if not data:
+                    logger.error(f"未能获取到视频详情，API响应中aweme_detail字段为空")
+                    raise ValueError("未能获取到视频详情")
             # $.aweme_detail.aweme_type
             aweme_type = data.get("aweme_type")
+            logger.info(f"抖音视频类型: {aweme_type}")
         # 解析TikTok视频/Parse TikTok video
         elif "tiktok" in url:
             platform = "tiktok"
             aweme_id = await self.TikTokWebCrawler.get_aweme_id(url)
 
-            # 2024-09-14: Switch to TikTokAPPCrawler instead of TikTokWebCrawler
-            # data = await self.TikTokWebCrawler.fetch_one_video(aweme_id)
             # data = data.get("itemInfo").get("itemStruct")
 
             data = await self.TikTokAPPCrawler.fetch_one_video(aweme_id)
@@ -102,7 +106,6 @@ class HybridCrawler:
         if not minimal:
             return data
 
-        # 如果是最小数据，处理数据/If it is minimal data, process the data
         url_type_code_dict = {
             # common
             0: 'video',
@@ -121,17 +124,6 @@ class HybridCrawler:
         url_type = url_type_code_dict.get(aweme_type, 'video')
         # print(f"url_type: {url_type}")
 
-        """
-        以下为(视频||图片)数据处理的四个方法,如果你需要自定义数据处理请在这里修改.
-        The following are four methods of (video || image) data processing. 
-        If you need to customize data processing, please modify it here.
-        """
-
-        """
-        创建已知数据字典(索引相同)，稍后使用.update()方法更新数据
-        Create a known data dictionary (index the same), 
-        and then use the .update() method to update the data
-        """
 
         # 根据平台适配字段映射
         if platform == 'bilibili':
@@ -151,7 +143,7 @@ class HybridCrawler:
             result_data = {
                 'type': url_type,
                 'platform': platform,
-                'video_id': aweme_id,  # 统一使用video_id字段，内容可能是aweme_id或bv_id
+                'video_id': aweme_id,
                 'desc': data.get("desc"),
                 'create_time': data.get("create_time"),
                 'author': data.get("author"),
@@ -160,7 +152,6 @@ class HybridCrawler:
                 'cover_data': {},  # 将在各平台处理中填充
                 'hashtags': data.get('text_extra'),
             }
-        # 创建一个空变量，稍后使用.update()方法更新数据/Create an empty variable and use the .update() method to update the data
         api_data = None
         # 判断链接类型并处理数据/Judge link type and process data
         # 抖音数据处理/Douyin data processing
@@ -173,19 +164,89 @@ class HybridCrawler:
             }
             # 抖音视频数据处理/Douyin video data processing
             if url_type == 'video':
-                # 将信息储存在字典中/Store information in a dictionary
-                uri = data['video']['play_addr']['uri']
-                wm_video_url_HQ = data['video']['play_addr']['url_list'][0]
-                wm_video_url = f"https://aweme.snssdk.com/aweme/v1/playwm/?video_id={uri}&radio=1080p&line=0"
-                nwm_video_url_HQ = wm_video_url_HQ.replace('playwm', 'play')
-                nwm_video_url = f"https://aweme.snssdk.com/aweme/v1/play/?video_id={uri}&ratio=1080p&line=0"
+                logger.info("开始处理抖音视频URL生成")
+                # 安全获取视频相关字段，避免KeyError
+                video = data.get('video', {})
+                play_addr = video.get('play_addr', {})
+                uri = play_addr.get('uri', '')
+                url_list = play_addr.get('url_list', [])
+                
+                logger.debug(f"视频基础信息: uri={uri}, url_list长度={len(url_list)}")
+                logger.debug(f"视频完整数据: {video}")
+                
+                # 多种URL生成策略
+                wm_video_url_HQ = url_list[0] if url_list else ''
+                wm_video_url = ''
+                nwm_video_url_HQ = ''
+                nwm_video_url = ''
+                
+                # 策略1：使用API返回的完整URL
+                if wm_video_url_HQ:
+                    logger.info(f"使用策略1生成URL，API返回的高清URL: {wm_video_url_HQ}")
+                    # 注意：直接替换playwm为play可能不再适用于新的URL格式
+                    # 新的URL格式已经不包含playwm/play关键字，而是通过其他参数控制水印
+                    nwm_video_url_HQ = wm_video_url_HQ
+                    # 添加额外的参数来获取无水印视频
+                    if '?' in nwm_video_url_HQ:
+                        nwm_video_url_HQ += '&is_play_url=1&source=PackSourceEnum_AWEME_DETAIL'
+                    else:
+                        nwm_video_url_HQ += '?is_play_url=1&source=PackSourceEnum_AWEME_DETAIL'
+                    logger.info(f"生成的无水印高清URL: {nwm_video_url_HQ}")
+                
+                # 策略2：如果API返回的URL无效或缺失，使用拼接URL
+                if uri:
+                    logger.info(f"使用策略2生成URL，视频URI: {uri}")
+                    wm_video_url = f"https://aweme.snssdk.com/aweme/v1/playwm/?video_id={uri}&radio=1080p&line=0"
+                    nwm_video_url = f"https://aweme.snssdk.com/aweme/v1/play/?video_id={uri}&ratio=1080p&line=0"
+                    logger.info(f"拼接的有水印URL: {wm_video_url}")
+                    logger.info(f"拼接的无水印URL: {nwm_video_url}")
+                    # 如果策略1失败，使用策略2的高清URL
+                    if not wm_video_url_HQ:
+                        logger.info("策略1失败，使用策略2的高清URL作为备选")
+                        wm_video_url_HQ = wm_video_url
+                        nwm_video_url_HQ = nwm_video_url
+                
+                # 策略3：尝试使用其他可能的URL格式
+                if not wm_video_url and video.get('download_addr'):
+                    logger.info("使用策略3生成URL，尝试从download_addr获取")
+                    download_url_list = video.get('download_addr', {}).get('url_list', [])
+                    if download_url_list:
+                        logger.info(f"从download_addr获取到URL: {download_url_list[0]}")
+                        wm_video_url = download_url_list[0]
+                        wm_video_url_HQ = download_url_list[0]
+                        # 注意：直接替换playwm为play可能不再适用于新的URL格式
+                        nwm_video_url = wm_video_url
+                        nwm_video_url_HQ = wm_video_url_HQ
+                        # 添加额外的参数来获取无水印视频
+                        if '?' in nwm_video_url:
+                            nwm_video_url += '&is_play_url=1&source=PackSourceEnum_AWEME_DETAIL'
+                        else:
+                            nwm_video_url += '?is_play_url=1&source=PackSourceEnum_AWEME_DETAIL'
+                        if '?' in nwm_video_url_HQ:
+                            nwm_video_url_HQ += '&is_play_url=1&source=PackSourceEnum_AWEME_DETAIL'
+                        else:
+                            nwm_video_url_HQ += '?is_play_url=1&source=PackSourceEnum_AWEME_DETAIL'
+                        logger.info(f"生成的有水印URL: {wm_video_url}")
+                        logger.info(f"生成的无水印URL: {nwm_video_url}")
+                
+                # 验证生成的URL
+                if not wm_video_url and not nwm_video_url:
+                    logger.error("所有URL生成策略均失败，未能获取到有效视频URL")
+                    logger.error(f"视频数据: {video}")
+                else:
+                    logger.info("视频URL生成成功")
+                    logger.info(f"最终有水印高清URL: {wm_video_url_HQ}")
+                    logger.info(f"最终无水印高清URL: {nwm_video_url_HQ}")
+                
                 api_data = {
                     'video_data':
                         {
                             'wm_video_url': wm_video_url,
                             'wm_video_url_HQ': wm_video_url_HQ,
                             'nwm_video_url': nwm_video_url,
-                            'nwm_video_url_HQ': nwm_video_url_HQ
+                            'nwm_video_url_HQ': nwm_video_url_HQ,
+                            'uri': uri,
+                            'url_list_count': len(url_list)
                         }
                 }
             # 抖音图片数据处理/Douyin image data processing
@@ -194,15 +255,27 @@ class HybridCrawler:
                 no_watermark_image_list = []
                 # 有水印图片列表/With watermark image list
                 watermark_image_list = []
+                
+                # 安全获取图片列表，避免KeyError
+                images = data.get('images', [])
+                
                 # 遍历图片列表/Traverse image list
-                for i in data['images']:
-                    no_watermark_image_list.append(i['url_list'][0])
-                    watermark_image_list.append(i['download_url_list'][0])
+                for i in images:
+                    # 安全获取图片URL，避免KeyError
+                    url_list = i.get('url_list', [])
+                    download_url_list = i.get('download_url_list', [])
+                    
+                    if url_list:
+                        no_watermark_image_list.append(url_list[0])
+                    if download_url_list:
+                        watermark_image_list.append(download_url_list[0])
+                
                 api_data = {
                     'image_data':
                         {
                             'no_watermark_image_list': no_watermark_image_list,
-                            'watermark_image_list': watermark_image_list
+                            'watermark_image_list': watermark_image_list,
+                            'image_count': len(images)
                         }
                 }
         # TikTok数据处理/TikTok data processing
@@ -217,7 +290,6 @@ class HybridCrawler:
             if url_type == 'video':
                 # 将信息储存在字典中/Store information in a dictionary
                 # wm_video = data['video']['downloadAddr']
-                # wm_video = data['video']['download_addr']['url_list'][0]
                 wm_video = (
                     data.get('video', {})
                     .get('download_addr', {})
@@ -231,7 +303,6 @@ class HybridCrawler:
                             'wm_video_url_HQ': wm_video,
                             # 'nwm_video_url': data['video']['playAddr'],
                             'nwm_video_url': data['video']['play_addr']['url_list'][0],
-                            # 'nwm_video_url_HQ': data['video']['bitrateInfo'][0]['PlayAddr']['UrlList'][0]
                             'nwm_video_url_HQ': data['video']['bit_rate'][0]['play_addr']['url_list'][0]
                         }
                 }
@@ -300,11 +371,8 @@ class HybridCrawler:
         return result_data
 
     async def main(self):
-        # 测试混合解析单一视频接口/Test hybrid parsing single video endpoint
         # url = "https://v.douyin.com/L4FJNR3/"
-        # url = "https://www.tiktok.com/@taylorswift/video/7359655005701311786"
         url = "https://www.tiktok.com/@flukegk83/video/7360734489271700753"
-        # url = "https://www.tiktok.com/@minecraft/photo/7369296852669205791"
         minimal = True
         result = await self.hybrid_parsing_single_video(url, minimal=minimal)
         print(result)
@@ -318,3 +386,4 @@ if __name__ == '__main__':
     hybird_crawler = HybridCrawler()
     # 运行测试代码/Run test code
     asyncio.run(hybird_crawler.main())
+
