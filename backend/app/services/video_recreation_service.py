@@ -13,6 +13,9 @@ from .video_analysis_agent import VideoAnalysisAgent
 from .speech_recognition_service import SimpleSpeechRecognizer
 from .scene_segmentation_service import SceneSegmentationService
 from .content_generation_service import ContentGenerationService
+from .speaker_voice_service import SpeakerVoiceService
+from .speaker_tts_integration import SpeakerTTSIntegration
+from .frame_continuity_service import FrameContinuityService
 from app.models import db, VideoRecreation, RecreationScene, RecreationLog
 from app.services.comfyui_service import ComfyUIService
 from app.services.comfyui_prompt_converter import ComfyUIPromptConverter
@@ -62,6 +65,13 @@ class VideoRecreationService:
         self.api_key = os.getenv("DASHSCOPE_API_KEY")
         self.video_generation_url = "https://dashscope.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis"
         self.task_query_url = "https://dashscope.aliyuncs.com/api/v1/tasks"
+        
+        # 初始化帧连续性服务
+        self.frame_continuity_service = FrameContinuityService()
+        
+        # 初始化说话人服务和TTS集成服务
+        self.speaker_voice_service = SpeakerVoiceService()
+        self.speaker_tts_integration = SpeakerTTSIntegration()
     
     def calculate_video_hash(self, video_path: str) -> str:
         import hashlib
@@ -426,6 +436,44 @@ class VideoRecreationService:
                 
                 audio_transcription = audio_result.get('text', '')
             
+            # 步骤2.5: 说话人识别和voice seed管理
+            print("步骤2.5: 说话人识别和voice seed管理...")
+            self.log_step(recreation_id, 'speaker_recognition', 'processing', '开始说话人识别')
+            
+            speaker_mapping = {}
+            if audio_result.get('success') and audio_result.get('audio_path'):
+                # 提取说话人信息
+                speaker_result = self.speaker_voice_service.extract_speakers_from_audio(audio_result.get('audio_path'))
+                if speaker_result.get('success'):
+                    speakers = speaker_result.get('speakers', [])
+                    print(f"[说话人识别] 成功识别 {len(speakers)} 个说话人")
+                    
+                    # 保存每个说话人的voice seed
+                    for speaker in speakers:
+                        speaker_id = speaker.get('speaker_id')
+                        voice_seed = speaker.get('voice_seed')
+                        if speaker_id and voice_seed:
+                            save_result = self.speaker_voice_service.save_speaker_voice_seed(
+                                speaker_id=speaker_id,
+                                voice_seed=voice_seed,
+                                audio_sample_path=audio_result.get('audio_path')
+                            )
+                            speaker_mapping[speaker_id] = voice_seed
+                            print(f"[说话人识别] 保存说话人 {speaker_id} 的voice seed: {voice_seed}")
+                    
+                    # 更新任务记录
+                    self.update_recreation_step(recreation_id, {
+                        'speaker_mapping': speaker_mapping,
+                        'total_speakers': len(speakers)
+                    })
+                    self.log_step(recreation_id, 'speaker_recognition', 'success', f'说话人识别完成，发现 {len(speakers)} 个说话人')
+                else:
+                    print(f"[说话人识别] 识别失败: {speaker_result.get('error')}")
+                    self.log_step(recreation_id, 'speaker_recognition', 'failed', f'说话人识别失败: {speaker_result.get('error')}')
+            else:
+                print(f"[说话人识别] 跳过说话人识别，因为音频提取失败")
+                self.log_step(recreation_id, 'speaker_recognition', 'skipped', '跳过说话人识别，音频提取失败')
+            
             # 步骤3: 新文案创作
             print("步骤3: 新文案创作...")
             self.log_step(recreation_id, 'new_script_creation', 'processing', '开始新文案创作')
@@ -765,7 +813,7 @@ class VideoRecreationService:
             
             self.log_step(recreation_id, 'video_consistency_check', 'success', '视频一致性检查完成')
             
-            # 步骤6: 文本转语音
+            # 步骤6: 文本转语音（使用voice seed保持声音一致性）
             print("步骤6: 文本转语音...")
             self.log_step(recreation_id, 'text_to_speech', 'processing', '开始文本转语音')
             
@@ -782,17 +830,31 @@ class VideoRecreationService:
                 tts_audio_path = os.path.join(task_dir, 'tts', 'tts_audio.mp3')
                 os.makedirs(os.path.dirname(tts_audio_path), exist_ok=True)
                 
-                tts_result = self.content_generator.text_to_speech(
-                    text=new_script.get('new_script', ''),
-                    output_path=tts_audio_path
-                )
+                # 使用speaker_tts_integration服务，确保使用voice seed保持声音一致性
+                if speaker_mapping:
+                    # 如果有说话人信息，使用第一个说话人的voice seed
+                    first_speaker_id = next(iter(speaker_mapping.keys()))
+                    print(f"[TTS] 使用说话人 {first_speaker_id} 的voice seed生成语音")
+                    tts_result = self.speaker_tts_integration.generate_audio_with_speaker(
+                        text=new_script.get('new_script', ''),
+                        speaker_id=first_speaker_id,
+                        output_path=tts_audio_path
+                    )
+                else:
+                    # 如果没有说话人信息，使用默认TTS
+                    print(f"[TTS] 没有说话人信息，使用默认TTS")
+                    tts_result = self.content_generator.text_to_speech(
+                        text=new_script.get('new_script', ''),
+                        output_path=tts_audio_path
+                    )
                 
                 if tts_result.get('success'):
                     self.update_recreation_step(recreation_id, {
                         'tts_audio_path': tts_result.get('audio_path'),
-                        'tts_service': 'edge-tts',
+                        'tts_service': 'speaker_tts_integration' if speaker_mapping else 'edge-tts',
                         'tts_voice_model': 'zh-CN-XiaoxiaoNeural',
-                        'tts_audio_duration': tts_result.get('duration', 0)
+                        'tts_audio_duration': tts_result.get('duration', 0),
+                        'speaker_mapping': speaker_mapping
                     })
                     self.log_step(recreation_id, 'text_to_speech', 'success', '文本转语音完成')
                 else:
@@ -980,18 +1042,41 @@ class VideoRecreationService:
                         print(f"[文生视频] 场景 {i+1} 提示词为空，跳过")
                         continue
                     
-                    print(f"[文生视频] 场景 {i+1} 提示词: {video_prompt[:100]}...")
+                    # 集成首尾帧功能：添加上一个场景的最后一帧作为当前场景的首帧
+                    previous_scene_last_frame = None
+                    if i > 0:
+                        # 获取上一个场景的最后一帧
+                        if generated_videos and generated_videos[i-1].get('success'):
+                            # 尝试从上一个场景的视频中提取最后一帧
+                            previous_video_path = generated_videos[i-1].get('local_path')
+                            if previous_video_path and os.path.exists(previous_video_path):
+                                previous_scene_last_frame = self.frame_continuity_service.extract_last_frame_from_video(previous_video_path)
+                                if previous_scene_last_frame:
+                                    print(f"[文生视频] 场景 {i+1}: 使用上一个场景的最后一帧作为首帧")
+                                    # 更新帧连续性服务的上一个场景最后一帧
+                                    self.frame_continuity_service.set_previous_scene_frame(previous_scene_last_frame)
+                    
+                    # 构建包含上下文的prompt
+                    enhanced_prompt = self.frame_continuity_service.build_contextual_prompt(
+                        current_prompt=video_prompt,
+                        previous_scene_info=scene.get('previous_scene_info'),
+                        use_first_frame_constraint=True
+                    )
+                    
+                    print(f"[文生视频] 场景 {i+1} 提示词: {enhanced_prompt[:100]}...")
                     
                     # 1. 将场景数据转换为ComfyUI格式
                     scene_data = scene.copy()
-                    scene_data['video_prompt'] = video_prompt
+                    scene_data['video_prompt'] = enhanced_prompt
+                    scene_data['previous_scene_last_frame'] = previous_scene_last_frame
                     comfyui_prompt = self.comfyui_prompt_converter.convert_to_comfyui_prompt(scene_data)
                     
                     # 2. 生成关键帧
                     print(f"[文生视频] 场景 {i+1}: 开始生成关键帧")
                     keyframe_result = self.comfyui_service.generate_keyframes(
                         prompt=comfyui_prompt,
-                        num_keyframes=3  # 每个场景生成3个关键帧
+                        num_keyframes=3,  # 每个场景生成3个关键帧
+                        previous_last_frame=previous_scene_last_frame
                     )
                     
                     if not keyframe_result.get('success'):
@@ -1526,20 +1611,25 @@ class VideoRecreationService:
                         else:
                             print(f"[Qwen Video] 场景 {i+1}: qwen3-vl-plus分析失败: {qwen3vl_result.get('error')}")
                     
-                    # 如果有上一个场景的关键帧，添加到参考图像中
+                    # 如果有上一个场景的关键帧，使用首尾帧连接方式
+                    previous_last_frame = None
                     if i > 0 and previous_scene_keyframes:
-                        print(f"[Qwen Video] 场景 {i+1}: 使用上一个场景的关键帧作为参考")
+                        previous_last_frame = previous_scene_keyframes[-1]  # 获取上一个场景的最后一帧
+                        print(f"[Qwen Video] 场景 {i+1}: 使用首尾帧连接方式，上一个场景的最后一帧将作为当前场景的第一个关键帧")
                         keyframe_prompt['previous_keyframes'] = previous_scene_keyframes
-                        # 将上一个场景的最后一个关键帧添加到参考图像中
-                        reference_images.append(previous_scene_keyframes[-1])
-                        print(f"[Qwen Video] 场景 {i+1}: 添加上一个场景的关键帧，参考图像总数: {len(reference_images)}")
+                        keyframe_prompt['previous_scene_info'] = {
+                            'video_prompt': previous_scene_data.get('video_prompt', '') if i > 0 else '',
+                            'style_elements': previous_scene_data.get('style_elements', {}) if i > 0 else {},
+                            'scene_info': previous_scene_data.get('scene_info', {}) if i > 0 else {}
+                        }
                     
-                    # 5. 使用qwen-image-edit-plus生成关键帧
+                    # 5. 使用qwen-image-edit-plus生成关键帧（支持首尾帧连接）
                     print(f"[Qwen Video] 场景 {i+1}: 开始使用qwen-image-edit-plus生成关键帧")
                     keyframe_result = self.qwen_video_service.generate_keyframes_with_qwen_image_edit(
                         keyframe_prompt, 
                         reference_images=reference_images, 
-                        num_keyframes=3
+                        num_keyframes=3,
+                        previous_last_frame=previous_last_frame  # 传入上一个场景的最后一帧
                     )
                     
                     if not keyframe_result.get('success'):
@@ -1555,6 +1645,16 @@ class VideoRecreationService:
                     
                     keyframes = keyframe_result.get('keyframes', [])
                     print(f"[Qwen Video] 场景 {i+1} 关键帧生成成功，共生成 {len(keyframes)} 个关键帧")
+                    
+                    # 验证首尾帧连接：如果使用了首尾帧连接，第一个关键帧应该是上一个场景的最后一帧
+                    if previous_last_frame and keyframes:
+                        if keyframes[0] == previous_last_frame:
+                            print(f"[Qwen Video] 场景 {i+1}: 首尾帧连接验证成功，第一个关键帧确实是上一个场景的最后一帧")
+                        else:
+                            print(f"[Qwen Video] 场景 {i+1}: 警告：首尾帧连接可能有问题，第一个关键帧与预期不一致")
+                            # 强制使用previous_last_frame作为第一个关键帧
+                            keyframes[0] = previous_last_frame
+                            print(f"[Qwen Video] 场景 {i+1}: 已强制使用上一个场景的最后一帧作为第一个关键帧")
                     
                     # 2. 使用wan2.6-r2v从关键帧生成视频
                     print(f"[Qwen Video] 场景 {i+1}: 开始使用wan2.6-r2v从关键帧生成视频")

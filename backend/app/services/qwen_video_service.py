@@ -191,25 +191,59 @@ class QwenVideoService:
                 "error": error_msg
             }
     
-    def generate_keyframes_with_qwen_image_edit(self, prompt: Dict[str, Any], reference_images: List[str], num_keyframes: int = 3) -> Dict[str, Any]:
+    def generate_keyframes_with_qwen_image_edit(self, prompt: Dict[str, Any], reference_images: List[str], num_keyframes: int = 3, previous_last_frame: Optional[str] = None) -> Dict[str, Any]:
+        """
+        生成关键帧，支持首尾帧连接方式
+        
+        Args:
+            prompt: 包含video_prompt等信息的字典
+            reference_images: 参考图像列表
+            num_keyframes: 需要生成的关键帧数量
+            previous_last_frame: 上一个场景的最后一帧（如果提供，将作为第一个关键帧）
+        """
         try:
             logger.info(f"开始使用qwen-image-edit生成关键帧，数量: {num_keyframes}")
             
             video_prompt = prompt.get('video_prompt', '')
             previous_keyframes = prompt.get('previous_keyframes', [])
+            previous_scene_info = prompt.get('previous_scene_info', {})
             
-            # 准备参考信息
-            reference_info = ""
-            if previous_keyframes:
-                reference_info = f"\n\n非常重要：请参考上一个场景的视觉风格，确保当前场景的关键帧与上一个场景保持视觉连贯性。上一个场景的关键帧URL: {previous_keyframes[-1]}"
+            # 如果提供了previous_last_frame，使用它作为第一个关键帧
+            if previous_last_frame:
+                logger.info(f"使用首尾帧连接方式：上一个场景的最后一帧将作为当前场景的第一个关键帧")
             
-            final_prompt = f"{video_prompt}{reference_info}"
-            logger.info(f"提示词: {final_prompt[:100]}...")
+            # 构建包含上下文的prompt
+            from app.services.frame_continuity_service import FrameContinuityService
+            continuity_service = FrameContinuityService()
+            
+            if previous_last_frame:
+                continuity_service.set_previous_scene_frame(
+                    last_frame=previous_last_frame,
+                    context=previous_scene_info
+                )
+            
+            # 构建增强的prompt，包含上下文信息
+            final_prompt = continuity_service.build_contextual_prompt(
+                current_prompt=video_prompt,
+                previous_scene_info=previous_scene_info,
+                use_first_frame_constraint=(previous_last_frame is not None)
+            )
+            
+            logger.info(f"提示词: {final_prompt[:200]}...")
             
             # 导入DashScope SDK的相关类
             from dashscope import MultiModalConversation
             
             keyframes = []
+            
+            # 如果提供了previous_last_frame，直接将其作为第一个关键帧
+            if previous_last_frame:
+                keyframes.append(previous_last_frame)
+                logger.info(f"已设置第一个关键帧为上一个场景的最后一帧")
+                # 调整需要生成的关键帧数量（第一个已经确定了）
+                num_keyframes_to_generate = num_keyframes - 1
+            else:
+                num_keyframes_to_generate = num_keyframes
             
             # 准备实际使用的参考图像列表
             actual_reference_images = []
@@ -217,18 +251,28 @@ class QwenVideoService:
             # 处理参考图像，支持本地路径和网络URL
             valid_reference_images = []
             
+            # 如果使用首尾帧连接，使用previous_last_frame作为参考图像
+            if previous_last_frame:
+                valid_reference_images.append(previous_last_frame)
+                logger.info(f"使用上一个场景的最后一帧作为参考图像")
+            
             # 检查前一个场景的关键帧
             if previous_keyframes:
-                valid_reference_images.extend(previous_keyframes)
-                logger.info(f"从 {len(previous_keyframes)} 个前场景关键帧中使用 {len(previous_keyframes)} 个")
+                # 如果已经添加了previous_last_frame，避免重复
+                for kf in previous_keyframes:
+                    if kf != previous_last_frame:
+                        valid_reference_images.append(kf)
+                logger.info(f"从 {len(previous_keyframes)} 个前场景关键帧中添加参考图像")
             
             # 如果参考图像不足，检查提供的参考图像
-            if len(valid_reference_images) < num_keyframes and reference_images:
-                valid_reference_images.extend(reference_images)
-                logger.info(f"从 {len(reference_images)} 个参考图像中使用 {len(reference_images)} 个")
+            if len(valid_reference_images) < num_keyframes_to_generate and reference_images:
+                for ref_img in reference_images:
+                    if ref_img not in valid_reference_images:
+                        valid_reference_images.append(ref_img)
+                logger.info(f"从 {len(reference_images)} 个参考图像中添加")
             
             # 限制有效参考图像数量
-            actual_reference_images = valid_reference_images[:num_keyframes]
+            actual_reference_images = valid_reference_images[:num_keyframes_to_generate]
             
             # 遍历所有API密钥，尝试生成关键帧
             for key_index in range(len(self.api_keys)):
@@ -254,15 +298,33 @@ class QwenVideoService:
                         logger.info(f"正在使用第 {i+1}/{len(actual_reference_images)} 个参考图像生成关键帧")
                         
                         # 构建消息格式
-                        messages = [
-                            {
-                                "role": "user",
-                                "content": [
-                                    {"image": reference_image},
-                                    {"text": final_prompt}
+                        if reference_image:
+                            messages = [
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {"image": reference_image},
+                                        {"text": final_prompt}
+                                    ]
+                                }
+                            ]
+                        else:
+                            # 如果没有参考图像，直接使用文本生成（但qwen-image-edit可能需要参考图像）
+                            # 这里我们仍然需要至少一个参考图像，使用previous_last_frame
+                            if previous_last_frame:
+                                messages = [
+                                    {
+                                        "role": "user",
+                                        "content": [
+                                            {"image": previous_last_frame},
+                                            {"text": final_prompt}
+                                        ]
+                                    }
                                 ]
-                            }
-                        ]
+                            else:
+                                # 如果既没有reference_image也没有previous_last_frame，跳过
+                                logger.warning(f"没有参考图像，跳过关键帧生成")
+                                continue
                         
                         try:
                             logger.debug(f"调用qwen-image-edit模型，消息格式: {json.dumps(messages, ensure_ascii=False)[:200]}...")

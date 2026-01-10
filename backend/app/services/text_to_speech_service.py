@@ -27,7 +27,9 @@ class TextToSpeechService:
                       response_format: str = "mp3",
                       sample_rate: int = 32000,
                       speed: float = 1.0,
-                      gain: float = 0.0) -> Dict[str, Any]:
+                      gain: float = 0.0,
+                      voice_seed: Optional[str] = None,
+                      speaker_id: Optional[str] = None) -> Dict[str, Any]:
         # 检查API密钥是否已设置
         if not self.api_key:
             # 模拟文本转语音结果
@@ -60,6 +62,14 @@ class TextToSpeechService:
                 os.makedirs(output_dir, exist_ok=True)
                 output_path = os.path.join(output_dir, f"tts_{timestamp}.{response_format}")
             
+            # 如果提供了speaker_id，尝试获取对应的voice_seed
+            if speaker_id and not voice_seed:
+                from app.services.speaker_voice_service import SpeakerVoiceService
+                speaker_service = SpeakerVoiceService()
+                voice_seed = speaker_service.get_speaker_voice_seed(speaker_id)
+                if voice_seed:
+                    print(f"[TTS] 使用说话人 {speaker_id} 的voice seed: {voice_seed}")
+            
             # 构建请求参数
             payload = {
                 "model": "FunAudioLLM/CosyVoice2-0.5B",
@@ -71,6 +81,17 @@ class TextToSpeechService:
                 "speed": speed,
                 "gain": gain
             }
+            
+            # 如果提供了voice_seed，添加到请求参数中
+            # 注意：不同TTS API的seed参数名称可能不同，需要根据实际情况调整
+            if voice_seed:
+                # 尝试作为seed参数（某些API支持）
+                try:
+                    seed_int = int(voice_seed)
+                    payload["seed"] = seed_int
+                    print(f"[TTS] 使用voice seed: {seed_int}")
+                except ValueError:
+                    print(f"[TTS] 警告: voice_seed不是有效整数，将忽略: {voice_seed}")
             
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
@@ -90,7 +111,7 @@ class TextToSpeechService:
                 
                 print(f"语音合成成功，文件保存至: {output_path}")
                 
-                return {
+                result = {
                     'success': True,
                     'audio_path': output_path,
                     'text': text,
@@ -98,6 +119,14 @@ class TextToSpeechService:
                     'duration_estimate': len(text) / 10,  # 粗略估算时长（字符数/10秒）
                     'file_size': os.path.getsize(output_path)
                 }
+                
+                # 添加voice_seed信息到结果中
+                if voice_seed:
+                    result['voice_seed'] = voice_seed
+                if speaker_id:
+                    result['speaker_id'] = speaker_id
+                
+                return result
             else:
                 error_msg = f"API请求失败，状态码: {response.status_code}, 响应: {response.text}"
                 print(f"语音合成失败: {error_msg}")

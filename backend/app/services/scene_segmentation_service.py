@@ -10,6 +10,10 @@ import sys
 # 添加项目根目录到Python路径
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from config import config
+from .json_prompt_parser import JSONPromptParser
+
+# 初始化JSON解析器
+json_parser = JSONPromptParser()
 
 class SceneSegmentationService:
     
@@ -157,141 +161,28 @@ class SceneSegmentationService:
             文本格式的提示词
         """
         try:
-            # 增强的JSON到文本转换，确保提取所有信息
-            text_prompt_parts = []
-            
-            # 1. 首先提取顶层的video_prompt字段（如果是字符串直接使用）
-            if 'video_prompt' in json_prompt:
-                video_prompt_content = json_prompt['video_prompt']
-                # 如果video_prompt是字符串，直接作为主要描述
-                if isinstance(video_prompt_content, str):
-                    text_prompt_parts.append(video_prompt_content)
-                # 如果video_prompt是字典，提取其中的video_prompt字段
-                elif isinstance(video_prompt_content, dict):
-                    if 'video_prompt' in video_prompt_content and isinstance(video_prompt_content['video_prompt'], str):
-                        text_prompt_parts.append(video_prompt_content['video_prompt'])
-                    # 同时提取video_prompt字典中的其他字段
-                    for key, value in video_prompt_content.items():
-                        if key != 'video_prompt':
-                            if isinstance(value, dict):
-                                # 如果是嵌套字典，详细处理
-                                nested_parts = []
-                                for sub_key, sub_value in value.items():
-                                    nested_parts.append(f"{sub_key}: {sub_value}")
-                                if nested_parts:
-                                    text_prompt_parts.append(f"{key}: {', '.join(nested_parts)}")
-                            else:
-                                text_prompt_parts.append(f"{key}: {value}")
-            
-            # 2. 提取顶层的description字段（如果有）
-            if 'description' in json_prompt and isinstance(json_prompt['description'], str):
-                if not text_prompt_parts:  # 如果还没有主要描述，使用description
-                    text_prompt_parts.append(json_prompt['description'])
-                else:  # 否则作为补充信息
-                    text_prompt_parts.append(f"描述: {json_prompt['description']}")
-            
-            # 3. 提取顶层的style_elements字段
-            if 'style_elements' in json_prompt and isinstance(json_prompt['style_elements'], dict):
-                style_parts = []
-                style_elements = json_prompt['style_elements']
-                
-                if 'characters' in style_elements and style_elements['characters']:
-                    style_parts.append(f"人物: {style_elements['characters']}")
-                if 'environment' in style_elements and style_elements['environment']:
-                    style_parts.append(f"环境: {style_elements['environment']}")
-                if 'visual_style' in style_elements and style_elements['visual_style']:
-                    style_parts.append(f"视觉风格: {style_elements['visual_style']}")
-                if 'camera_movement' in style_elements and style_elements['camera_movement']:
-                    style_parts.append(f"摄像机运动: {style_elements['camera_movement']}")
-                if 'style' in style_elements and style_elements['style']:
-                    style_parts.append(f"风格: {style_elements['style']}")
-                if 'quality' in style_elements and style_elements['quality']:
-                    style_parts.append(f"质量: {style_elements['quality']}")
-                if 'motion' in style_elements and style_elements['motion']:
-                    style_parts.append(f"运动: {style_elements['motion']}")
-                
-                # 添加其他未显式处理的风格元素
-                other_style_elements = [k for k in style_elements.keys() 
-                                      if k not in ['characters', 'environment', 'visual_style', 'camera_movement', 'style', 'quality', 'motion']]
-                for key in other_style_elements:
-                    style_parts.append(f"{key}: {style_elements[key]}")
-                
-                if style_parts:
-                    text_prompt_parts.append(f"风格元素: {'; '.join(style_parts)}")
-            
-            # 4. 提取顶层的technical_params字段
-            if 'technical_params' in json_prompt and isinstance(json_prompt['technical_params'], dict):
-                tech_parts = []
-                technical_params = json_prompt['technical_params']
-                
-                if 'aspect_ratio' in technical_params and technical_params['aspect_ratio']:
-                    tech_parts.append(f"宽高比: {technical_params['aspect_ratio']}")
-                if 'fps' in technical_params and technical_params['fps']:
-                    tech_parts.append(f"帧率: {technical_params['fps']}fps")
-                if 'quality' in technical_params and technical_params['quality']:
-                    tech_parts.append(f"质量: {technical_params['quality']}")
-                if 'resolution' in technical_params and technical_params['resolution']:
-                    tech_parts.append(f"分辨率: {technical_params['resolution']}")
-                if 'width' in technical_params and technical_params['width']:
-                    tech_parts.append(f"宽度: {technical_params['width']}")
-                if 'height' in technical_params and technical_params['height']:
-                    tech_parts.append(f"高度: {technical_params['height']}")
-                if 'duration' in technical_params and technical_params['duration']:
-                    tech_parts.append(f"时长: {technical_params['duration']}秒")
-                
-                # 添加其他未显式处理的技术参数
-                other_tech_params = [k for k in technical_params.keys() 
-                                   if k not in ['aspect_ratio', 'fps', 'quality', 'resolution', 'width', 'height', 'duration']]
-                for key in other_tech_params:
-                    tech_parts.append(f"{key}: {technical_params[key]}")
-                
-                if tech_parts:
-                    text_prompt_parts.append(f"技术参数: {'; '.join(tech_parts)}")
-            
-            # 5. 提取顶层的scene_info字段
-            if 'scene_info' in json_prompt and isinstance(json_prompt['scene_info'], dict):
-                scene_parts = []
-                scene_info = json_prompt['scene_info']
-                
-                for key, value in scene_info.items():
-                    scene_parts.append(f"{key}: {value}")
-                
-                if scene_parts:
-                    text_prompt_parts.append(f"场景信息: {', '.join(scene_parts)}")
-            
-            # 6. 处理其他顶层字段
-            other_fields = ['scenes', 'video_understanding', 'audio_text']
-            for key in json_prompt.keys():
-                if key not in ['video_prompt', 'description', 'style_elements', 'technical_params', 'scene_info'] + other_fields:
-                    value = json_prompt[key]
-                    if isinstance(value, (str, int, float, bool)):
-                        text_prompt_parts.append(f"{key}: {value}")
-                    elif isinstance(value, dict):
-                        # 对其他字典类型字段进行递归处理
-                        dict_parts = []
-                        for sub_key, sub_value in value.items():
-                            dict_parts.append(f"{sub_key}: {sub_value}")
-                        if dict_parts:
-                            text_prompt_parts.append(f"{key}: {', '.join(dict_parts)}")
-            
-            # 如果没有提取到任何信息，返回原始JSON的字符串表示
-            if not text_prompt_parts:
-                return json.dumps(json_prompt, ensure_ascii=False, indent=2)
-            
-            # 合并所有部分，确保信息完整
-            text_prompt = "\n".join(text_prompt_parts)
-            
-            # 去除重复的空行
-            lines = [line.strip() for line in text_prompt.split('\n') if line.strip()]
-            text_prompt = "\n".join(lines)
-            
-            return text_prompt
+            # 使用优化后的JSON解析器
+            if isinstance(json_prompt, dict):
+                # 将字典转换为JSON字符串
+                json_str = json.dumps(json_prompt, ensure_ascii=False)
+                # 使用JSON解析器解析
+                parse_result = json_parser.parse_prompt(json_str, prompt_type="txt2img")
+                # 提取增强后的prompt
+                return parse_result.get('prompt', '')
+            elif isinstance(json_prompt, str):
+                # 直接使用JSON解析器解析字符串
+                parse_result = json_parser.parse_prompt(json_prompt, prompt_type="txt2img")
+                return parse_result.get('prompt', json_prompt)
+            else:
+                # 其他类型，转换为字符串
+                return str(json_prompt)
         except Exception as e:
-            print(f"JSON转文本提示词异常: {e}")
-            import traceback
-            traceback.print_exc()
-            # 发生异常时，返回原始JSON的字符串表示，确保不丢失任何信息
-            return json.dumps(json_prompt, ensure_ascii=False, indent=2)
+            print(f"JSON转文本提示词失败: {e}")
+            # 失败时返回原始内容
+            if isinstance(json_prompt, dict):
+                return json.dumps(json_prompt, ensure_ascii=False)
+            else:
+                return str(json_prompt)
     
     def intelligent_scene_segmentation(self, video_path: str, video_understanding: str = "", audio_text: str = "") -> Dict[str, Any]:
         """
@@ -563,10 +454,32 @@ class SceneSegmentationService:
             # 添加统一的字幕生成指令
             subtitle_instruction = "\n非常重要：视频必须生成清晰的中文字幕，字体美观，位置居中，确保观众能够清晰阅读。字幕内容应与场景的音频内容一致。"
             
-            # 添加上一场景的参考信息（如果有）
+            # 添加上一场景的参考信息（如果有）- 增强版，包含更详细的上下文
             previous_info = ""
             if previous_scene_info:
-                previous_info = f"\n\n上一个场景的信息：\n- 上一场景风格：{previous_scene_info.get('style_elements', {}).get('visual_style', '')}\n- 上一场景人物：{previous_scene_info.get('style_elements', {}).get('characters', '')}\n- 上一场景环境：{previous_scene_info.get('style_elements', {}).get('environment', '')}\n\n非常重要：当前场景必须与上一个场景保持视觉连贯性，包括风格、人物和环境的一致性。"            
+                previous_prompt = previous_scene_info.get('video_prompt', '')
+                previous_style = previous_scene_info.get('style_elements', {})
+                previous_scene_data = previous_scene_info.get('scene_info', {})
+                
+                previous_info = (
+                    f"\n\n【上一个场景的详细上下文信息】\n"
+                    f"上一场景内容描述: {previous_prompt[:300]}\n"
+                    f"上一场景风格: {previous_style.get('visual_style', '')}\n"
+                    f"上一场景人物: {previous_style.get('characters', '')}\n"
+                    f"上一场景环境: {previous_style.get('environment', '')}\n"
+                    f"上一场景摄像机运动: {previous_style.get('camera_movement', '')}\n"
+                    f"\n【关键约束】\n"
+                    f"当前场景的第一个关键帧必须与上一个场景的最后一个关键帧完全相同！\n"
+                    f"这意味着当前场景的起始画面必须无缝衔接上一个场景的结束画面。\n"
+                    f"请确保第一个关键帧的视觉元素、构图、色彩、光线等都与上一场景的最后一帧保持完全一致。\n"
+                    f"后续关键帧可以逐渐过渡到当前场景的主要内容，但必须保持视觉风格的连贯性。\n"
+                    f"\n【场景连贯性要求】\n"
+                    f"1. 第一个关键帧必须完美衔接上一场景的最后一帧（这是强制要求）\n"
+                    f"2. 保持视觉风格的一致性（色彩、光线、画质）\n"
+                    f"3. 保持人物外观的一致性（服装、发型、表情特征）\n"
+                    f"4. 保持环境元素的一致性（背景、道具、氛围）\n"
+                    f"5. 确保场景过渡自然流畅，没有突兀的跳跃"
+                )            
             
             # 根据输出格式构建不同的提示词
             if output_format == "json":

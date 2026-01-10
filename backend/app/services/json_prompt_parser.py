@@ -79,6 +79,7 @@ class JSONPromptParser:
             sampler_name = self.default_config["default_sampler"]
             scheduler = self.default_config["default_scheduler"]
             negative_prompt = self.default_config["default_negative_prompt"]
+            additional_fields = {}  # 用于保存额外的JSON字段
             
             # 只有当JSON解析成功时，才提取详细参数
             if parsed_json is not None:
@@ -112,15 +113,37 @@ class JSONPromptParser:
                     
                     # 8. 提取负向提示词
                     negative_prompt = parsed_json.get("negative_prompt", "") or self.default_config["default_negative_prompt"]
+                    
+                    # 9. 提取其他可能的字段，确保不丢失内容
+                    # 这些字段可能在JSON中存在但不在标准结构中
+                    known_fields = {"video_prompt", "prompt", "scene_info", "style_elements", 
+                                  "technical_params", "negative_prompt", "objects", "people", 
+                                  "actions", "emotions", "atmosphere", "reference_images",
+                                  "style_reference", "reference_keyframes", "previous_keyframe",
+                                  "transition_style"}
+                    for key, value in parsed_json.items():
+                        # 保存不在已知字段列表中的字段
+                        if key not in known_fields:
+                            additional_fields[key] = value
+                    
+                    if additional_fields:
+                        logger.debug(f"发现额外的JSON字段: {list(additional_fields.keys())}")
             
             # 如果没有指定尺寸，根据默认配置或帧率计算
             if not width or not height:
                 width, height = self._calculate_dimensions(aspect_ratio, fps, quality)
             
-            # 9. 构建增强提示词（可选）
-            enhanced_prompt = self._build_enhanced_prompt(prompt, characters, environment, visual_style, camera_movement)
+            # 10. 构建增强提示词（传递parsed_json以包含所有字段）
+            enhanced_prompt = self._build_enhanced_prompt(
+                prompt, 
+                parsed_json=parsed_json,  # 传递完整的JSON对象
+                characters=characters, 
+                environment=environment, 
+                visual_style=visual_style, 
+                camera_movement=camera_movement
+            )
             
-            # 10. 根据提示词类型返回不同的参数
+            # 11. 根据提示词类型返回不同的参数
             # 基础参数字典，包含所有解析出的信息
             base_params = {
                 "prompt": enhanced_prompt,
@@ -138,7 +161,8 @@ class JSONPromptParser:
                 "people": parsed_json.get("people", []) if parsed_json else [],
                 "actions": parsed_json.get("actions", []) if parsed_json else [],
                 "emotions": parsed_json.get("emotions", []) if parsed_json else [],
-                "atmosphere": parsed_json.get("atmosphere", "") if parsed_json else ""
+                "atmosphere": parsed_json.get("atmosphere", "") if parsed_json else "",
+                "additional_fields": additional_fields if parsed_json else {}  # 保存额外字段，避免丢失
             }
             
             if prompt_type == "txt2img":
@@ -279,27 +303,115 @@ class JSONPromptParser:
             # 返回默认尺寸
             return self.default_config["default_width"], self.default_config["default_height"]
     
-    def _build_enhanced_prompt(self, prompt: str, characters: str, environment: str, 
-                              visual_style: str, camera_movement: str) -> str:
+    def _build_enhanced_prompt(self, prompt: str, parsed_json: Optional[Dict[str, Any]] = None,
+                              characters: str = "", environment: str = "", 
+                              visual_style: str = "", camera_movement: str = "") -> str:
+        """
+        构建增强的提示词，包含JSON中的所有重要内容
+        
+        Args:
+            prompt: 基础提示词
+            parsed_json: 解析后的JSON对象（可选，如果提供将从中提取更多字段）
+            characters: 角色描述
+            environment: 环境描述
+            visual_style: 视觉风格
+            camera_movement: 相机运动
+        """
         enhanced_prompt = prompt
         
+        # 如果提供了parsed_json，优先从JSON中提取信息
+        if parsed_json and isinstance(parsed_json, dict):
+            # 优先使用JSON中的字段（如果存在）
+            if not characters:
+                characters = parsed_json.get("style_elements", {}).get("characters", "")
+            if not environment:
+                environment = parsed_json.get("style_elements", {}).get("environment", "")
+            if not visual_style:
+                visual_style = parsed_json.get("style_elements", {}).get("visual_style", "")
+            if not camera_movement:
+                camera_movement = parsed_json.get("style_elements", {}).get("camera_movement", "")
+            
+            # 添加其他重要字段
+            # 1. 对象列表
+            objects = parsed_json.get("objects", [])
+            if objects:
+                if isinstance(objects, list):
+                    objects_text = ", ".join([str(obj) for obj in objects if obj])
+                    if objects_text:
+                        enhanced_prompt += f", objects: {objects_text}"
+            
+            # 2. 人物列表
+            people = parsed_json.get("people", [])
+            if people:
+                if isinstance(people, list):
+                    people_text = ", ".join([str(p) for p in people if p])
+                    if people_text:
+                        enhanced_prompt += f", people: {people_text}"
+            
+            # 3. 动作列表
+            actions = parsed_json.get("actions", [])
+            if actions:
+                if isinstance(actions, list):
+                    actions_text = ", ".join([str(a) for a in actions if a])
+                    if actions_text:
+                        enhanced_prompt += f", actions: {actions_text}"
+            
+            # 4. 情感
+            emotions = parsed_json.get("emotions", [])
+            if emotions:
+                if isinstance(emotions, list):
+                    emotions_text = ", ".join([str(e) for e in emotions if e])
+                    if emotions_text:
+                        enhanced_prompt += f", emotions: {emotions_text}"
+            
+            # 5. 氛围
+            atmosphere = parsed_json.get("atmosphere", "")
+            if atmosphere and atmosphere not in enhanced_prompt:
+                enhanced_prompt += f", atmosphere: {atmosphere}"
+            
+            # 6. 处理其他额外字段（不在标准结构中的字段）
+            # 这些字段可能是动态添加的，也应该包含在prompt中
+            for key, value in parsed_json.items():
+                # 跳过已经处理的字段
+                if key not in {"video_prompt", "prompt", "scene_info", "style_elements",
+                              "technical_params", "negative_prompt", "objects", "people",
+                              "actions", "emotions", "atmosphere", "reference_images",
+                              "style_reference", "reference_keyframes", "previous_keyframe",
+                              "transition_style"}:
+                    # 将额外字段转换为文本格式
+                    if value:  # 只处理非空值
+                        if isinstance(value, (list, tuple)):
+                            value_text = ", ".join([str(v) for v in value if v])
+                            if value_text:
+                                enhanced_prompt += f", {key}: {value_text}"
+                        elif isinstance(value, dict):
+                            # 对于字典类型，转换为键值对格式
+                            value_text = ", ".join([f"{k}: {v}" for k, v in value.items() if v])
+                            if value_text:
+                                enhanced_prompt += f", {key}: {value_text}"
+                        else:
+                            value_str = str(value).strip()
+                            if value_str and value_str not in enhanced_prompt:
+                                enhanced_prompt += f", {key}: {value_str}"
+        
+        # 添加基本的风格元素（如果还没有添加）
         # 添加角色描述
-        if characters:
+        if characters and characters not in enhanced_prompt:
             enhanced_prompt += f", {characters}"
         
         # 添加环境描述
-        if environment:
+        if environment and environment not in enhanced_prompt:
             enhanced_prompt += f", {environment}"
         
         # 添加视觉风格
-        if visual_style:
+        if visual_style and visual_style not in enhanced_prompt:
             enhanced_prompt += f", {visual_style}"
         
         # 添加相机运动
-        if camera_movement:
+        if camera_movement and camera_movement not in enhanced_prompt:
             enhanced_prompt += f", {camera_movement}"
         
-        # 添加默认风格前缀
+        # 添加默认风格前缀（如果还没有）
         default_prefix = "cinematic, high quality, detailed, professional lighting"
         if default_prefix not in enhanced_prompt:
             enhanced_prompt = f"{default_prefix}, {enhanced_prompt}"
@@ -341,6 +453,45 @@ class JSONPromptParser:
         except Exception as e:
             logger.error(f"转换为ComfyUI工作流参数失败: {str(e)}")
             return self._get_default_params("txt2img")
+    
+    def parse(self, json_prompt: str) -> Dict[str, Any]:
+        """
+        解析JSON提示词并转换为文本格式（兼容test_simple_video_process.py的调用方式）
+        
+        Args:
+            json_prompt: JSON格式的提示词字符串
+            
+        Returns:
+            包含success和parsed_content的字典
+        """
+        try:
+            # 使用parse_prompt方法解析
+            parsed_result = self.parse_prompt(json_prompt, prompt_type="txt2img")
+            
+            # 提取增强后的prompt作为文本内容
+            parsed_content = parsed_result.get("prompt", "")
+            
+            # 如果解析成功且有内容，返回success
+            if parsed_content:
+                return {
+                    "success": True,
+                    "parsed_content": parsed_content,
+                    "full_result": parsed_result  # 包含完整的解析结果
+                }
+            else:
+                return {
+                    "success": False,
+                    "parsed_content": "",
+                    "error": "解析后未找到有效内容"
+                }
+                
+        except Exception as e:
+            logger.error(f"parse方法解析失败: {str(e)}")
+            return {
+                "success": False,
+                "parsed_content": json_prompt,  # 失败时返回原始内容
+                "error": str(e)
+            }
     
     def format_for_comfyui_api(self, parsed_prompt: Dict[str, Any], workflow_template: Dict[str, Any]) -> Dict[str, Any]:
         try:
