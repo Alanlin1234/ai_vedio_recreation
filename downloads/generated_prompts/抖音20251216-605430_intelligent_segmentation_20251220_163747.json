@@ -1,0 +1,149 @@
+{
+  "video_path": "d:\\ai-agent-comfy\\downloads\\抖音20251216-605430.mp4",
+  "timestamp": "20251220_163747",
+  "prompt_type": "intelligent_segmentation",
+  "scene_count": 10,
+  "scenes": [
+    {
+      "scene_id": 1,
+      "start_time": 0.0,
+      "end_time": 8.0,
+      "duration": 8.0,
+      "description": "黄色小熊站在木门前,表情由疑惑转为惊恐；镜头切换至巨大的豌豆藤蔓,兔子和小猫在上面显得害怕。",
+      "video_prompt": "A cartoon-style scene featuring a yellow teddy bear standing in front of an orange wooden house, looking confused then frightened. The camera pans up to reveal a massive pea vine climbing into the sky, with a rabbit and kitten clinging to it, visibly scared. Bright, vivid colors and natural daylight create a playful yet tense atmosphere. Camera movement: slow upward pan from bear to vine. Style: animated, whimsical, high-detail textures, soft lighting, wide-angle perspective.",
+      "style_elements": {
+        "characters": "Yellow teddy bear, small rabbit, tiny kitten with expressive faces",
+        "environment": "Orange wooden house, blue sky, green bushes, giant magical pea vine",
+        "visual_style": "Bright, animated, child-friendly, high saturation, soft shadows",
+        "camera_movement": "Slow upward pan, starting from bear to reveal the towering vine"
+      }
+    },
+    {
+      "scene_id": 2,
+      "start_time": 8.0,
+      "end_time": 14.5,
+      "duration": 6.5,
+      "description": "小兔子闭眼微笑,老鼠紧张担忧,小熊惊讶；老鼠拿起棍子,决心扳倒蔓藤。",
+      "video_prompt": "Close-up shots of a smiling bunny, a worried mouse, and a surprised bear near a garden beside the orange house. The mouse picks up a small stick with determination, gesturing toward the giant vine. Natural lighting enhances emotional expressions. The scene conveys rising tension and resolve. Camera movement: dynamic close-ups shifting between characters, ending with a low-angle shot of the mouse. Style: expressive animation, vibrant colors, detailed fur textures, cheerful yet urgent tone.",
+      "style_elements": {
+        "characters": "Cute bunny, determined mouse, shocked bear with exaggerated facial expressions",
+        "environment": "Garden with flowers, wooden house in background, green grass",
+        "visual_style": "Animated, expressive, bright daylight, soft focus on emotions",
+        "camera_movement": "Close-up cuts between characters, ending with low-angle shot of mouse"
+      }
+    },
+    {
+      "scene_id": 3,
+      "start_time": 14.5,
+      "end_time": 22.0,
+      "duration": 7.5,
+      "description": "果园中,小女孩玩绳子,小熊拿着绳子微笑,展现田园生活的温馨场景。",
+      "video_prompt": "A peaceful orchard scene with a little girl playing with a skipping rope under apple trees. A friendly bear holds a coiled rope, smiling warmly. The orange house sits in the distance, surrounded by blooming plants. Warm sunlight bathes the scene in golden tones. Camera movement: gentle tracking shot following the girl, then a medium shot of the bear. Style: idyllic, pastoral animation, rich colors, soft bokeh, harmonious mood.",
+      "style_elements": {
+        "characters": "Cheerful girl in simple dress, kind bear holding a rope",
+        "environment": "Orchard with fruit trees, wooden house, sunny meadow",
+        "visual_style": "Warm, pastoral, sunlit, soft textures, joyful innocence",
+        "camera_movement": "Tracking shot of girl, then static medium shot of bear"
+      }
+    },
+    {
+      "scene_id": 4,
+      "start_time": 22.0,
+      "end_time": 45.0,
+      "duration": 23.0,
+      "description": "动物们讨论豌豆藤蔓变大带来的危险,决定合作拯救被困的小猫,体现团队勇气与解决方案。",
+      "video_prompt": "Group discussion among the bear, mouse, and bunny as they look up at the towering pea vine. They express concern for the kitten still trapped above. The bear nods bravely—'We can solve this together!' Dynamic expressions show unity and courage. Camera alternates between group huddle and upward glances at the vine. Lighting remains bright, emphasizing hope. Style: emotionally expressive animation, strong character chemistry, natural movement, uplifting tone.",
+      "style_elements": {
+        "characters": "Bear, mouse, bunny showing teamwork and concern",
+        "environment": "Front yard of orange house, giant vine reaching sky",
+        "visual_style": "Expressive, hopeful, animated with emotional depth",
+        "camera_movement": "Alternating close-ups and wide group shots, slight tilt up to vine"
+      }
+    },
+    {
+      "scene_id": 5,
+      "start_time": 45.0,
+      "end_time": 78.0,
+      "duration": 33.0,
+      "description": "小熊爬藤救下小猫,大家安全落地,小猫却还想再玩,带来幽默反差。",
+      "video_prompt": "The bear courageously climbs the giant pea vine, branches swaying gently. Reaching the top, he rescues the kitten, who giggles and says, 'We wanted to play more!' Soft wind rustles leaves. Camera follows the ascent with a smooth crane-up motion, then switches to ground-level relief as they descend safely. Joyful music swells. Style: adventurous yet lighthearted, detailed vine textures, realistic movement, warm daylight.",
+      "style_elements": {
+        "characters": "Brave bear, playful kitten, relieved friends below",
+        "environment": "High in the air on massive pea vine, house visible below",
+        "visual_style": "Dynamic, slightly dramatic but fun, rich environmental detail",
+        "camera_movement": "Crane-up during climb, cut to ground reactions, smooth descent"
+      }
+    },
+    {
+      "scene_id": 6,
+      "start_time": 78.0,
+      "end_time": 110.0,
+      "duration": 32.0,
+      "description": "小胡用仓库材料制作工具,帮助处理豌豆浆,展现创造力与协作。",
+      "video_prompt": "Inside a cozy wooden shed, a clever mouse named Xiao Hu stirs a pot of steaming pea goo, using gadgets made from household items. Others watch in amazement. Close-ups show bubbling mixture and inventive tools. Warm interior lighting with dust particles in air. Camera: handheld-style movement for energy, cut to wide shot revealing the team’s impressed faces. Style: inventive, cozy workshop vibe, detailed props, charming DIY aesthetic.",
+      "style_elements": {
+        "characters": "Inventive mouse (Xiao Hu), curious bear and bunny",
+        "environment": "Rustic garden shed filled with tools and jars",
+        "visual_style": "Cozy, inventive, warm indoor lighting, tactile textures",
+        "camera_movement": "Handheld close-ups, dynamic cuts, ending with wide reaction shot"
+      }
+    },
+    {
+      "scene_id": 7,
+      "start_time": 110.0,
+      "end_time": 145.0,
+      "duration": 35.0,
+      "description": "将豌豆植物移送到公园作为盆景,赋予新家,传递环保与关爱自然的理念。",
+      "video_prompt": "The group carefully transports the giant pea plant in a wheelbarrow toward a sunny park. They plant it in a decorative pot, patting soil around its base. Children wave nearby. Golden hour lighting casts long shadows. Camera: wide establishing shot of journey, then close-up of paws planting. Style: heartwarming, eco-conscious, lush greenery, cinematic warmth, gentle pacing.",
+      "style_elements": {
+        "characters": "Bear, mouse, bunny working together with care",
+        "environment": "Village path leading to public park, flower beds, benches",
+        "visual_style": "Golden hour, cinematic warmth, environmentally positive",
+        "camera_movement": "Wide tracking shot of transport, close-up of planting hands"
+      }
+    },
+    {
+      "scene_id": 8,
+      "start_time": 145.0,
+      "end_time": 190.0,
+      "duration": 45.0,
+      "description": "购物归来发现小猫在怀里睡觉,妈妈来接,温馨家庭团聚时刻。",
+      "video_prompt": "A woman returns from shopping, surprised to find the kitten sleeping peacefully in the bear’s arms. She smiles warmly and takes the kitten, whispering thanks. The mother cat nuzzles her child. Soft afternoon light filters through trees. Camera: slow zoom-in on sleeping kitten, then gentle two-shot of reunion. Style: tender, quiet emotion, soft focus, pastel tones, family warmth.",
+      "style_elements": {
+        "characters": "Sleeping kitten, grateful mother cat, gentle bear",
+        "environment": "Front porch of orange house, shaded by tree",
+        "visual_style": "Soft, emotional, gentle lighting, pastel color palette",
+        "camera_movement": "Slow zoom-in, then steady two-shot of reunion"
+      }
+    },
+    {
+      "scene_id": 9,
+      "start_time": 190.0,
+      "end_time": 230.0,
+      "duration": 40.0,
+      "description": "庆祝时刻:准备豌豆米饭,虽有犹豫但最终接受,展现成长与幽默。",
+      "video_prompt": "A festive table is set with a large bowl of green pea rice. The bear proudly presents it. The kitten hesitates, remembering the giant vine, but then laughs and takes a bite. Everyone claps. Warm kitchen interior with hanging pots and sunlight. Camera: circular dolly around the table, close-up on tasting face. Style: joyful, humorous, food-focused, rich color contrast, cozy domestic setting.",
+      "style_elements": {
+        "characters": "Bear as chef, hesitant then happy kitten, cheering friends",
+        "environment": "Cozy kitchen with rustic decor, sunny window",
+        "visual_style": "Festive, warm, food-centric, high color contrast",
+        "camera_movement": "Dolly around table, close-up on kitten’s reaction"
+      }
+    },
+    {
+      "scene_id": 10,
+      "start_time": 230.0,
+      "end_time": 265.1,
+      "duration": 35.1,
+      "description": "盛大的豌豆舞会开始,大家一起跳舞庆祝,节日气氛达到高潮。",
+      "video_prompt": "A joyful dance party under string lights in the garden. All characters—bear, mouse, bunny, kitten, and villagers—dance in rhythm. Pea-shaped lanterns glow softly. Music pulses with cheer. Camera: sweeping aerial drone shot circling the dancers, then energetic handheld movements among them. Style: celebratory, magical evening lighting, vibrant costumes, dynamic motion, fairy-tale finale.",
+      "style_elements": {
+        "characters": "All characters dancing joyfully in celebration",
+        "environment": "Nighttime garden with fairy lights, pea-themed decorations",
+        "visual_style": "Magical, festive, soft night lighting, colorful lanterns",
+        "camera_movement": "Aerial sweep, then energetic handheld among dancers"
+      }
+    }
+  ],
+  "raw_json": "{\n  \"scenes\": [\n    {\n      \"scene_id\": 1,\n      \"start_time\": 0.0,\n      \"end_time\": 8.0,\n      \"duration\": 8.0,\n      \"description\": \"黄色小熊站在木门前，表情由疑惑转为惊恐；镜头切换至巨大的豌豆藤蔓，兔子和小猫在上面显得害怕。\",\n      \"video_prompt\": \"A cartoon-style scene featuring a yellow teddy bear standing in front of an orange wooden house, looking confused then frightened. The camera pans up to reveal a massive pea vine climbing into the sky, with a rabbit and kitten clinging to it, visibly scared. Bright, vivid colors and natural daylight create a playful yet tense atmosphere. Camera movement: slow upward pan from bear to vine. Style: animated, whimsical, high-detail textures, soft lighting, wide-angle perspective.\",\n      \"style_elements\": {\n        \"characters\": \"Yellow teddy bear, small rabbit, tiny kitten with expressive faces\",\n        \"environment\": \"Orange wooden house, blue sky, green bushes, giant magical pea vine\",\n        \"visual_style\": \"Bright, animated, child-friendly, high saturation, soft shadows\",\n        \"camera_movement\": \"Slow upward pan, starting from bear to reveal the towering vine\"\n      }\n    },\n    {\n      \"scene_id\": 2,\n      \"start_time\": 8.0,\n      \"end_time\": 14.5,\n      \"duration\": 6.5,\n      \"description\": \"小兔子闭眼微笑，老鼠紧张担忧，小熊惊讶；老鼠拿起棍子，决心扳倒蔓藤。\",\n      \"video_prompt\": \"Close-up shots of a smiling bunny, a worried mouse, and a surprised bear near a garden beside the orange house. The mouse picks up a small stick with determination, gesturing toward the giant vine. Natural lighting enhances emotional expressions. The scene conveys rising tension and resolve. Camera movement: dynamic close-ups shifting between characters, ending with a low-angle shot of the mouse. Style: expressive animation, vibrant colors, detailed fur textures, cheerful yet urgent tone.\",\n      \"style_elements\": {\n        \"characters\": \"Cute bunny, determined mouse, shocked bear with exaggerated facial expressions\",\n        \"environment\": \"Garden with flowers, wooden house in background, green grass\",\n        \"visual_style\": \"Animated, expressive, bright daylight, soft focus on emotions\",\n        \"camera_movement\": \"Close-up cuts between characters, ending with low-angle shot of mouse\"\n      }\n    },\n    {\n      \"scene_id\": 3,\n      \"start_time\": 14.5,\n      \"end_time\": 22.0,\n      \"duration\": 7.5,\n      \"description\": \"果园中，小女孩玩绳子，小熊拿着绳子微笑，展现田园生活的温馨场景。\",\n      \"video_prompt\": \"A peaceful orchard scene with a little girl playing with a skipping rope under apple trees. A friendly bear holds a coiled rope, smiling warmly. The orange house sits in the distance, surrounded by blooming plants. Warm sunlight bathes the scene in golden tones. Camera movement: gentle tracking shot following the girl, then a medium shot of the bear. Style: idyllic, pastoral animation, rich colors, soft bokeh, harmonious mood.\",\n      \"style_elements\": {\n        \"characters\": \"Cheerful girl in simple dress, kind bear holding a rope\",\n        \"environment\": \"Orchard with fruit trees, wooden house, sunny meadow\",\n        \"visual_style\": \"Warm, pastoral, sunlit, soft textures, joyful innocence\",\n        \"camera_movement\": \"Tracking shot of girl, then static medium shot of bear\"\n      }\n    },\n    {\n      \"scene_id\": 4,\n      \"start_time\": 22.0,\n      \"end_time\": 45.0,\n      \"duration\": 23.0,\n      \"description\": \"动物们讨论豌豆藤蔓变大带来的危险，决定合作拯救被困的小猫，体现团队勇气与解决方案。\",\n      \"video_prompt\": \"Group discussion among the bear, mouse, and bunny as they look up at the towering pea vine. They express concern for the kitten still trapped above. The bear nods bravely—'We can solve this together!' Dynamic expressions show unity and courage. Camera alternates between group huddle and upward glances at the vine. Lighting remains bright, emphasizing hope. Style: emotionally expressive animation, strong character chemistry, natural movement, uplifting tone.\",\n      \"style_elements\": {\n        \"characters\": \"Bear, mouse, bunny showing teamwork and concern\",\n        \"environment\": \"Front yard of orange house, giant vine reaching sky\",\n        \"visual_style\": \"Expressive, hopeful, animated with emotional depth\",\n        \"camera_movement\": \"Alternating close-ups and wide group shots, slight tilt up to vine\"\n      }\n    },\n    {\n      \"scene_id\": 5,\n      \"start_time\": 45.0,\n      \"end_time\": 78.0,\n      \"duration\": 33.0,\n      \"description\": \"小熊爬藤救下小猫，大家安全落地，小猫却还想再玩，带来幽默反差。\",\n      \"video_prompt\": \"The bear courageously climbs the giant pea vine, branches swaying gently. Reaching the top, he rescues the kitten, who giggles and says, 'We wanted to play more!' Soft wind rustles leaves. Camera follows the ascent with a smooth crane-up motion, then switches to ground-level relief as they descend safely. Joyful music swells. Style: adventurous yet lighthearted, detailed vine textures, realistic movement, warm daylight.\",\n      \"style_elements\": {\n        \"characters\": \"Brave bear, playful kitten, relieved friends below\",\n        \"environment\": \"High in the air on massive pea vine, house visible below\",\n        \"visual_style\": \"Dynamic, slightly dramatic but fun, rich environmental detail\",\n        \"camera_movement\": \"Crane-up during climb, cut to ground reactions, smooth descent\"\n      }\n    },\n    {\n      \"scene_id\": 6,\n      \"start_time\": 78.0,\n      \"end_time\": 110.0,\n      \"duration\": 32.0,\n      \"description\": \"小胡用仓库材料制作工具，帮助处理豌豆浆，展现创造力与协作。\",\n      \"video_prompt\": \"Inside a cozy wooden shed, a clever mouse named Xiao Hu stirs a pot of steaming pea goo, using gadgets made from household items. Others watch in amazement. Close-ups show bubbling mixture and inventive tools. Warm interior lighting with dust particles in air. Camera: handheld-style movement for energy, cut to wide shot revealing the team’s impressed faces. Style: inventive, cozy workshop vibe, detailed props, charming DIY aesthetic.\",\n      \"style_elements\": {\n        \"characters\": \"Inventive mouse (Xiao Hu), curious bear and bunny\",\n        \"environment\": \"Rustic garden shed filled with tools and jars\",\n        \"visual_style\": \"Cozy, inventive, warm indoor lighting, tactile textures\",\n        \"camera_movement\": \"Handheld close-ups, dynamic cuts, ending with wide reaction shot\"\n      }\n    },\n    {\n      \"scene_id\": 7,\n      \"start_time\": 110.0,\n      \"end_time\": 145.0,\n      \"duration\": 35.0,\n      \"description\": \"将豌豆植物移送到公园作为盆景，赋予新家，传递环保与关爱自然的理念。\",\n      \"video_prompt\": \"The group carefully transports the giant pea plant in a wheelbarrow toward a sunny park. They plant it in a decorative pot, patting soil around its base. Children wave nearby. Golden hour lighting casts long shadows. Camera: wide establishing shot of journey, then close-up of paws planting. Style: heartwarming, eco-conscious, lush greenery, cinematic warmth, gentle pacing.\",\n      \"style_elements\": {\n        \"characters\": \"Bear, mouse, bunny working together with care\",\n        \"environment\": \"Village path leading to public park, flower beds, benches\",\n        \"visual_style\": \"Golden hour, cinematic warmth, environmentally positive\",\n        \"camera_movement\": \"Wide tracking shot of transport, close-up of planting hands\"\n      }\n    },\n    {\n      \"scene_id\": 8,\n      \"start_time\": 145.0,\n      \"end_time\": 190.0,\n      \"duration\": 45.0,\n      \"description\": \"购物归来发现小猫在怀里睡觉，妈妈来接，温馨家庭团聚时刻。\",\n      \"video_prompt\": \"A woman returns from shopping, surprised to find the kitten sleeping peacefully in the bear’s arms. She smiles warmly and takes the kitten, whispering thanks. The mother cat nuzzles her child. Soft afternoon light filters through trees. Camera: slow zoom-in on sleeping kitten, then gentle two-shot of reunion. Style: tender, quiet emotion, soft focus, pastel tones, family warmth.\",\n      \"style_elements\": {\n        \"characters\": \"Sleeping kitten, grateful mother cat, gentle bear\",\n        \"environment\": \"Front porch of orange house, shaded by tree\",\n        \"visual_style\": \"Soft, emotional, gentle lighting, pastel color palette\",\n        \"camera_movement\": \"Slow zoom-in, then steady two-shot of reunion\"\n      }\n    },\n    {\n      \"scene_id\": 9,\n      \"start_time\": 190.0,\n      \"end_time\": 230.0,\n      \"duration\": 40.0,\n      \"description\": \"庆祝时刻：准备豌豆米饭，虽有犹豫但最终接受，展现成长与幽默。\",\n      \"video_prompt\": \"A festive table is set with a large bowl of green pea rice. The bear proudly presents it. The kitten hesitates, remembering the giant vine, but then laughs and takes a bite. Everyone claps. Warm kitchen interior with hanging pots and sunlight. Camera: circular dolly around the table, close-up on tasting face. Style: joyful, humorous, food-focused, rich color contrast, cozy domestic setting.\",\n      \"style_elements\": {\n        \"characters\": \"Bear as chef, hesitant then happy kitten, cheering friends\",\n        \"environment\": \"Cozy kitchen with rustic decor, sunny window\",\n        \"visual_style\": \"Festive, warm, food-centric, high color contrast\",\n        \"camera_movement\": \"Dolly around table, close-up on kitten’s reaction\"\n      }\n    },\n    {\n      \"scene_id\": 10,\n      \"start_time\": 230.0,\n      \"end_time\": 265.1,\n      \"duration\": 35.1,\n      \"description\": \"盛大的豌豆舞会开始，大家一起跳舞庆祝，节日气氛达到高潮。\",\n      \"video_prompt\": \"A joyful dance party under string lights in the garden. All characters—bear, mouse, bunny, kitten, and villagers—dance in rhythm. Pea-shaped lanterns glow softly. Music pulses with cheer. Camera: sweeping aerial drone shot circling the dancers, then energetic handheld movements among them. Style: celebratory, magical evening lighting, vibrant costumes, dynamic motion, fairy-tale finale.\",\n      \"style_elements\": {\n        \"characters\": \"All characters dancing joyfully in celebration\",\n        \"environment\": \"Nighttime garden with fairy lights, pea-themed decorations\",\n        \"visual_style\": \"Magical, festive, soft night lighting, colorful lanterns\",\n        \"camera_movement\": \"Aerial sweep, then energetic handheld among dancers\"\n      }\n    }\n  ]\n}"
+}

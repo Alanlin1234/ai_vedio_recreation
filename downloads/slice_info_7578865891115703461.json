@@ -1,0 +1,100 @@
+{
+  "slices": [
+    {
+      "slice_id": "slice_0",
+      "input_file": "D:\\ai-agent-comfy\\downloads\\7578865891115703461_20251212_161717.mp4",
+      "output_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_000.mp4",
+      "preview_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_000.jpg",
+      "start_time": 0,
+      "duration": 8,
+      "index": 0
+    },
+    {
+      "slice_id": "slice_1",
+      "input_file": "D:\\ai-agent-comfy\\downloads\\7578865891115703461_20251212_161717.mp4",
+      "output_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_001.mp4",
+      "preview_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_001.jpg",
+      "start_time": 8,
+      "duration": 8,
+      "index": 1
+    },
+    {
+      "slice_id": "slice_2",
+      "input_file": "D:\\ai-agent-comfy\\downloads\\7578865891115703461_20251212_161717.mp4",
+      "output_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_002.mp4",
+      "preview_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_002.jpg",
+      "start_time": 16,
+      "duration": 8,
+      "index": 2
+    },
+    {
+      "slice_id": "slice_3",
+      "input_file": "D:\\ai-agent-comfy\\downloads\\7578865891115703461_20251212_161717.mp4",
+      "output_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_003.mp4",
+      "preview_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_003.jpg",
+      "start_time": 24,
+      "duration": 8,
+      "index": 3
+    },
+    {
+      "slice_id": "slice_4",
+      "input_file": "D:\\ai-agent-comfy\\downloads\\7578865891115703461_20251212_161717.mp4",
+      "output_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_004.mp4",
+      "preview_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_004.jpg",
+      "start_time": 32,
+      "duration": 8,
+      "index": 4
+    },
+    {
+      "slice_id": "slice_5",
+      "input_file": "D:\\ai-agent-comfy\\downloads\\7578865891115703461_20251212_161717.mp4",
+      "output_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_005.mp4",
+      "preview_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_005.jpg",
+      "start_time": 40,
+      "duration": 8,
+      "index": 5
+    },
+    {
+      "slice_id": "slice_6",
+      "input_file": "D:\\ai-agent-comfy\\downloads\\7578865891115703461_20251212_161717.mp4",
+      "output_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_006.mp4",
+      "preview_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_006.jpg",
+      "start_time": 48,
+      "duration": 8,
+      "index": 6
+    },
+    {
+      "slice_id": "slice_7",
+      "input_file": "D:\\ai-agent-comfy\\downloads\\7578865891115703461_20251212_161717.mp4",
+      "output_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_007.mp4",
+      "preview_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_007.jpg",
+      "start_time": 56,
+      "duration": 8,
+      "index": 7
+    },
+    {
+      "slice_id": "slice_8",
+      "input_file": "D:\\ai-agent-comfy\\downloads\\7578865891115703461_20251212_161717.mp4",
+      "output_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_008.mp4",
+      "preview_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_008.jpg",
+      "start_time": 64,
+      "duration": 8,
+      "index": 8
+    },
+    {
+      "slice_id": "slice_9",
+      "input_file": "D:\\ai-agent-comfy\\downloads\\7578865891115703461_20251212_161717.mp4",
+      "output_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_009.mp4",
+      "preview_file": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7\\slice_009.jpg",
+      "start_time": 72,
+      "duration": 8,
+      "index": 9
+    }
+  ],
+  "slice_info": {
+    "total_slices": 10,
+    "slice_duration": 8,
+    "input_video": "D:\\ai-agent-comfy\\downloads\\7578865891115703461_20251212_161717.mp4",
+    "output_dir": "D:\\ai-agent-comfy\\downloads\\slices_dd21f1e7"
+  }
+}

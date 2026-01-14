@@ -1,0 +1,59 @@
+{
+  "success": true,
+  "total_scenes": 5,
+  "successful_count": 5,
+  "failed_count": 0,
+  "output_directory": "d:\\ai-agent-comfy\\downloads\\recreation_1766368710\\videos",
+  "generated_videos": [
+    {
+      "scene_index": 0,
+      "scene_id": 0,
+      "success": true,
+      "local_path": "d:\\ai-agent-comfy\\downloads\\recreation_1766368710\\videos\\scene_01.mp4",
+      "prompt": "Animated children's cartoon scene: A cheerful anthropomorphic white rabbit with pink inner ears, blue overalls, and wide-eyed curious expression hops backward in surprise as a giant green pea vine rapidly expands upward from garden soil—twisting, coiling, and sprouting oversized leaves and pods. Beside it, a fluffy brown bear in red scarf stares upward with mouth agape, paws raised in alarm. Background features vibrant rural garden: pastel-colored cottage with flower boxes, wooden vegetable racks, sun-dappled grass, and blooming marigolds. Bright daylight, soft shadows, saturated primary colors (emerald greens, sky blues, warm yellows). Smooth tracking shot starts medium-long, dollies forward while gently rising to emphasize vine’s dramatic growth. Clean vector-based 2D animation style, smooth motion blur on fast movements, subtle bloom lighting. High-resolution 16:9 frame at 24fps. Clear, bold, centered Chinese subtitles in rounded sans-serif font (size 48, white with black stroke) displaying: '小兔子:豌豆藤蔓不知为什么变大了,太可怕了。我的天哪,越来越大越来越高了！'",
+      "duration": 8,
+      "start_time": 0,
+      "end_time": 4
+    },
+    {
+      "scene_index": 1,
+      "scene_id": 1,
+      "success": true,
+      "local_path": "d:\\ai-agent-comfy\\downloads\\recreation_1766368710\\videos\\scene_02.mp4",
+      "prompt": "Animated cartoon scene, 4.0–8.0 seconds: A curious brown cartoon bear with round glasses and a blue overalls stands on a sunlit rustic garden path, eyes wide with alarm as giant green pea vines rapidly coil upward beside him. Beside him, a cheerful white rabbit in a red polka-dot dress jumps excitedly, ears perked, mouth open mid-sentence. Orange kitten clings nervously to the top of a spiraling vine near a colorful cottage roof. Background features vibrant vegetable patches, wooden trellises, blooming marigolds, and soft-focus cottages under a clear azure sky. Warm natural daylight, saturated pastel palette, smooth cel-shaded textures, gentle bokeh depth. Medium tracking shot starts at waist level, slowly dollying backward while subtly rising to reveal escalating vine height; ends with a slight tilt upward toward the vine’s tip. High-resolution 16:9 animation, 24fps, crisp line art, no photorealism. Overlay clear, centered, bold sans-serif Chinese subtitles (white with black stroke) synced precisely to audio: '天哪,它就像面条一样全出脚了,这可怎么办啊？这样下去越来越大,蔓头上面的小猫会很危险的。'",
+      "duration": 8,
+      "start_time": 4,
+      "end_time": 8
+    },
+    {
+      "scene_index": 2,
+      "scene_id": 2,
+      "success": true,
+      "local_path": "d:\\ai-agent-comfy\\downloads\\recreation_1766368710\\videos\\scene_03.mp4",
+      "prompt": "Animated cartoon scene in vibrant children's storybook style: A curious brown bear in a red scarf and blue overalls looks up nervously as giant green pea vines rapidly spiral upward, wrapping around a colorful cottage roof. Beside him, a cheerful white rabbit with pink ears, wearing a yellow polka-dot dress, gestures excitedly with both paws while shouting. An orange kitten dangles precariously from a vine near the rooftop edge, tail flicking in panic. Background features sunlit rural setting — cobblestone path, flower beds, wooden vegetable racks, and pastel-colored houses with smoke curling from chimneys. Warm daylight, soft shadows, hand-drawn texture with subtle cel-shading. Medium tracking shot starts at ground level, tilting up dynamically as vines surge skyward; ends on a low-angle wide shot emphasizing height and urgency. High-resolution 16:9 animation at 24fps. Clear, centered, aesthetically styled Chinese subtitles (Noto Sans SC, bold, semi-transparent black background) display synchronized audio: '天哪,它就像面条一样全出脚了,这可怎么办啊？这样下去越来越大,蔓头上面的小猫会很危险的。'",
+      "duration": 8,
+      "start_time": 8,
+      "end_time": 12
+    },
+    {
+      "scene_index": 3,
+      "scene_id": 3,
+      "success": true,
+      "local_path": "d:\\ai-agent-comfy\\downloads\\recreation_1766368710\\videos\\scene_04.mp4",
+      "prompt": "Animated cartoon scene in vibrant children's storybook style: At 12.0–16.0s, three characters—pink-eared white rabbit (wearing blue overalls, wide-eyed with determined expression), brown teddy bear (red scarf, fur slightly ruffled, tense but resolute posture), and orange kitten (perched precariously on top of an enormous, spiraling green pea vine now entangled around a colorful cottage roof)—interact dynamically. The vine pulses gently with bioluminescent veins, stretching upward like animated noodles. Background features sunlit rural garden with polka-dot fence, vegetable racks, and candy-colored houses; soft volumetric lighting casts cheerful shadows. Camera starts low-angle wide shot tracking upward as vine surges, then dollies forward into medium two-shot of rabbit and bear reaching up, followed by quick cut to high-angle overhead view showing kitten waving from roof peak. Smooth motion, crisp vector-based animation, 24fps, ultra-clean lines, saturated pastel palette. Render with subtle bloom and gentle depth-of-field blur. Overlay clear, centered, bold sans-serif Chinese subtitles (white with black stroke) synced precisely to audio: '天哪,它就像面条一样全出脚了,这可怎么办啊？这样下去越来越大,蔓头上面的小猫会很危险的。'",
+      "duration": 8,
+      "start_time": 12,
+      "end_time": 16
+    },
+    {
+      "scene_index": 4,
+      "scene_id": 4,
+      "success": true,
+      "local_path": "d:\\ai-agent-comfy\\downloads\\recreation_1766368710\\videos\\scene_05.mp4",
+      "prompt": "Animated cartoon scene: A cheerful white rabbit with pink ears and blue overalls leaps playfully onto a rooftop garden, waving excitedly at a nervous brown bear in red scarf and striped shirt who cautiously peers over the edge. An orange kitten with green bow sits safely on the rabbit's back, giggling. Giant green pea vines coil dynamically around a colorful cottage roof, pulsing gently with soft bioluminescent glow. Bright daylight with warm golden-hour lighting casts soft shadows; vibrant saturated palette—emerald greens, sky blues, buttery yellows. Smooth crane-up camera starts medium-close on rabbit’s face, then rises fluidly to wide aerial view revealing entire whimsical village rooftop garden. Clean vector-based 2D animation style, smooth motion blur on vine movement, subtle lens flare on sun highlights. High-resolution 16:9 frame at 24fps. Clear, bold, centered Chinese subtitles with rounded sans-serif font (Noto Sans SC), soft white stroke, animated fade-in/out synced precisely to audio: '哇塞,我们现在在房顶了,这是我们第一次站这么高。很好,我爬上去救他们什么,我来了。'",
+      "duration": 8,
+      "start_time": 16,
+      "end_time": 20
+    }
+  ]
+}

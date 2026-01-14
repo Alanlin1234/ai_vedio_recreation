@@ -1,0 +1,38 @@
+{
+  "timestamp": "2025-12-12T20:40:21.990746",
+  "test_name": "prompt_json_format_test",
+  "json_format_result": {
+    "success": true,
+    "video_prompt": "A realistic classroom scene showing a College English Test (CET-4/6) listening exam in progress. Multiple students, aged around 18–22, sit at individual desks, wearing casual academic clothing such as hoodies and glasses, focused with serious expressions. They wear over-ear headphones and are writing on exam papers. A proctor teacher, middle-aged, in formal shirt and trousers, walks slowly down the aisle between desks with quiet, deliberate steps, observing students. The classroom has fluorescent ceiling lighting casting even, cool-toned illumination, creating a calm but tense atmosphere. Walls feature bulletin boards with academic posters and clocks. Desks are neatly arranged in rows, adding to the structured feel. Shot in high detail with shallow depth of field during close-ups, transitioning to wide-angle static shots. Camera starts with a medium wide shot from the front of the class, then gently dollies forward along the central aisle, capturing student reactions and teacher movement. Visual style is clean, naturalistic color grading with slight desaturation to emphasize concentration. High-resolution textures on faces, paper, and fabrics. Shot at 24fps, 16:9 aspect ratio, cinematic sharpness with minimal grain.",
+    "scene_info": {
+      "scene_id": 1,
+      "start_time": 0.0,
+      "end_time": 8.0,
+      "duration": 8.0
+    },
+    "style_elements": {
+      "characters": "Students in casual academic attire with headphones, focused expressions, writing; teacher in formal wear walking quietly, monitoring.",
+      "environment": "Well-lit classroom with rows of desks, academic posters, clocks, and bulletin boards, orderly and quiet.",
+      "visual_style": "Naturalistic color grading, cool fluorescent lighting, clean composition, slightly desaturated tones.",
+      "camera_movement": "Medium wide shot opening, followed by a slow dolly forward along the central aisle, smooth tracking."
+    },
+    "technical_params": {
+      "aspect_ratio": "16:9",
+      "fps": 24,
+      "quality": "high"
+    },
+    "duration": 8.0,
+    "raw_response": "{\n  \"video_prompt\": \"A realistic classroom scene showing a College English Test (CET-4/6) listening exam in progress. Multiple students, aged around 18–22, sit at individual desks, wearing casual academic clothing such as hoodies and glasses, focused with serious expressions. They wear over-ear headphones and are writing on exam papers. A proctor teacher, middle-aged, in formal shirt and trousers, walks slowly down the aisle between desks with quiet, deliberate steps, observing students. The classroom has fluorescent ceiling lighting casting even, cool-toned illumination, creating a calm but tense atmosphere. Walls feature bulletin boards with academic posters and clocks. Desks are neatly arranged in rows, adding to the structured feel. Shot in high detail with shallow depth of field during close-ups, transitioning to wide-angle static shots. Camera starts with a medium wide shot from the front of the class, then gently dollies forward along the central aisle, capturing student reactions and teacher movement. Visual style is clean, naturalistic color grading with slight desaturation to emphasize concentration. High-resolution textures on faces, paper, and fabrics. Shot at 24fps, 16:9 aspect ratio, cinematic sharpness with minimal grain.\",\n  \"scene_info\": {\n    \"scene_id\": 1,\n    \"start_time\": 0.0,\n    \"end_time\": 8.0,\n    \"duration\": 8.0\n  },\n  \"style_elements\": {\n    \"characters\": \"Students in casual academic attire with headphones, focused expressions, writing; teacher in formal wear walking quietly, monitoring.\",\n    \"environment\": \"Well-lit classroom with rows of desks, academic posters, clocks, and bulletin boards, orderly and quiet.\",\n    \"visual_style\": \"Naturalistic color grading, cool fluorescent lighting, clean composition, slightly desaturated tones.\",\n    \"camera_movement\": \"Medium wide shot opening, followed by a slow dolly forward along the central aisle, smooth tracking.\"\n  },\n  \"technical_params\": {\n    \"aspect_ratio\": \"16:9\",\n    \"fps\": 24,\n    \"quality\": \"high\"\n  }\n}"
+  },
+  "text_format_result": {
+    "success": true,
+    "video_prompt": "A medium-wide shot of a quiet, well-lit classroom during a CET-4/CET-6 listening exam. Rows of focused university students sit at wooden desks, wearing headphones and writing on test papers. Students are dressed in casual academic attire—hoodies, sweaters, and button-down shirts—with neutral or concentrated expressions. Some glance at their watches; others lean forward attentively. A proctor in formal business attire walks slowly down the aisle, monitoring the exam with calm vigilance. The room features white walls, a green chalkboard with written instructions, and overhead fluorescent lighting casting soft, even illumination. Desks are neatly arranged, each holding exam booklets, pencils, and erasers. The atmosphere is tense yet orderly. Camera starts with a wide establishing view, then slowly dollies forward along the central aisle, maintaining eye-level perspective. Shallow depth of field briefly focuses on individual students’ faces and hands. Color grading is natural with cool blue-white tones to emphasize concentration. Shot in 4K resolution, 24fps, with minimal grain for cinematic clarity. Soft shadows and realistic textures enhance authenticity. No music, ambient silence implied.",
+    "duration": 8.0,
+    "technical_params": {
+      "aspect_ratio": "16:9",
+      "fps": 24,
+      "quality": "high",
+      "style": "cinematic"
+    }
+  }
+}

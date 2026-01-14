@@ -469,7 +469,7 @@ class VideoRecreationService:
                     self.log_step(recreation_id, 'speaker_recognition', 'success', f'说话人识别完成，发现 {len(speakers)} 个说话人')
                 else:
                     print(f"[说话人识别] 识别失败: {speaker_result.get('error')}")
-                    self.log_step(recreation_id, 'speaker_recognition', 'failed', f'说话人识别失败: {speaker_result.get('error')}')
+                    self.log_step(recreation_id, 'speaker_recognition', 'failed', f'说话人识别失败: {speaker_result.get("error")}')
             else:
                 print(f"[说话人识别] 跳过说话人识别，因为音频提取失败")
                 self.log_step(recreation_id, 'speaker_recognition', 'skipped', '跳过说话人识别，音频提取失败')

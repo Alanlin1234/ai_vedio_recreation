@@ -1,0 +1,121 @@
+{
+  "video_path": "d:\\ai-agent-comfy\\downloads\\抖音20251216-192137.mp4",
+  "timestamp": "20251219_181645",
+  "prompt_type": "intelligent_segmentation",
+  "scene_count": 8,
+  "scenes": [
+    {
+      "scene_id": 1,
+      "start_time": 0.0,
+      "end_time": 8.0,
+      "duration": 8.0,
+      "description": "一名年轻男子在明亮温暖的室内环境中从容行走，背景为家庭或办公场所，配有书架、桌椅和墙面装饰，光线柔和自然，整体氛围平静和谐。",
+      "video_prompt": "A young man walks confidently through a warmly lit indoor space, wearing a dark top and light pants. The environment resembles a cozy home or office with white walls, carpeted flooring, wooden shelves, furniture, and framed art on the walls. Soft, natural daylight streams through windows, creating a calm and inviting atmosphere. The camera follows him in a smooth tracking shot at eye level, emphasizing his relaxed posture and focused demeanor. Shot in 4K resolution, 24fps, with shallow depth of field to gently blur the background while maintaining environmental clarity.",
+      "style_elements": {
+        "characters": "Young male in dark top and light pants, confident and calm",
+        "environment": "Indoor domestic/workspace with bookshelves, furniture, and soft lighting",
+        "visual_style": "Warm tone, natural daylight, soft shadows, realistic textures",
+        "camera_movement": "Smooth tracking shot at eye level"
+      }
+    },
+    {
+      "scene_id": 2,
+      "start_time": 8.0,
+      "end_time": 45.0,
+      "duration": 37.0,
+      "description": "拖拉机陷入泥潭，驾驶员惊慌失措，车轮打滑无法前进，他自言自语表达挫败感，背景为野外泥泞道路，天空阴沉。",
+      "video_prompt": "A cartoon-style tractor is stuck in a deep muddy pit on a rural dirt road. The driver, a small anthropomorphic animal character (likely a bear), panics as the wheels spin uselessly, splashing thick mud. He exclaims in frustration, 'Why can't I move? The wheels are slipping!' The sky is overcast, enhancing the gloomy mood. Mud covers parts of the vehicle, including his messy 'mud hairstyle.' The scene uses exaggerated expressions and dynamic sound effects. Camera alternates between medium close-up of the driver and low-angle shots of spinning tires. Rendered in vibrant animation style with soft shading, 16:9 aspect ratio, 30fps.",
+      "style_elements": {
+        "characters": "Anthropomorphic animal driver (bear-like), expressive and distressed",
+        "environment": "Rural muddy path under gray skies, isolated setting",
+        "visual_style": "Animated cartoon style, exaggerated physics and facial expressions",
+        "camera_movement": "Alternating close-ups and low-angle shots for dramatic effect"
+      }
+    },
+    {
+      "scene_id": 3,
+      "start_time": 45.0,
+      "end_time": 90.0,
+      "duration": 45.0,
+      "description": "小兔子下车帮忙推车，但泥地太滑失败，随后小绵羊也加入，三人被困，情绪转为无奈与担忧，但仍保持乐观对话。",
+      "video_prompt": "The little rabbit hops out of the tractor to help push, but slips on the slick mud, falling back with a splash. Then a small sheep joins, both pushing hard with no success. They exchange worried glances, saying, 'We’re trapped!' Despite this, their voices remain hopeful. The bear driver reassures them, 'Don’t lose hope—we’ll find a way!' Medium group shots show all three characters covered in mud, standing beside the stranded vehicle. Background shows dense trees and puddles. Animation style features soft fur textures and realistic mud dynamics. Camera slowly circles the group to emphasize unity. 1080p, 25fps, warm highlights despite overcast lighting.",
+      "style_elements": {
+        "characters": "Rabbit and sheep join to help; expressive, muddy, determined",
+        "environment": "Forest trail with puddles, tall trees, and heavy mud",
+        "visual_style": "Colorful animated characters with detailed textures and fluid motion",
+        "camera_movement": "Slow circular movement around the group"
+      }
+    },
+    {
+      "scene_id": 4,
+      "start_time": 90.0,
+      "end_time": 135.0,
+      "duration": 45.0,
+      "description": "角色提出清理泥浆的想法，但觉得太累，转而寻找其他办法；他突然想到新点子，开始兴奋地寻找工具。",
+      "video_prompt": "The bear suddenly perks up, exclaiming, 'Wait! I have an idea!' He begins searching frantically around the tractor, lifting seat cushions and checking compartments. The others watch curiously. Voiceover expresses doubt: 'Will it work? Where’s the tool?' Tension builds with quick cuts and rising music. Close-ups show muddy hands rummaging through storage boxes. After a moment of suspense, he triumphantly shouts, 'Found it!' The scene transitions from fatigue to excitement. Lighting remains dim but highlights his face during epiphany. Animated style maintains consistent character design. Camera uses jump cuts and handheld-like motion for urgency. 16:9, 30fps.",
+      "style_elements": {
+        "characters": "Bear becomes inspired; others curious and expectant",
+        "environment": "Inside and around the stuck tractor, cluttered with tools and gear",
+        "visual_style": "Expressive animation with emotional shifts and comedic timing",
+        "camera_movement": "Quick cuts and simulated handheld movement for tension"
+      }
+    },
+    {
+      "scene_id": 5,
+      "start_time": 135.0,
+      "end_time": 180.0,
+      "duration": 45.0,
+      "description": "找到工具后，揭示是一个自制吸尘器，小胡自豪展示发明，请求小熊帮忙搬运并连接电源。",
+      "video_prompt": "The bear reveals a quirky, homemade vacuum cleaner made from scrap parts—pipes, wires, and a large hose. 'This is my new invention!' he declares proudly. The rabbit watches in amazement. He asks the bear to help carry it closer to the mud. They plug the device into the tractor’s battery for power. Close-ups show sparks and blinking lights as it powers up. The visual style blends whimsical engineering with cartoon realism. Green energy glow highlights the machine. Camera focuses on the gadget with rotating views, then pulls back to show teamwork. Brightened color grading contrasts earlier gloom. 4K, 24fps, dynamic focus transitions.",
+      "style_elements": {
+        "characters": "Inventor bear demonstrates creation; others impressed and supportive",
+        "environment": "Tractor side with scattered tools and glowing device",
+        "visual_style": "Whimsical tech design with cartoonish yet functional look",
+        "camera_movement": "Rotating close-up on device, pull-back to wide team shot"
+      }
+    },
+    {
+      "scene_id": 6,
+      "start_time": 180.0,
+      "end_time": 225.0,
+      "duration": 45.0,
+      "description": "启动吸尘器吸取泥浆，过程紧张又有趣，泥浆被逐渐吸干，角色们欢呼鼓励，气氛转向积极。",
+      "video_prompt": "The vacuum roars to life with a comical 'whoosh' sound, sucking thick mud rapidly. Mud flies into the transparent tank, filling it quickly. The characters cheer, 'Go! Go! Faster!' as the muck clears around the wheels. Slowly, the tractor becomes exposed. Camera shakes slightly during suction for effect. Time-lapse-style editing shows progress. Characters dance in joy when most mud is gone. Lighting brightens progressively, symbolizing hope. Full animation with particle effects for flying mud droplets. Wide-angle shots capture action, followed by joyful close-ups. 16:9, 30fps, vivid colors.",
+      "style_elements": {
+        "characters": "All celebrate together; energetic and relieved",
+        "environment": "Muddy area being cleared around tractor",
+        "visual_style": "Dynamic animation with special effects for suction and splatter",
+        "camera_movement": "Shaking during operation, wide angles and rapid close-ups"
+      }
+    },
+    {
+      "scene_id": 7,
+      "start_time": 225.0,
+      "end_time": 260.0,
+      "duration": 35.0,
+      "description": "小熊推动拖拉机成功脱困，车辆缓缓驶出，大家欢庆胜利，准备继续前往送甘草。",
+      "video_prompt": "With the mud cleared, the bear braces himself and pushes the rear of the tractor. It creaks forward, then gains traction. The wheels roll smoothly out of the pit. Everyone cheers loudly, 'We did it!' High-fives and hugs follow. The tractor starts up again, ready to continue its journey. Camera follows the vehicle pulling away in a steady dolly shot. Sunlight breaks through clouds, bathing the scene in golden light. Joyful music swells. Animated expressions are exaggerated for celebration. Shot in widescreen format with smooth motion blur. 1080p, 25fps, optimistic tone.",
+      "style_elements": {
+        "characters": "Team celebrates success; triumphant and united",
+        "environment": "Clearing trail after mud removal, sunlight emerging",
+        "visual_style": "Brightening palette, celebratory lighting and motion",
+        "camera_movement": "Dolly-out shot following departing tractor"
+      }
+    },
+    {
+      "scene_id": 8,
+      "start_time": 260.0,
+      "end_time": 279.1,
+      "duration": 19.1,
+      "description": "抵达目的地，给小羊送干草，动物们开心进食，最后大家一起跳舞庆祝互助与成功。",
+      "video_prompt": "The tractor arrives at a sunny meadow where hungry lambs await. 'Here’s your hay!' says the rabbit, unloading bundles. The lambs munch happily. Then the group forms a circle, dancing joyfully to upbeat music. Even the shy sheep joins in. Text appears playfully: 'Everyone helps, everyone dances!' Final shot pans upward to a wide view of the field under blue sky. Characters wave at the camera. Style remains consistent with earlier animation—bright, soft-edged, emotionally expressive. Ends with cheerful fade-out. 16:9, 30fps, warm color grade.",
+      "style_elements": {
+        "characters": "All characters rejoice; inclusive, happy dancing",
+        "environment": "Sunny meadow with grazing lambs and delivery truck",
+        "visual_style": "Joyful, colorful animation with uplifting tone",
+        "camera_movement": "Wide upward pan ending in aerial view"
+      }
+    }
+  ],
+  "raw_json": "{\n  \"scenes\": [\n    {\n      \"scene_id\": 1,\n      \"start_time\": 0.0,\n      \"end_time\": 8.0,\n      \"duration\": 8.0,\n      \"description\": \"一名年轻男子在明亮温暖的室内环境中从容行走，背景为家庭或办公场所，配有书架、桌椅和墙面装饰，光线柔和自然，整体氛围平静和谐。\",\n      \"video_prompt\": \"A young man walks confidently through a warmly lit indoor space, wearing a dark top and light pants. The environment resembles a cozy home or office with white walls, carpeted flooring, wooden shelves, furniture, and framed art on the walls. Soft, natural daylight streams through windows, creating a calm and inviting atmosphere. The camera follows him in a smooth tracking shot at eye level, emphasizing his relaxed posture and focused demeanor. Shot in 4K resolution, 24fps, with shallow depth of field to gently blur the background while maintaining environmental clarity.\",\n      \"style_elements\": {\n        \"characters\": \"Young male in dark top and light pants, confident and calm\",\n        \"environment\": \"Indoor domestic/workspace with bookshelves, furniture, and soft lighting\",\n        \"visual_style\": \"Warm tone, natural daylight, soft shadows, realistic textures\",\n        \"camera_movement\": \"Smooth tracking shot at eye level\"\n      }\n    },\n    {\n      \"scene_id\": 2,\n      \"start_time\": 8.0,\n      \"end_time\": 45.0,\n      \"duration\": 37.0,\n      \"description\": \"拖拉机陷入泥潭，驾驶员惊慌失措，车轮打滑无法前进，他自言自语表达挫败感，背景为野外泥泞道路，天空阴沉。\",\n      \"video_prompt\": \"A cartoon-style tractor is stuck in a deep muddy pit on a rural dirt road. The driver, a small anthropomorphic animal character (likely a bear), panics as the wheels spin uselessly, splashing thick mud. He exclaims in frustration, 'Why can't I move? The wheels are slipping!' The sky is overcast, enhancing the gloomy mood. Mud covers parts of the vehicle, including his messy 'mud hairstyle.' The scene uses exaggerated expressions and dynamic sound effects. Camera alternates between medium close-up of the driver and low-angle shots of spinning tires. Rendered in vibrant animation style with soft shading, 16:9 aspect ratio, 30fps.\",\n      \"style_elements\": {\n        \"characters\": \"Anthropomorphic animal driver (bear-like), expressive and distressed\",\n        \"environment\": \"Rural muddy path under gray skies, isolated setting\",\n        \"visual_style\": \"Animated cartoon style, exaggerated physics and facial expressions\",\n        \"camera_movement\": \"Alternating close-ups and low-angle shots for dramatic effect\"\n      }\n    },\n    {\n      \"scene_id\": 3,\n      \"start_time\": 45.0,\n      \"end_time\": 90.0,\n      \"duration\": 45.0,\n      \"description\": \"小兔子下车帮忙推车，但泥地太滑失败，随后小绵羊也加入，三人被困，情绪转为无奈与担忧，但仍保持乐观对话。\",\n      \"video_prompt\": \"The little rabbit hops out of the tractor to help push, but slips on the slick mud, falling back with a splash. Then a small sheep joins, both pushing hard with no success. They exchange worried glances, saying, 'We’re trapped!' Despite this, their voices remain hopeful. The bear driver reassures them, 'Don’t lose hope—we’ll find a way!' Medium group shots show all three characters covered in mud, standing beside the stranded vehicle. Background shows dense trees and puddles. Animation style features soft fur textures and realistic mud dynamics. Camera slowly circles the group to emphasize unity. 1080p, 25fps, warm highlights despite overcast lighting.\",\n      \"style_elements\": {\n        \"characters\": \"Rabbit and sheep join to help; expressive, muddy, determined\",\n        \"environment\": \"Forest trail with puddles, tall trees, and heavy mud\",\n        \"visual_style\": \"Colorful animated characters with detailed textures and fluid motion\",\n        \"camera_movement\": \"Slow circular movement around the group\"\n      }\n    },\n    {\n      \"scene_id\": 4,\n      \"start_time\": 90.0,\n      \"end_time\": 135.0,\n      \"duration\": 45.0,\n      \"description\": \"角色提出清理泥浆的想法，但觉得太累，转而寻找其他办法；他突然想到新点子，开始兴奋地寻找工具。\",\n      \"video_prompt\": \"The bear suddenly perks up, exclaiming, 'Wait! I have an idea!' He begins searching frantically around the tractor, lifting seat cushions and checking compartments. The others watch curiously. Voiceover expresses doubt: 'Will it work? Where’s the tool?' Tension builds with quick cuts and rising music. Close-ups show muddy hands rummaging through storage boxes. After a moment of suspense, he triumphantly shouts, 'Found it!' The scene transitions from fatigue to excitement. Lighting remains dim but highlights his face during epiphany. Animated style maintains consistent character design. Camera uses jump cuts and handheld-like motion for urgency. 16:9, 30fps.\",\n      \"style_elements\": {\n        \"characters\": \"Bear becomes inspired; others curious and expectant\",\n        \"environment\": \"Inside and around the stuck tractor, cluttered with tools and gear\",\n        \"visual_style\": \"Expressive animation with emotional shifts and comedic timing\",\n        \"camera_movement\": \"Quick cuts and simulated handheld movement for tension\"\n      }\n    },\n    {\n      \"scene_id\": 5,\n      \"start_time\": 135.0,\n      \"end_time\": 180.0,\n      \"duration\": 45.0,\n      \"description\": \"找到工具后，揭示是一个自制吸尘器，小胡自豪展示发明，请求小熊帮忙搬运并连接电源。\",\n      \"video_prompt\": \"The bear reveals a quirky, homemade vacuum cleaner made from scrap parts—pipes, wires, and a large hose. 'This is my new invention!' he declares proudly. The rabbit watches in amazement. He asks the bear to help carry it closer to the mud. They plug the device into the tractor’s battery for power. Close-ups show sparks and blinking lights as it powers up. The visual style blends whimsical engineering with cartoon realism. Green energy glow highlights the machine. Camera focuses on the gadget with rotating views, then pulls back to show teamwork. Brightened color grading contrasts earlier gloom. 4K, 24fps, dynamic focus transitions.\",\n      \"style_elements\": {\n        \"characters\": \"Inventor bear demonstrates creation; others impressed and supportive\",\n        \"environment\": \"Tractor side with scattered tools and glowing device\",\n        \"visual_style\": \"Whimsical tech design with cartoonish yet functional look\",\n        \"camera_movement\": \"Rotating close-up on device, pull-back to wide team shot\"\n      }\n    },\n    {\n      \"scene_id\": 6,\n      \"start_time\": 180.0,\n      \"end_time\": 225.0,\n      \"duration\": 45.0,\n      \"description\": \"启动吸尘器吸取泥浆，过程紧张又有趣，泥浆被逐渐吸干，角色们欢呼鼓励，气氛转向积极。\",\n      \"video_prompt\": \"The vacuum roars to life with a comical 'whoosh' sound, sucking thick mud rapidly. Mud flies into the transparent tank, filling it quickly. The characters cheer, 'Go! Go! Faster!' as the muck clears around the wheels. Slowly, the tractor becomes exposed. Camera shakes slightly during suction for effect. Time-lapse-style editing shows progress. Characters dance in joy when most mud is gone. Lighting brightens progressively, symbolizing hope. Full animation with particle effects for flying mud droplets. Wide-angle shots capture action, followed by joyful close-ups. 16:9, 30fps, vivid colors.\",\n      \"style_elements\": {\n        \"characters\": \"All celebrate together; energetic and relieved\",\n        \"environment\": \"Muddy area being cleared around tractor\",\n        \"visual_style\": \"Dynamic animation with special effects for suction and splatter\",\n        \"camera_movement\": \"Shaking during operation, wide angles and rapid close-ups\"\n      }\n    },\n    {\n      \"scene_id\": 7,\n      \"start_time\": 225.0,\n      \"end_time\": 260.0,\n      \"duration\": 35.0,\n      \"description\": \"小熊推动拖拉机成功脱困，车辆缓缓驶出，大家欢庆胜利，准备继续前往送甘草。\",\n      \"video_prompt\": \"With the mud cleared, the bear braces himself and pushes the rear of the tractor. It creaks forward, then gains traction. The wheels roll smoothly out of the pit. Everyone cheers loudly, 'We did it!' High-fives and hugs follow. The tractor starts up again, ready to continue its journey. Camera follows the vehicle pulling away in a steady dolly shot. Sunlight breaks through clouds, bathing the scene in golden light. Joyful music swells. Animated expressions are exaggerated for celebration. Shot in widescreen format with smooth motion blur. 1080p, 25fps, optimistic tone.\",\n      \"style_elements\": {\n        \"characters\": \"Team celebrates success; triumphant and united\",\n        \"environment\": \"Clearing trail after mud removal, sunlight emerging\",\n        \"visual_style\": \"Brightening palette, celebratory lighting and motion\",\n        \"camera_movement\": \"Dolly-out shot following departing tractor\"\n      }\n    },\n    {\n      \"scene_id\": 8,\n      \"start_time\": 260.0,\n      \"end_time\": 279.1,\n      \"duration\": 19.1,\n      \"description\": \"抵达目的地，给小羊送干草，动物们开心进食，最后大家一起跳舞庆祝互助与成功。\",\n      \"video_prompt\": \"The tractor arrives at a sunny meadow where hungry lambs await. 'Here’s your hay!' says the rabbit, unloading bundles. The lambs munch happily. Then the group forms a circle, dancing joyfully to upbeat music. Even the shy sheep joins in. Text appears playfully: 'Everyone helps, everyone dances!' Final shot pans upward to a wide view of the field under blue sky. Characters wave at the camera. Style remains consistent with earlier animation—bright, soft-edged, emotionally expressive. Ends with cheerful fade-out. 16:9, 30fps, warm color grade.\",\n      \"style_elements\": {\n        \"characters\": \"All characters rejoice; inclusive, happy dancing\",\n        \"environment\": \"Sunny meadow with grazing lambs and delivery truck\",\n        \"visual_style\": \"Joyful, colorful animation with uplifting tone\",\n        \"camera_movement\": \"Wide upward pan ending in aerial view\"\n      }\n    }\n  ]\n}"
+}

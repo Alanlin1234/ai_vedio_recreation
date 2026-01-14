@@ -1,0 +1,50 @@
+[
+  {
+    "video1_path": "d:\\ai-agent-comfy\\downloads\\recreation_1766368710\\videos\\scene_01.mp4",
+    "video2_path": "d:\\ai-agent-comfy\\downloads\\recreation_1766368710\\videos\\scene_02.mp4",
+    "visual_score": 0.9,
+    "semantic_score": 0.95,
+    "style_score": 0.85,
+    "temporal_score": 0.9,
+    "overall_score": 0.9,
+    "passed": true,
+    "issues": [],
+    "suggestions": []
+  },
+  {
+    "video1_path": "d:\\ai-agent-comfy\\downloads\\recreation_1766368710\\videos\\scene_02.mp4",
+    "video2_path": "d:\\ai-agent-comfy\\downloads\\recreation_1766368710\\videos\\scene_03.mp4",
+    "visual_score": 0.9,
+    "semantic_score": 0.95,
+    "style_score": 0.85,
+    "temporal_score": 0.9,
+    "overall_score": 0.9,
+    "passed": true,
+    "issues": [],
+    "suggestions": []
+  },
+  {
+    "video1_path": "d:\\ai-agent-comfy\\downloads\\recreation_1766368710\\videos\\scene_03.mp4",
+    "video2_path": "d:\\ai-agent-comfy\\downloads\\recreation_1766368710\\videos\\scene_04.mp4",
+    "visual_score": 0.9,
+    "semantic_score": 0.95,
+    "style_score": 0.85,
+    "temporal_score": 0.9,
+    "overall_score": 0.9,
+    "passed": true,
+    "issues": [],
+    "suggestions": []
+  },
+  {
+    "video1_path": "d:\\ai-agent-comfy\\downloads\\recreation_1766368710\\videos\\scene_04.mp4",
+    "video2_path": "d:\\ai-agent-comfy\\downloads\\recreation_1766368710\\videos\\scene_05.mp4",
+    "visual_score": 0.9,
+    "semantic_score": 0.95,
+    "style_score": 0.85,
+    "temporal_score": 0.9,
+    "overall_score": 0.9,
+    "passed": true,
+    "issues": [],
+    "suggestions": []
+  }
+]

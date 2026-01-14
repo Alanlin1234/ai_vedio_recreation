@@ -1,0 +1,37 @@
+{
+  "video_path": "d:\\ai-agent-comfy\\video\\hotspots\\20251212\\6918273131559881997.mp4",
+  "timestamp": "20251219_143747",
+  "prompt_type": "intelligent_segmentation",
+  "scene_count": 2,
+  "scenes": [
+    {
+      "scene_id": 1,
+      "start_time": 0.0,
+      "end_time": 5.2,
+      "duration": 5.2,
+      "description": "视频开场聚焦于一位身穿白色衬衫的男性，他正面对镜头，表情专注且富有情感，似乎在进行讲述或表达某种观点。背景为简约的室内环境，光线柔和温暖，营造出安静而亲密的氛围。",
+      "video_prompt": "A close-up shot of a man in a white shirt speaking thoughtfully to the camera, conveying emotion and engagement. He has dark hair and expressive facial features, suggesting sincerity or urgency. The setting is a minimalist indoor space with neutral-colored walls and soft, even lighting that creates a calm and inviting atmosphere. The camera remains static with slight focus breathing to emphasize subtle facial expressions. Shot on a full-frame digital cinema camera at 24fps, f/2.8 aperture for shallow depth of field, natural color grading with warm tones.",
+      "style_elements": {
+        "characters": "Man in white shirt, dark hair, expressive face, appearing sincere and engaged",
+        "environment": "Minimalist indoor room with neutral walls and flooring, clean and uncluttered",
+        "visual_style": "Warm, soft lighting; naturalistic color palette; intimate and professional tone",
+        "camera_movement": "Static close-up with minor focus adjustments"
+      }
+    },
+    {
+      "scene_id": 2,
+      "start_time": 5.2,
+      "end_time": 10.2,
+      "duration": 5.0,
+      "description": "画面切换至双人互动场景，原白衬衫男子与一名穿深色衣物的人进行交流，两人处于同一室内空间，肢体语言显示对话具有重要性或深度，整体氛围依然保持平静但更具张力。",
+      "video_prompt": "A medium two-shot featuring the man in the white shirt and another person wearing dark clothing engaged in a serious conversation. Both are partially visible, leaning slightly forward, indicating emotional investment. The background matches the previous scene—simple walls and subdued tones—maintaining visual continuity. Soft, diffused lighting preserves the calm yet intense mood. The camera slowly pushes in slightly to heighten intimacy. Captured at 24fps with a 35mm lens, shallow depth of field, and warm-neutral color grading to ensure consistency across scenes.",
+      "style_elements": {
+        "characters": "Two individuals: one in white shirt, one in dark clothes; both showing focused expressions and conversational body language",
+        "environment": "Same minimalist interior as Scene 1, consistent design and lighting",
+        "visual_style": "Soft shadows, balanced exposure, emotionally restrained yet engaging aesthetic",
+        "camera_movement": "Slow dolly-in to intensify emotional connection"
+      }
+    }
+  ],
+  "raw_json": "{\n  \"scenes\": [\n    {\n      \"scene_id\": 1,\n      \"start_time\": 0.0,\n      \"end_time\": 5.2,\n      \"duration\": 5.2,\n      \"description\": \"视频开场聚焦于一位身穿白色衬衫的男性，他正面对镜头，表情专注且富有情感，似乎在进行讲述或表达某种观点。背景为简约的室内环境，光线柔和温暖，营造出安静而亲密的氛围。\",\n      \"video_prompt\": \"A close-up shot of a man in a white shirt speaking thoughtfully to the camera, conveying emotion and engagement. He has dark hair and expressive facial features, suggesting sincerity or urgency. The setting is a minimalist indoor space with neutral-colored walls and soft, even lighting that creates a calm and inviting atmosphere. The camera remains static with slight focus breathing to emphasize subtle facial expressions. Shot on a full-frame digital cinema camera at 24fps, f/2.8 aperture for shallow depth of field, natural color grading with warm tones.\",\n      \"style_elements\": {\n        \"characters\": \"Man in white shirt, dark hair, expressive face, appearing sincere and engaged\",\n        \"environment\": \"Minimalist indoor room with neutral walls and flooring, clean and uncluttered\",\n        \"visual_style\": \"Warm, soft lighting; naturalistic color palette; intimate and professional tone\",\n        \"camera_movement\": \"Static close-up with minor focus adjustments\"\n      }\n    },\n    {\n      \"scene_id\": 2,\n      \"start_time\": 5.2,\n      \"end_time\": 10.2,\n      \"duration\": 5.0,\n      \"description\": \"画面切换至双人互动场景，原白衬衫男子与一名穿深色衣物的人进行交流，两人处于同一室内空间，肢体语言显示对话具有重要性或深度，整体氛围依然保持平静但更具张力。\",\n      \"video_prompt\": \"A medium two-shot featuring the man in the white shirt and another person wearing dark clothing engaged in a serious conversation. Both are partially visible, leaning slightly forward, indicating emotional investment. The background matches the previous scene—simple walls and subdued tones—maintaining visual continuity. Soft, diffused lighting preserves the calm yet intense mood. The camera slowly pushes in slightly to heighten intimacy. Captured at 24fps with a 35mm lens, shallow depth of field, and warm-neutral color grading to ensure consistency across scenes.\",\n      \"style_elements\": {\n        \"characters\": \"Two individuals: one in white shirt, one in dark clothes; both showing focused expressions and conversational body language\",\n        \"environment\": \"Same minimalist interior as Scene 1, consistent design and lighting\",\n        \"visual_style\": \"Soft shadows, balanced exposure, emotionally restrained yet engaging aesthetic\",\n        \"camera_movement\": \"Slow dolly-in to intensify emotional connection\"\n      }\n    }\n  ]\n}"
+}

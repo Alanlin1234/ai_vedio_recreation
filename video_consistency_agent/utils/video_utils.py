@@ -29,7 +29,7 @@ class VideoUtils:
                 timestamps = [duration / 2]
             elif num_keyframes == 2:
                 # 提取开始和结束帧
-                timestamps = [1, duration - 1]
+                timestamps = [1, duration]
             else:
                 # 均匀分布提取
                 timestamps = [i * duration / (num_keyframes + 1) for i in range(1, num_keyframes + 1)]
@@ -89,13 +89,22 @@ class VideoUtils:
         last_frame_path = os.path.join(temp_dir, "last_frame.jpg")
         
         try:
-            # 提取最后一帧（留出1秒的缓冲）
-            self._extract_frame_at_timestamp(video_path, duration - 1, last_frame_path)
+            # 提取真正的最后一帧（使用视频总时长作为时间戳）
+            # 对于极短视频，确保时间戳不为负数
+            timestamp = max(0, duration)
+            self._extract_frame_at_timestamp(video_path, timestamp, last_frame_path)
             
             if os.path.exists(last_frame_path) and os.path.getsize(last_frame_path) > 0:
                 return last_frame_path
             else:
-                raise RuntimeError(f"最后一帧提取失败: {last_frame_path}")
+                # 如果提取失败，尝试使用视频结束前0.1秒作为备选
+                fallback_timestamp = max(0, duration - 0.1)
+                self._extract_frame_at_timestamp(video_path, fallback_timestamp, last_frame_path)
+                
+                if os.path.exists(last_frame_path) and os.path.getsize(last_frame_path) > 0:
+                    return last_frame_path
+                else:
+                    raise RuntimeError(f"最后一帧提取失败: {last_frame_path}")
         except Exception as e:
             # 清理临时文件
             self._cleanup_temp_files(temp_dir)

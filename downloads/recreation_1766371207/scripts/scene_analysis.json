@@ -1,0 +1,112 @@
+{
+  "success": true,
+  "scenes": [
+    {
+      "scene_id": 0,
+      "start_time": 0,
+      "end_time": 8,
+      "duration": 8,
+      "description": "第1个场景，对应第1个切片",
+      "slice_data": {
+        "output_file": "slice_000.mp4",
+        "start_time": 0,
+        "duration": 8,
+        "end_time": 8,
+        "keyframes": [],
+        "preview_file": ""
+      },
+      "video_prompt": {
+        "success": false,
+        "error": "生成视频提示词失败: Invalid API-key provided.",
+        "video_prompt": "Scene 1: 第1个场景，对应第1个切片"
+      },
+      "keyframes": []
+    },
+    {
+      "scene_id": 1,
+      "start_time": 8,
+      "end_time": 16,
+      "duration": 8,
+      "description": "第2个场景，对应第2个切片",
+      "slice_data": {
+        "output_file": "slice_001.mp4",
+        "start_time": 8,
+        "duration": 8,
+        "end_time": 16,
+        "keyframes": [],
+        "preview_file": ""
+      },
+      "video_prompt": {
+        "success": false,
+        "error": "生成视频提示词失败: Invalid API-key provided.",
+        "video_prompt": "Scene 2: 第2个场景，对应第2个切片"
+      },
+      "keyframes": []
+    },
+    {
+      "scene_id": 2,
+      "start_time": 16,
+      "end_time": 24,
+      "duration": 8,
+      "description": "第3个场景，对应第3个切片",
+      "slice_data": {
+        "output_file": "slice_002.mp4",
+        "start_time": 16,
+        "duration": 8,
+        "end_time": 24,
+        "keyframes": [],
+        "preview_file": ""
+      },
+      "video_prompt": {
+        "success": false,
+        "error": "生成视频提示词失败: Invalid API-key provided.",
+        "video_prompt": "Scene 3: 第3个场景，对应第3个切片"
+      },
+      "keyframes": []
+    },
+    {
+      "scene_id": 3,
+      "start_time": 24,
+      "end_time": 32,
+      "duration": 8,
+      "description": "第4个场景，对应第4个切片",
+      "slice_data": {
+        "output_file": "slice_003.mp4",
+        "start_time": 24,
+        "duration": 8,
+        "end_time": 32,
+        "keyframes": [],
+        "preview_file": ""
+      },
+      "video_prompt": {
+        "success": false,
+        "error": "生成视频提示词失败: Invalid API-key provided.",
+        "video_prompt": "Scene 4: 第4个场景，对应第4个切片"
+      },
+      "keyframes": []
+    },
+    {
+      "scene_id": 4,
+      "start_time": 32,
+      "end_time": 40,
+      "duration": 8,
+      "description": "第5个场景，对应第5个切片",
+      "slice_data": {
+        "output_file": "slice_004.mp4",
+        "start_time": 32,
+        "duration": 8,
+        "end_time": 40,
+        "keyframes": [],
+        "preview_file": ""
+      },
+      "video_prompt": {
+        "success": false,
+        "error": "生成视频提示词失败: Invalid API-key provided.",
+        "video_prompt": "Scene 5: 第5个场景，对应第5个切片"
+      },
+      "keyframes": []
+    }
+  ],
+  "total_scenes": 5,
+  "timestamp": "2025-12-22 10:40:35"
+}

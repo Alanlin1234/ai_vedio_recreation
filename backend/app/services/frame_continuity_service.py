@@ -175,9 +175,10 @@ class FrameContinuityService:
                 logger.error(f"无法解析视频时长: {result.stdout}")
                 return None
             
-            # 提取最后一帧（使用稍微提前一点的时间，避免最后一帧可能不存在）
-            extract_time = max(0, duration - 0.1)
+            # 提取真正的最后一帧（使用视频总时长作为时间戳）
+            extract_time = max(0, duration)
             
+            # 执行第一次提取
             extract_cmd = [
                 'ffmpeg', '-i', video_path,
                 '-ss', str(extract_time),
@@ -188,6 +189,20 @@ class FrameContinuityService:
             ]
             
             result = subprocess.run(extract_cmd, capture_output=True, text=True)
+            
+            # 如果第一次提取失败，尝试使用视频结束前0.1秒作为备选
+            if result.returncode != 0 or not os.path.exists(frame_path):
+                fallback_time = max(0, duration - 0.1)
+                extract_cmd = [
+                    'ffmpeg', '-i', video_path,
+                    '-ss', str(fallback_time),
+                    '-vframes', '1',
+                    '-q:v', '2',
+                    '-y',
+                    frame_path
+                ]
+                
+                result = subprocess.run(extract_cmd, capture_output=True, text=True)
             
             if result.returncode == 0 and os.path.exists(frame_path):
                 logger.info(f"成功提取最后一帧: {frame_path}")

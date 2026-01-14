@@ -64,36 +64,6 @@ class SceneSegmentationService:
         self.set_current_api_key()
         return self.current_api_key
     
-    def segment_video_scenes(self, video_path: str, method: str = "intelligent") -> List[Dict[str, Any]]:
-        """
-        对视频进行场景分割
-        
-        Args:
-            video_path: 视频文件路径
-            method: 分割方法，"intelligent" 或 "traditional"
-        
-        Returns:
-            场景分割结果列表
-        """
-        try:
-            # 提取视频理解和音频文本（这里应该从其他服务获取，暂时使用默认值）
-            video_understanding = ""
-            audio_text = ""
-            
-            if method == "intelligent":
-                # 调用智能场景分割
-                result = self.intelligent_scene_segmentation(video_path, video_understanding, audio_text)
-                if result.get('success', False):
-                    return result['scenes']
-                else:
-                    print(f"智能场景分割失败，回退到传统分割: {result.get('error', '未知错误')}")
-                    return self.traditional_scene_segmentation(video_path)
-            else:
-                return self.traditional_scene_segmentation(video_path)
-        except Exception as e:
-            print(f"场景分割失败，回退到传统分割: {e}")
-            return self.traditional_scene_segmentation(video_path)
-    
     def optimize_json_prompt(self, json_prompt: Dict[str, Any]) -> Dict[str, Any]:
         """
         使用qwen-plus模型优化JSON格式的提示词
@@ -109,18 +79,51 @@ class SceneSegmentationService:
             
             # 构建优化提示词
             prompt = f"""
-            请优化以下JSON格式的视频场景提示词，确保每个场景的描述更详细、更适合视频生成，同时保持原有结构不变：
-            
-            {json.dumps(json_prompt, ensure_ascii=False, indent=2)}
-            
-            请返回优化后的完整JSON内容，不要添加任何额外的解释或说明。
+请作为专业视频内容优化专家，对以下JSON格式的视频场景提示词进行全面优化：
+
+{json.dumps(json_prompt, ensure_ascii=False, indent=2)}
+
+## 优化要求：
+
+### 1. 内容深度优化
+- **场景描述**：增强叙事连贯性，明确场景目的和情感基调
+- **视觉细节**：添加具体的色彩方案、光线效果、构图指导
+- **人物刻画**：细化人物外观、动作、表情和互动，但**严格保持人物基本特征不变**（如发型、发色、肤色、性别等）
+- **环境氛围**：丰富环境细节，增强空间感和真实感
+- **镜头语言**：明确摄像机角度、运动方式和景别变化
+
+### 2. 专业度提升
+- 使用专业视频制作术语
+- 提供具体的视觉参考（如电影风格、艺术流派）
+- 确保技术参数符合视频制作标准
+- 添加适当的节奏和剪辑建议
+
+### 3. 结构保持
+- 严格保持原始JSON结构不变
+- 确保所有字段都有合理的值
+- 保持场景之间的逻辑连贯性
+- 维持整体风格的一致性
+
+### 4. 格式要求
+- 返回完整的优化后JSON内容
+- 不要添加任何额外的解释或说明
+- 确保JSON格式完全正确可解析
+- 保持中文描述的准确性和流畅性
+
+## 优化目标
+生成的提示词应能直接用于AI视频生成，确保：
+- 视频内容与描述高度一致
+- 视觉效果达到专业水准
+- 叙事逻辑清晰连贯
+- 整体风格统一协调
+- **人物基本特征保持一致**（如发型、发色、肤色、性别等）
             """
             
             # 调用qwen-plus-latest模型
             response = dashscope.Generation.call(
                 model="qwen-plus-latest",
                 messages=[
-                    {"role": "system", "content": "你是一个专业的视频内容优化专家，擅长优化视频场景提示词，使其更适合生成高质量视频。"},
+                    {"role": "system", "content": "你是一位顶尖的视频内容优化专家，精通AI视频生成技术和专业视频制作术语。你的专长是：\n1. 深度理解视频场景结构和叙事逻辑\n2. 精准捕捉视觉风格和美学元素\n3. 优化提示词以获得最佳AI视频生成效果\n4. 保持JSON数据结构的完整性和一致性\n5. 提供专业、详细且可执行的视频制作指导\n\n请严格按照要求优化提示词，确保每个场景描述都达到专业视频制作水准。"},
                     {"role": "user", "content": prompt}
                 ],
                 result_format='message',
@@ -183,85 +186,6 @@ class SceneSegmentationService:
                 return json.dumps(json_prompt, ensure_ascii=False)
             else:
                 return str(json_prompt)
-    
-    def intelligent_scene_segmentation(self, video_path: str, video_understanding: str = "", audio_text: str = "") -> Dict[str, Any]:
-        """
-        基于大模型的智能场景分割
-        
-        
-            video_path: 视频文件路径（用于获取视频时长等基本信息）
-            video_understanding: 视频理解内容
-            audio_text: 音频转录文本
-        
-       
-        """
-        try:
-            # 获取视频基本信息
-            video_info = self._get_video_info(video_path)
-            
-            # 构建智能分割的提示词
-            prompt = self._build_intelligent_segmentation_prompt_with_content(
-                video_understanding, audio_text, video_info['duration']
-            )
-            
-            print("正在调用qwen-plus-latest模型进行智能场景分割...")
-            
-            # 使用 dashscope 库调用 qwen-plus-latest 模型
-            response = dashscope.Generation.call(
-                model="qwen-plus-latest",
-                messages=[
-                    {"role": "system", "content": "你是一个专业的视频内容分析师，擅长根据视频理解内容和音频文本进行智能场景分割，并生成高质量的英文文生视频提示词。"},
-                    {"role": "user", "content": prompt}
-                ],
-                result_format='message',
-                temperature=0.7,
-                max_tokens=8000
-            )
-            
-            if response.status_code == 200 and response.output and response.output.choices:
-                result_text = response.output.choices[0].message.content
-                
-                # 提取纯JSON部分
-                import re
-                # 找到JSON的开始和结束位置
-                json_start = result_text.find('{')
-                json_end = result_text.rfind('}')
-                
-                if json_start != -1 and json_end != -1:
-                    # 提取纯JSON
-                    pure_json_text = result_text[json_start:json_end + 1]
-                    print(f"[DEBUG] 提取到纯JSON，长度: {len(pure_json_text)}")
-                else:
-                    pure_json_text = result_text
-                    print(f"[DEBUG] 未找到明确的JSON边界，使用完整文本")
-                
-                scenes = self._parse_intelligent_segmentation_result(pure_json_text)
-                
-                print(f"[DEBUG] 解析出 {len(scenes)} 个场景")
-                
-                # 保存生成的场景和prompt到文件
-                self._save_prompts_to_file(video_path, scenes, pure_json_text, "intelligent_segmentation")
-                
-                return {
-                    'success': True,
-                    'scenes': scenes,
-                    'method': 'intelligent',
-                    'processing_time': 0,
-                    'model_response': result_text
-                }
-            else:
-                error_msg = response.message if hasattr(response, 'message') else '未知错误'
-                raise Exception(f"大模型响应错误: {error_msg}")
-                
-        except Exception as e:
-            print(f"智能场景分割失败: {e}")
-            import traceback
-            traceback.print_exc()
-            return {
-                'success': False,
-                'error': str(e),
-                'method': 'intelligent_failed'
-            }
     
     def create_scenes_from_slices(self, video_slices: List[Dict[str, Any]], slice_analyses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -330,8 +254,8 @@ class SceneSegmentationService:
         结合qwen-omni-turbo和qwen3-vl生成的prompt
         
         Args:
-            qwen_omni_prompt: qwen-omni-turbo生成的prompt
-            qwen_vl_prompt: qwen3-vl生成的prompt
+            qwen_omni_prompt: qwen-omni-turbo生成的prompt（负责宏观场景和镜头移动分析）
+            qwen_vl_prompt: qwen3-vl生成的prompt（负责视觉细节分析）
             
         Returns:
             结合后的完整prompt
@@ -356,53 +280,67 @@ class SceneSegmentationService:
                 "people": [],
                 "actions": [],
                 "emotions": [],
-                "atmosphere": ""
+                "atmosphere": "",
+                "camera_movement": ""  # 新增：专门存储镜头移动信息
             }
             
-            # 3. 合并场景信息
+            # 3. 合并场景信息（优先使用qwen-omni的宏观场景分析）
             scene_info_omni = qwen_omni_prompt.get("scene_info", {})
             scene_info_vl = qwen_vl_prompt.get("scene_info", {})
             combined_prompt["scene_info"] = {**scene_info_omni, **scene_info_vl}
             
-            # 4. 合并风格元素
+            # 4. 合并风格元素（优先使用qwen3-vl的视觉细节）
             style_omni = qwen_omni_prompt.get("style_elements", {})
             style_vl = qwen_vl_prompt.get("style_elements", {})
+            # 移除qwen-omni中可能存在的镜头移动相关内容，避免冲突
+            if "camera_movement" in style_omni:
+                combined_prompt["camera_movement"] = style_omni["camera_movement"]
+                del style_omni["camera_movement"]
             combined_prompt["style_elements"] = {**style_omni, **style_vl}
             
-            # 5. 合并技术参数
+            # 5. 提取qwen-omni中的镜头移动信息
+            camera_movement = qwen_omni_prompt.get("camera_movement", "") or qwen_omni_prompt.get("camera_movement_analysis", "")
+            if camera_movement:
+                combined_prompt["camera_movement"] = camera_movement
+            
+            # 6. 合并技术参数
             tech_omni = qwen_omni_prompt.get("technical_params", {})
             tech_vl = qwen_vl_prompt.get("technical_params", {})
             combined_prompt["technical_params"] = {**tech_omni, **tech_vl}
             
-            # 6. 合并物体、人物、动作等列表信息
+            # 7. 合并物体、人物、动作等列表信息
             for key in ["objects", "people", "actions", "emotions"]:
                 combined_prompt[key] = list(set(qwen_omni_prompt.get(key, []) + qwen_vl_prompt.get(key, [])))
             
-            # 7. 合并氛围描述
+            # 8. 合并氛围描述（优先使用qwen-omni的宏观氛围）
             combined_prompt["atmosphere"] = qwen_omni_prompt.get("atmosphere", "") or qwen_vl_prompt.get("atmosphere", "")
             
-            # 8. 构建最终的视频提示词
+            # 9. 构建最终的视频提示词（结构化分层）
             video_prompt_parts = []
             
-            # 从qwen-omni获取的文本描述
+            # 第一层：qwen-omni的宏观场景描述
             omni_video_prompt = qwen_omni_prompt.get("video_prompt", "")
             if omni_video_prompt:
-                video_prompt_parts.append(omni_video_prompt)
+                video_prompt_parts.append(f"[整体场景] {omni_video_prompt}")
             
-            # 从qwen-vl获取的视觉描述
+            # 第二层：qwen-omni的镜头移动分析
+            if combined_prompt["camera_movement"]:
+                video_prompt_parts.append(f"[镜头移动] {combined_prompt['camera_movement']}")
+            
+            # 第三层：qwen3-vl的视觉细节描述
             vl_video_prompt = qwen_vl_prompt.get("video_prompt", "")
             if vl_video_prompt:
-                video_prompt_parts.append(vl_video_prompt)
+                video_prompt_parts.append(f"[视觉细节] {vl_video_prompt}")
             
-            # 添加风格和氛围信息
+            # 第四层：风格和氛围信息
             style_desc = qwen_vl_prompt.get("style", "") or qwen_omni_prompt.get("style", "")
             if style_desc:
-                video_prompt_parts.append(f"视觉风格: {style_desc}")
+                video_prompt_parts.append(f"[视觉风格] {style_desc}")
             
             # 合并所有部分
             combined_prompt["video_prompt"] = " ".join(video_prompt_parts)
             
-            # 9. 确保所有必要字段存在
+            # 10. 确保所有必要字段存在
             if not combined_prompt["video_prompt"]:
                 # 兜底方案：从场景描述生成提示词
                 scene_desc = combined_prompt["scene_info"].get("description", "")
@@ -480,7 +418,6 @@ class SceneSegmentationService:
                     f"4. 保持环境元素的一致性（背景、道具、氛围）\n"
                     f"5. 确保场景过渡自然流畅，没有突兀的跳跃"
                 )            
-            
             # 根据输出格式构建不同的提示词
             if output_format == "json":
                 prompt = f"""
@@ -763,9 +700,19 @@ class SceneSegmentationService:
                     }
                     return scene_prompt_data
             else:
-                error_msg = response.message if hasattr(response, 'message') else '未知错误'
-                raise Exception(f"生成视频提示词失败: {error_msg}")
-                
+                # 纯文本格式直接返回
+                scene_prompt_data = {
+                    'success': True,
+                    'video_prompt': model_response,
+                    'duration': scene['duration'],
+                    'technical_params': {
+                        'aspect_ratio': '16:9',
+                        'fps': 24,
+                        'quality': 'high',
+                        'style': 'cinematic'
+                    }
+                }
+                return scene_prompt_data
         except Exception as e:
             print(f"生成场景 {scene_index + 1} 视频提示词失败: {e}")
             return {
@@ -810,55 +757,6 @@ class SceneSegmentationService:
                 'aspect_ratio': '16:9'
             }
     
-    def _build_intelligent_segmentation_prompt_with_content(self, video_understanding: str, 
-                                                          audio_text: str, duration: float) -> str:
-        """
-        基于视频理解内容和音频文本构建智能分割提示词
-        """
-        prompt = f"""基于以下视频理解内容和音频转录文本，请进行智能场景分割并为每个场景生成详细的英文视频提示词。
-
-视频基本信息：
-- 总时长：{duration:.1f} 秒
-
-视频理解内容：
-{video_understanding}
-
-音频转录：
-{audio_text}
-
-分割要求：
-1. 根据逻辑内容变化进行场景分割（如话题转换、情节发展、关键点）
-2. 每个场景时长应在2-30秒之间
-3. 场景转换要遵循视频的自然节奏
-4. 所有场景总时长必须等于视频总长度
-
-提示词生成要求：
-1. 为每个场景生成详细的英文视频提示词
-2. 包含：人物描述、环境、视觉风格、摄像机运动、技术参数
-3. 保持整体风格和人物刻画的一致性
-4. 提示词长度控制在80-150个英文单词之间
-
-请按以下JSON格式返回结果：
-{{
-  "scenes": [
-    {{
-      "scene_id": 1,
-      "start_time": 0.0,
-      "end_time": 5.2,
-      "duration": 5.2,
-      "description": "Scene description in Chinese",
-      "video_prompt": "Detailed English video generation prompt",
-      "style_elements": {{
-        "characters": "Character description",
-        "environment": "Environment description",
-        "visual_style": "Visual style",
-        "camera_movement": "Camera movement"
-      }}
-    }}
-  ]
-}}"""
-        return prompt
-    
     def _save_prompts_to_file(self, video_path: str, scenes: List[Dict[str, Any]], raw_json: str, prompt_type: str):
         """
         保存生成的prompt到文件中
@@ -898,259 +796,3 @@ class SceneSegmentationService:
             print(f"📝 生成的prompt已保存到文件: {file_path}")
         except Exception as e:
             print(f"保存prompt到文件失败: {e}")
-    
-    def _parse_intelligent_segmentation_result(self, result_text: str) -> List[Dict[str, Any]]:
-        """
-        解析智能分割结果，增强版JSON解析逻辑
-        """
-        print("[DEBUG] 开始解析智能分割结果...")
-        scenes = []
-        
-        try:
-            # 清理和提取JSON部分
-            import re
-            
-            # 移除可能的前后空格和换行
-            cleaned_text = result_text.strip()
-            print(f"[DEBUG] 清理后的文本长度: {len(cleaned_text)}")
-            
-            # 1. 处理各种可能的代码块标记
-            # 移除 ```json, ```, ```text 等标记
-            json_text = re.sub(r'^```(json|text|)\n|\n```$', '', cleaned_text).strip()
-            print(f"[DEBUG] 移除代码块标记后长度: {len(json_text)}")
-            
-            # 2. 最小化处理特殊字符，只处理影响解析的关键字符
-            # 仅替换中文引号和标点，不移除控制字符（可能破坏转义序列）
-            # 不统一替换空格（可能破坏JSON结构）
-            json_text = re.sub(r'“|”', '"', json_text)  # 替换中文引号为英文引号
-            json_text = re.sub(r'，', ',', json_text)   # 替换中文逗号为英文逗号
-            json_text = re.sub(r'：', ':', json_text)   # 替换中文冒号为英文冒号
-            
-            # 3. 尝试直接解析JSON
-            print("[DEBUG] 尝试直接解析JSON...")
-            try:
-                result_data = json.loads(json_text)
-                scenes = result_data.get('scenes', [])
-                print(f"[DEBUG] 直接解析成功，获取到 {len(scenes)} 个场景")
-            except json.JSONDecodeError:
-                # 4. 尝试修复JSON格式
-                print("[DEBUG] 尝试修复JSON格式...")
-                
-                # 查找最外层的JSON结构
-                json_start = json_text.find('{')
-                json_end = json_text.rfind('}')
-                
-                if json_start != -1 and json_end != -1:
-                    # 提取最外层JSON
-                    outer_json = json_text[json_start:json_end+1]
-                    print(f"[DEBUG] 提取最外层JSON，长度: {len(outer_json)}")
-                    
-                    try:
-                        result_data = json.loads(outer_json)
-                        scenes = result_data.get('scenes', [])
-                        print(f"[DEBUG] 外层JSON解析成功，获取到 {len(scenes)} 个场景")
-                    except json.JSONDecodeError as e:
-                        print(f"[DEBUG] 外层JSON解析失败: {e}")
-                        
-                        # 5. 尝试提取scenes数组
-                        print("[DEBUG] 尝试提取scenes数组...")
-                        scenes_pattern = r'"scenes"\s*:\s*\[(.*?)\]' 
-                        match = re.search(scenes_pattern, outer_json, re.DOTALL)
-                        
-                        if match:
-                            scenes_content = match.group(1)
-                            print(f"[DEBUG] 提取到scenes内容，长度: {len(scenes_content)}")
-                            
-                            # 尝试修复scenes数组的格式
-                            # 确保数组元素之间有正确的逗号
-                            scenes_content = re.sub(r'\}\s*\{', '}, {', scenes_content)
-                            
-                            # 尝试解析修复后的scenes数组
-                            full_scenes_json = f"[{scenes_content}]"
-                            print(f"[DEBUG] 修复后的scenes JSON: {full_scenes_json[:100]}...")
-                            
-                            try:
-                                scenes = json.loads(full_scenes_json)
-                                print(f"[DEBUG] scenes数组解析成功，获取到 {len(scenes)} 个场景")
-                            except json.JSONDecodeError as inner_e:
-                                print(f"[DEBUG] scenes数组解析失败: {inner_e}")
-                                
-                                # 6. 最后尝试：直接查找所有场景对象
-                                print("[DEBUG] 尝试直接提取场景对象...")
-                                scene_pattern = r'\{[^}]*"scene_id"[^}]*\}'
-                                scene_matches = re.findall(scene_pattern, outer_json, re.DOTALL)
-                                print(f"[DEBUG] 找到 {len(scene_matches)} 个场景对象")
-                                
-                                scenes = []
-                                for scene_str in scene_matches:
-                                    try:
-                                        scene = json.loads(scene_str)
-                                        scenes.append(scene)
-                                    except json.JSONDecodeError:
-                                        # 尝试修复单个场景对象的JSON格式
-                                        try:
-                                            # 移除多余的逗号
-                                            fixed_scene_str = re.sub(r',\s*}', '}', scene_str)
-                                            fixed_scene_str = re.sub(r',\s*]', ']', fixed_scene_str)
-                                            scene = json.loads(fixed_scene_str)
-                                            scenes.append(scene)
-                                        except:
-                                            continue
-                                
-                                print(f"[DEBUG] 成功解析 {len(scenes)} 个场景对象")
-        
-        except Exception as general_error:
-            print(f"[DEBUG] 发生通用错误: {general_error}")
-            import traceback
-            traceback.print_exc()
-        
-        # 验证和标准化场景数据
-        standardized_scenes = []
-        for i, scene in enumerate(scenes):
-            try:
-                standardized_scene = {
-                    'scene_id': scene.get('scene_id', i + 1),
-                    'start_time': float(scene.get('start_time', 0)),
-                    'end_time': float(scene.get('end_time', 0)),
-                    'duration': float(scene.get('duration', 0)),
-                    'description': scene.get('description', f'场景 {i + 1}'),
-                    'video_prompt': scene.get('video_prompt', ''),
-                    'style_elements': scene.get('style_elements', {})
-                }
-                standardized_scenes.append(standardized_scene)
-            except Exception as scene_error:
-                print(f"[DEBUG] 标准化场景 {i+1} 失败: {scene_error}")
-                continue
-        
-        # 确保至少返回一个场景，避免空列表
-        if not standardized_scenes:
-            print("[DEBUG] 标准化后无有效场景，创建默认场景")
-            default_scene = {
-                'scene_id': 1,
-                'start_time': 0.0,
-                'end_time': 10.0,
-                'duration': 10.0,
-                'description': f"默认场景: {result_text[:100]}...",
-                'video_prompt': result_text[:200],
-                'style_elements': {}
-            }
-            standardized_scenes = [default_scene]
-        
-        print(f"[DEBUG] 最终标准化场景数量: {len(standardized_scenes)}")
-        return standardized_scenes
-    
-    # def traditional_scene_segmentation(self, video_path: str) -> List[Dict[str, Any]]:
-    #     """
-    #     基于视觉特征的传统场景分割
-        
-    #     Args:
-    #         video_path: 视频文件路径
-        
-    #     Returns:
-    #         传统分割的场景列表
-    #     """
-    #     try:
-    #         # 打开视频文件
-    #         cap = cv2.VideoCapture(video_path)
-    #         if not cap.isOpened():
-    #             raise Exception(f"无法打开视频文件: {video_path}")
-            
-    #         fps = cap.get(cv2.CAP_PROP_FPS)
-    #         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    #         duration = total_frames / fps
-            
-    #         scenes = []
-    #         scene_start = 0
-    #         prev_hist = None
-    #         frame_count = 0
-            
-    #         print(f"开始传统场景分割，视频时长: {duration:.2f}秒，帧率: {fps:.2f}")
-            
-    #         while True:
-    #             ret, frame = cap.read()
-    #             if not ret:
-    #                 break
-                
-    #             current_time = frame_count / fps
-                
-    #             # 每隔一定帧数进行分析（减少计算量）
-    #             if frame_count % max(1, int(fps / 2)) == 0:
-    #                 # 计算直方图
-    #                 hist = cv2.calcHist([frame], [0, 1, 2], None, [50, 50, 50], [0, 256, 0, 256, 0, 256])
-    #                 hist = cv2.normalize(hist, hist).flatten()
-                    
-    #                 if prev_hist is not None:
-    #                     # 计算相似度
-    #                     similarity = cv2.compareHist(prev_hist, hist, cv2.HISTCMP_CORREL)
-                        
-    #                     # 如果相似度低于阈值且距离上个场景足够远，则认为是新场景
-    #                     if similarity < self.similarity_threshold and (current_time - scene_start) >= self.min_scene_duration:
-    #                         # 保存前一个场景
-    #                         scenes.append({
-    #                             'scene_id': len(scenes) + 1,
-    #                             'start_time': scene_start,
-    #                             'end_time': current_time,
-    #                             'duration': current_time - scene_start,
-    #                             'description': f"场景 {len(scenes) + 1}",
-    #                             'key_frame_time': (scene_start + current_time) / 2
-    #                         })
-    #                         scene_start = current_time
-                    
-    #                 prev_hist = hist
-                
-    #             frame_count += 1
-            
-    #         # 添加最后一个场景
-    #         if duration - scene_start >= self.min_scene_duration:
-    #             scenes.append({
-    #                 'scene_id': len(scenes) + 1,
-    #                 'start_time': scene_start,
-    #                 'end_time': duration,
-    #                 'duration': duration - scene_start,
-    #                 'description': f"场景 {len(scenes) + 1}",
-    #                 'key_frame_time': (scene_start + duration) / 2
-    #             })
-            
-    #         cap.release()
-            
-    #         # 优化场景分割结果
-    #         scenes = self._optimize_scenes(scenes)
-            
-    #         print(f"传统场景分割完成，共分割出 {len(scenes)} 个场景")
-    #         return scenes
-            
-    #     except Exception as e:
-    #         if 'cap' in locals():
-    #             cap.release()
-    #         raise Exception(f"传统场景分割失败: {e}")
-    
-    # def _optimize_scenes(self, scenes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    #     """
-    #     优化场景分割结果
-    #     """
-    #     if not scenes:
-    #         return scenes
-        
-    #     optimized_scenes = []
-    #     current_scene = scenes[0].copy()
-        
-    #     for i in range(1, len(scenes)):
-    #         scene = scenes[i]
-            
-    #         # 如果当前场景太短，合并到前一个场景
-    #         if current_scene['duration'] < self.min_scene_duration:
-    #             current_scene['end_time'] = scene['end_time']
-    #             current_scene['duration'] = current_scene['end_time'] - current_scene['start_time']
-    #             current_scene['description'] += f" + {scene['description']}"
-    #         else:
-    #             optimized_scenes.append(current_scene)
-    #             current_scene = scene.copy()
-        
-    #     # 添加最后一个场景
-    #     optimized_scenes.append(current_scene)
-        
-    #     # 重新编号
-    #     for i, scene in enumerate(optimized_scenes):
-    #         scene['scene_id'] = i + 1
-        
-    #     return optimized_scenes

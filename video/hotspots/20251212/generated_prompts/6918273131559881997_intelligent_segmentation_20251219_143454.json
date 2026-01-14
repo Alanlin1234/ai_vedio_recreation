@@ -1,0 +1,37 @@
+{
+  "video_path": "d:\\ai-agent-comfy\\video\\hotspots\\20251212\\6918273131559881997.mp4",
+  "timestamp": "20251219_143454",
+  "prompt_type": "intelligent_segmentation",
+  "scene_count": 2,
+  "scenes": [
+    {
+      "scene_id": 1,
+      "start_time": 0.0,
+      "end_time": 8.0,
+      "duration": 8.0,
+      "description": "视频开始于一个简洁明亮的室内场景，一位身穿白色衬衫、深色头发的人物位于画面中央，正在通过表情和手势进行交流或表达，氛围平静专注。",
+      "video_prompt": "A medium shot of a person with dark hair wearing a white shirt, centered in a clean, warmly lit indoor space. The individual is expressing something through subtle facial expressions and hand gestures, suggesting calm communication. The background features neutral-toned walls and simple flooring, creating a minimalist atmosphere. Soft, even lighting illuminates the scene without harsh shadows, emphasizing clarity and focus. Camera holds steady with a slight shallow depth of field to highlight the subject. Shot on 4K digital cinema camera, 24fps, natural color grading.",
+      "style_elements": {
+        "characters": "Person in white shirt, dark hair, gender-neutral, expressive face and hands",
+        "environment": "Minimalist indoor setting with warm tones, plain walls and floors",
+        "visual_style": "Clean, bright, and focused with natural lighting and soft contrasts",
+        "camera_movement": "Static medium shot with slight focus emphasis on subject"
+      }
+    },
+    {
+      "scene_id": 2,
+      "start_time": 8.0,
+      "end_time": 10.2,
+      "duration": 2.2,
+      "description": "场景切换至另一位穿深色衣物的人物，背景为浅色墙面和地毯的办公室环境，另一人部分入镜，两人似在对话，氛围正式而安静。",
+      "video_prompt": "A wide two-shot in a softly lit office environment showing two individuals, one in dark clothing facing forward, the other partially visible, suggesting an ongoing quiet conversation. The setting includes light gray walls, carpeted floor, and a tidy, professional aesthetic. Lighting remains even and diffused, maintaining visual consistency with the previous scene. The camera holds still, emphasizing the compositional balance and subdued interaction. Focus is maintained across both figures, with minimal movement to preserve the calm tone. Filmed in 4K, 24fps, with neutral color palette and gentle contrast.",
+      "style_elements": {
+        "characters": "Two people, one in dark clothes, second partially in frame, engaged in quiet interaction",
+        "environment": "Office-like interior with neutral walls, carpet, and formal layout",
+        "visual_style": "Soft, neutral tones with balanced lighting and realistic textures",
+        "camera_movement": "Fixed wide shot with static composition"
+      }
+    }
+  ],
+  "raw_json": "{\n  \"scenes\": [\n    {\n      \"scene_id\": 1,\n      \"start_time\": 0.0,\n      \"end_time\": 8.0,\n      \"duration\": 8.0,\n      \"description\": \"视频开始于一个简洁明亮的室内场景，一位身穿白色衬衫、深色头发的人物位于画面中央，正在通过表情和手势进行交流或表达，氛围平静专注。\",\n      \"video_prompt\": \"A medium shot of a person with dark hair wearing a white shirt, centered in a clean, warmly lit indoor space. The individual is expressing something through subtle facial expressions and hand gestures, suggesting calm communication. The background features neutral-toned walls and simple flooring, creating a minimalist atmosphere. Soft, even lighting illuminates the scene without harsh shadows, emphasizing clarity and focus. Camera holds steady with a slight shallow depth of field to highlight the subject. Shot on 4K digital cinema camera, 24fps, natural color grading.\",\n      \"style_elements\": {\n        \"characters\": \"Person in white shirt, dark hair, gender-neutral, expressive face and hands\",\n        \"environment\": \"Minimalist indoor setting with warm tones, plain walls and floors\",\n        \"visual_style\": \"Clean, bright, and focused with natural lighting and soft contrasts\",\n        \"camera_movement\": \"Static medium shot with slight focus emphasis on subject\"\n      }\n    },\n    {\n      \"scene_id\": 2,\n      \"start_time\": 8.0,\n      \"end_time\": 10.2,\n      \"duration\": 2.2,\n      \"description\": \"场景切换至另一位穿深色衣物的人物，背景为浅色墙面和地毯的办公室环境，另一人部分入镜，两人似在对话，氛围正式而安静。\",\n      \"video_prompt\": \"A wide two-shot in a softly lit office environment showing two individuals, one in dark clothing facing forward, the other partially visible, suggesting an ongoing quiet conversation. The setting includes light gray walls, carpeted floor, and a tidy, professional aesthetic. Lighting remains even and diffused, maintaining visual consistency with the previous scene. The camera holds still, emphasizing the compositional balance and subdued interaction. Focus is maintained across both figures, with minimal movement to preserve the calm tone. Filmed in 4K, 24fps, with neutral color palette and gentle contrast.\",\n      \"style_elements\": {\n        \"characters\": \"Two people, one in dark clothes, second partially in frame, engaged in quiet interaction\",\n        \"environment\": \"Office-like interior with neutral walls, carpet, and formal layout\",\n        \"visual_style\": \"Soft, neutral tones with balanced lighting and realistic textures\",\n        \"camera_movement\": \"Fixed wide shot with static composition\"\n      }\n    }\n  ]\n}"
+}

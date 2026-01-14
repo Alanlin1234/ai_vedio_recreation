@@ -3,8 +3,15 @@ import numpy as np
 import os
 import asyncio
 from typing import Dict, Any
-from alibabacloud_imagerecog20190930.client import Client as imagerecog20190930Client
-from alibabacloud_tea_openapi import models as open_api_models
+
+# 尝试导入阿里云图像相似度API模块，如果失败则继续使用本地实现
+try:
+    from alibabacloud_imagerecog20190930.client import Client as imagerecog20190930Client
+    from alibabacloud_tea_openapi import models as open_api_models
+    ALIBABA_CLOUD_AVAILABLE = True
+except ImportError:
+    print("[警告] 阿里云图像相似度API模块未安装，将使用本地相似度计算")
+    ALIBABA_CLOUD_AVAILABLE = False
 
 class SimilarityCalculator:
     def __init__(self, config: Dict[str, Any] = None):
@@ -37,6 +44,11 @@ class SimilarityCalculator:
     def _init_aliyun_client(self):
         """初始化阿里云图像相似度API客户端"""
         try:
+            # 检查阿里云模块是否可用
+            if not ALIBABA_CLOUD_AVAILABLE:
+                print("[警告] 阿里云图像相似度API模块未安装，将使用本地相似度计算")
+                return
+            
             access_key_id = os.getenv("ALIBABA_CLOUD_ACCESS_KEY_ID", self.config.get('aliyun_access_key_id'))
             access_key_secret = os.getenv("ALIBABA_CLOUD_ACCESS_KEY_SECRET", self.config.get('aliyun_access_key_secret'))
             region_id = os.getenv("ALIBABA_CLOUD_REGION_ID", self.config.get('aliyun_region_id', 'cn-shanghai'))
@@ -91,7 +103,7 @@ class SimilarityCalculator:
                 # 回退到其他方法
         
         # 其次使用阿里云图像相似度API
-        if self.aliyun_client:
+        if ALIBABA_CLOUD_AVAILABLE and self.aliyun_client:
             try:
                 print(f"[阿里云API] 计算图像相似度: {image1_path} vs {image2_path}")
                 

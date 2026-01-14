@@ -1,0 +1,37 @@
+{
+  "video_path": "d:\\ai-agent-comfy\\video\\hotspots\\20251212\\6918273131559881997.mp4",
+  "timestamp": "20251219_142316",
+  "prompt_type": "intelligent_segmentation",
+  "scene_count": 2,
+  "scenes": [
+    {
+      "scene_id": 1,
+      "start_time": 0.0,
+      "end_time": 8.0,
+      "duration": 8.0,
+      "description": "小孩在户外健身器材上玩耍，身穿卡通动物服装，周围绿树环绕，阳光柔和，充满童趣与活力。",
+      "video_prompt": "A cheerful child wearing a fluffy blue-and-yellow animal costume with a red bow hat sits on an outdoor fitness machine in a leafy park. The child grips the handles and pulls the ropes with playful effort, mimicking adult workouts. Lush green trees and distant buildings form the background under soft daylight. The scene radiates joy and innocence. Shot with a steady medium-angle lens, slight zoom-in to capture facial expressions. Natural lighting, vibrant colors, shallow depth of field. 4K resolution, cinematic style.",
+      "style_elements": {
+        "characters": "Child in cartoonish animal outfit with mask and bow hat, expressive eyes, smiling",
+        "environment": "Outdoor park with greenery, fitness equipment, soft sunlight, urban backdrop",
+        "visual_style": "Vibrant, naturalistic, family-friendly aesthetic",
+        "camera_movement": "Steady medium shot with slow zoom-in"
+      }
+    },
+    {
+      "scene_id": 2,
+      "start_time": 8.0,
+      "end_time": 10.2,
+      "duration": 2.2,
+      "description": "一位粉色渐变发色的女性骑在白色马上，夜晚背景星光点点，灯光柔和，氛围梦幻浪漫。",
+      "video_prompt": "A graceful woman with long pink-gradient hair rides a white horse at night in an open field. She wears a flowing white long-sleeve top and light skirt, adorned with delicate jewelry, lips painted red. Soft ambient lights and distant stars illuminate the dark sky, creating a dreamy, ethereal atmosphere. Her gaze meets the camera warmly. Slow lateral tracking shot follows the horse in smooth motion. Low-light optimized cinematography, cool-blue highlights with warm accents. Shallow depth of field, 4K UHD, romantic fantasy visual tone.",
+      "style_elements": {
+        "characters": "Elegant woman with pink ombre hair, white dress, red lipstick, gentle expression",
+        "environment": "Nighttime outdoor setting with starry sky, soft glows, open terrain",
+        "visual_style": "Dreamlike, romantic, low-light cinematic",
+        "camera_movement": "Smooth lateral tracking shot"
+      }
+    }
+  ],
+  "raw_json": "{\n  \"scenes\": [\n    {\n      \"scene_id\": 1,\n      \"start_time\": 0.0,\n      \"end_time\": 8.0,\n      \"duration\": 8.0,\n      \"description\": \"小孩在户外健身器材上玩耍，身穿卡通动物服装，周围绿树环绕，阳光柔和，充满童趣与活力。\",\n      \"video_prompt\": \"A cheerful child wearing a fluffy blue-and-yellow animal costume with a red bow hat sits on an outdoor fitness machine in a leafy park. The child grips the handles and pulls the ropes with playful effort, mimicking adult workouts. Lush green trees and distant buildings form the background under soft daylight. The scene radiates joy and innocence. Shot with a steady medium-angle lens, slight zoom-in to capture facial expressions. Natural lighting, vibrant colors, shallow depth of field. 4K resolution, cinematic style.\",\n      \"style_elements\": {\n        \"characters\": \"Child in cartoonish animal outfit with mask and bow hat, expressive eyes, smiling\",\n        \"environment\": \"Outdoor park with greenery, fitness equipment, soft sunlight, urban backdrop\",\n        \"visual_style\": \"Vibrant, naturalistic, family-friendly aesthetic\",\n        \"camera_movement\": \"Steady medium shot with slow zoom-in\"\n      }\n    },\n    {\n      \"scene_id\": 2,\n      \"start_time\": 8.0,\n      \"end_time\": 10.2,\n      \"duration\": 2.2,\n      \"description\": \"一位粉色渐变发色的女性骑在白色马上，夜晚背景星光点点，灯光柔和，氛围梦幻浪漫。\",\n      \"video_prompt\": \"A graceful woman with long pink-gradient hair rides a white horse at night in an open field. She wears a flowing white long-sleeve top and light skirt, adorned with delicate jewelry, lips painted red. Soft ambient lights and distant stars illuminate the dark sky, creating a dreamy, ethereal atmosphere. Her gaze meets the camera warmly. Slow lateral tracking shot follows the horse in smooth motion. Low-light optimized cinematography, cool-blue highlights with warm accents. Shallow depth of field, 4K UHD, romantic fantasy visual tone.\",\n      \"style_elements\": {\n        \"characters\": \"Elegant woman with pink ombre hair, white dress, red lipstick, gentle expression\",\n        \"environment\": \"Nighttime outdoor setting with starry sky, soft glows, open terrain\",\n        \"visual_style\": \"Dreamlike, romantic, low-light cinematic\",\n        \"camera_movement\": \"Smooth lateral tracking shot\"\n      }\n    }\n  ]\n}"
+}
