@@ -10,6 +10,7 @@ import uuid
 logger = logging.getLogger(__name__)
 
 
+
 class FFmpegService:
     
     
@@ -116,6 +117,10 @@ class FFmpegService:
         except Exception as e:
             logger.error(f"查找FFprobe失败: {str(e)}")
             return None
+    
+    async def get_video_info(self, video_path: str) -> Dict[str, Any]:
+        """获取视频信息（公共方法）"""
+        return await self._get_video_info(video_path)
     
     async def slice_video(self, video_path: str, slice_duration: int = None, slice_limit: int = 0) -> Dict[str, Any]:
         #将视频切片为指定时长的片段
@@ -410,6 +415,17 @@ class FFmpegService:
     async def _get_video_info(self, video_path: str) -> Dict[str, Any]:
         """获取视频信息"""
         try:
+            # 检查ffprobe是否可用
+            if not self.ffprobe_path:
+                logger.warning("ffprobe未找到，返回默认视频信息")
+                return {
+                    'duration': 10,  # 假设默认时长10秒
+                    'width': 1920,
+                    'height': 1080,
+                    'bitrate': 0,
+                    'format_name': 'mp4'
+                }
+            
             # 使用ffprobe获取视频信息
             ffprobe_cmd = [
                 self.ffprobe_path,
@@ -573,3 +589,280 @@ class FFmpegService:
         except Exception as e:
             logger.error(f"视频缩略图生成失败: {str(e)}")
             return None
+    
+    async def download_video(self, video_url: str, output_path: str) -> str:
+        """下载视频文件"""
+        try:
+            logger.info(f"开始下载视频: {video_url} -> {output_path}")
+            
+            # 确保输出目录存在
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            
+            # 使用requests库下载视频
+            import requests
+            
+            # 发送GET请求下载视频
+            response = requests.get(video_url, stream=True, timeout=60)
+            response.raise_for_status()  # 检查请求是否成功
+            
+            # 写入文件
+            with open(output_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            
+            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                logger.info(f"视频下载成功: {output_path}")
+                return output_path
+            else:
+                logger.error(f"视频下载失败: {output_path}")
+                return None
+        except Exception as e:
+            logger.error(f"视频下载失败: {str(e)}")
+            return None
+    
+    async def extract_last_frame(self, video_path: str, output_path: str) -> Dict[str, Any]:
+        """
+        从视频中提取最后一帧
+        
+        Args:
+            video_path: 视频文件路径
+            output_path: 输出路径
+            
+        Returns:
+            包含成功状态和最后一帧路径的字典
+        """
+        try:
+            logger.info(f"开始从视频中提取最后一帧: {video_path} -> {output_path}")
+            
+            # 确保输出目录存在
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            
+            # 清理可能存在的旧文件
+            if os.path.exists(output_path):
+                try:
+                    os.remove(output_path)
+                    logger.info(f"已清理旧的最后一帧文件: {output_path}")
+                except Exception as e:
+                    logger.warning(f"清理旧文件失败: {str(e)}")
+            
+            # 方法1：使用ffprobe获取视频时长
+            duration = None
+            if self.ffprobe_path:
+                try:
+                    # 获取视频时长
+                    duration_cmd = [
+                        self.ffprobe_path, '-v', 'error', '-show_entries', 'format=duration',
+                        '-of', 'default=noprint_wrappers=1:nokey=1', video_path
+                    ]
+                    
+                    # 执行ffprobe命令获取视频时长
+                    result = await asyncio.create_subprocess_exec(
+                        *duration_cmd,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    stdout, stderr = await result.communicate()
+                    
+                    if result.returncode == 0:
+                        try:
+                            duration = float(stdout.decode().strip())
+                            logger.info(f"视频时长: {duration}秒")
+                        except ValueError:
+                            logger.warning(f"无法解析视频时长: {stdout.decode()}")
+                    else:
+                        logger.warning(f"ffprobe获取视频时长失败: {stderr.decode()}")
+                except Exception as e:
+                    logger.warning(f"使用ffprobe获取视频时长时发生异常: {str(e)}")
+            else:
+                logger.warning("ffprobe未找到，使用备选方法")
+            
+            # 方法列表，按优先级尝试
+            extract_methods = []
+            
+            # 只有当duration有效时，才添加基于时长提取的方法
+            if duration is not None and isinstance(duration, (int, float)):
+                extract_methods.append(
+                    {
+                        "name": "基于时长提取",
+                        "cmd": [
+                            self.ffmpeg_path, '-i', video_path,
+                            '-ss', str(max(0, duration - 0.1)),  # 使用0.1秒的偏移，更安全
+                            '-vframes', '1',
+                            '-q:v', '2',
+                            '-y',
+                            output_path
+                        ],
+                        "condition": True
+                    }
+                )
+            
+            # 添加其他提取方法
+            extract_methods.extend([
+                # 方法2：使用tail滤镜提取最后一个关键帧
+                {
+                    "name": "使用tail滤镜提取最后一个关键帧",
+                    "cmd": [
+                        self.ffmpeg_path, '-i', video_path,
+                        '-vf', 'select=eq(pict_type,PICT_TYPE_I),tail=1',
+                        '-vframes', '1',
+                        '-q:v', '2',
+                        '-y',
+                        output_path
+                    ],
+                    "condition": True
+                },
+                # 方法3：使用reverse滤镜提取第一帧（即原视频的最后一帧）
+                {
+                    "name": "使用reverse滤镜提取第一帧",
+                    "cmd": [
+                        self.ffmpeg_path, '-i', video_path,
+                        '-vf', 'reverse',
+                        '-vframes', '1',
+                        '-q:v', '2',
+                        '-y',
+                        output_path
+                    ],
+                    "condition": True
+                },
+                # 方法4：使用更简单的命令，直接提取最后一帧
+                {
+                    "name": "使用简单命令提取最后一帧",
+                    "cmd": [
+                        self.ffmpeg_path, '-i', video_path,
+                        '-vframes', '1',
+                        '-q:v', '2',
+                        '-y',
+                        output_path
+                    ],
+                    "condition": True
+                },
+                # 方法5：使用seek到视频末尾的方式
+                {
+                    "name": "使用seek到视频末尾的方式",
+                    "cmd": [
+                        self.ffmpeg_path, '-sseof', '-1', '-i', video_path,
+                        '-vframes', '1',
+                        '-q:v', '2',
+                        '-y',
+                        output_path
+                    ],
+                    "condition": True
+                }
+            ])
+            
+            # 尝试所有可用的方法
+            for method in extract_methods:
+                if method["condition"]:
+                    logger.info(f"尝试方法: {method['name']}")
+                    logger.debug(f"执行命令: {' '.join(method['cmd'])}")
+                    
+                    try:
+                        # 执行ffmpeg命令
+                        result = await asyncio.create_subprocess_exec(
+                            *method['cmd'],
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE
+                        )
+                        stdout, stderr = await result.communicate()
+                        
+                        # 检查命令执行结果
+                        if result.returncode == 0:
+                            # 检查输出文件是否有效
+                            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                                logger.info(f"成功提取最后一帧: {output_path} (使用方法: {method['name']})")
+                                return {
+                                    'success': True,
+                                    'frame_path': output_path,
+                                    'method_used': method['name']
+                                }
+                            else:
+                                logger.warning(f"方法 {method['name']} 执行成功，但输出文件无效")
+                        else:
+                            error_msg = stderr.decode('utf-8', errors='ignore')
+                            logger.warning(f"方法 {method['name']} 执行失败: {error_msg}")
+                    except Exception as e:
+                        logger.warning(f"方法 {method['name']} 执行异常: {str(e)}")
+            
+            # 如果所有方法都失败，尝试使用更基础的方法
+            logger.info("尝试使用最基础的方法提取最后一帧")
+            try:
+                # 使用最基础的命令，不使用复杂的滤镜
+                basic_cmd = [
+                    self.ffmpeg_path,
+                    '-i', video_path,
+                    '-vf', 'select=v:eq(n\,N-1)',
+                    '-vframes', '1',
+                    '-q:v', '2',
+                    '-y',
+                    output_path
+                ]
+                
+                logger.debug(f"执行基础命令: {' '.join(basic_cmd)}")
+                
+                result = await asyncio.create_subprocess_exec(
+                    *basic_cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                stdout, stderr = await result.communicate()
+                
+                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                    logger.info(f"成功提取最后一帧: {output_path} (使用基础方法)")
+                    return {
+                        'success': True,
+                        'frame_path': output_path,
+                        'method_used': '基础方法'
+                    }
+            except Exception as e:
+                logger.warning(f"基础方法执行失败: {str(e)}")
+            
+            # 所有方法都失败
+            logger.error(f"所有提取最后一帧的方法都失败了: {video_path}")
+            return {'success': False, 'error': '所有提取方法都失败了'}
+        except Exception as e:
+            logger.error(f"提取最后一帧失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return {'success': False, 'error': str(e)}
+    
+    async def remove_audio(self, video_path: str) -> str:
+        """
+        移除视频中的音频轨道
+        
+        Args:
+            video_path: 视频文件路径
+            
+        Returns:
+            移除音频后的视频路径
+        """
+        try:
+            logger.info(f"开始移除视频中的音频: {video_path}")
+            
+            # 生成输出路径
+            output_dir = os.path.dirname(video_path)
+            base_name = os.path.splitext(os.path.basename(video_path))[0]
+            output_path = os.path.join(output_dir, f"{base_name}_no_audio.mp4")
+            
+            # 构建FFmpeg命令
+            cmd = [
+                self.ffmpeg_path,
+                '-i', video_path,
+                '-c:v', 'copy',  # 复制视频轨道
+                '-an',  # 移除音频轨道
+                '-y',  # 覆盖输出文件
+                output_path
+            ]
+            
+            # 执行FFmpeg命令
+            await self._run_ffmpeg_command(cmd)
+            
+            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                logger.info(f"音频移除成功: {output_path}")
+                return output_path
+            else:
+                logger.error(f"音频移除失败: {output_path}")
+                return video_path  # 如果失败，返回原始视频路径
+        except Exception as e:
+            logger.error(f"音频移除失败: {str(e)}")
+            return video_path  # 如果异常，返回原始视频路径
