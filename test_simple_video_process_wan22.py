@@ -24,8 +24,7 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
-# 导入必要的服务和类
-from app import create_app
+# 导入必要的服务类
 from app.services.ffmpeg_service import FFmpegService
 from app.services.qwen_vl_service import QwenVLService
 from app.services.qwen_video_service import QwenVideoService
@@ -36,8 +35,7 @@ from app.services.speaker_voice_service import SpeakerVoiceService
 from app.services.speaker_tts_integration import SpeakerTTSIntegration
 from video_consistency_agent.agent.consistency_agent import ConsistencyAgent
 
-# 创建Flask应用实例
-app = create_app()
+# 不需要Flask应用实例，直接进行测试
 
 class QwenVideoServiceWan22(QwenVideoService):
     """
@@ -98,7 +96,7 @@ class QwenVideoServiceWan22(QwenVideoService):
                     # 添加free_tier_only=False参数来禁用免费模式，使用付费模式
                     # 使用wan2.2模型
                     rsp = VideoSynthesis.async_call(
-                        model='wan2.5-i2v-preview',
+                        model='wan2.2-kf2v-flash',
                         prompt=video_prompt,
                         img_url=img_url,
                         api_key=self.api_key,
@@ -562,7 +560,7 @@ class VideoProcessingTest:
                                 'original_prompt': self.scene_prompts[i-1].get('parsed_prompt', '') if i > 0 else '',
                                 'generation_params': {
                                     'frame_rate': 24,
-                                    'resolution': '1920x1080',
+                                    'resolution': '1280x720',
                                     'duration': self.scene_prompts[i-1].get('duration', 4) if i > 0 else 4
                                 }
                             },
@@ -592,14 +590,19 @@ class VideoProcessingTest:
                     
                     self.log_step(f"场景{i+1}视频生成", f"使用关键帧，数量: {len(generated_keyframes)}")
                     
-                    # 确保关键帧路径是file://格式，以便远程API能够访问
+                    # 确保关键帧路径是HTTP URL格式，以便远程API能够访问
                     formatted_keyframes = []
                     for keyframe in generated_keyframes:
                         if keyframe and os.path.exists(keyframe):
-                            formatted_keyframes.append(f"file://{os.path.abspath(keyframe)}")
+                            # 将本地路径转换为HTTP URL
+                            relative_path = os.path.relpath(keyframe, os.path.join(os.path.dirname(__file__), 'downloads'))
+                            http_url = f"http://localhost:8000/{relative_path.replace('\\', '/')}"
+                            formatted_keyframes.append(http_url)
                     if formatted_keyframes:
                         generated_keyframes = formatted_keyframes
                         self.log_step(f"场景{i+1}视频生成", f"格式化关键帧路径完成，数量: {len(generated_keyframes)}")
+                        for i, url in enumerate(generated_keyframes):
+                            self.log_step(f"场景{i+1}视频生成", f"关键帧 URL {i+1}: {url}")
                     else:
                         self.log_step(f"场景{i+1}视频生成", "警告: 没有有效的关键帧")
                         # 使用模拟关键帧
@@ -609,7 +612,7 @@ class VideoProcessingTest:
                     self.log_step(f"场景{i+1}视频生成", "使用AI生成关键帧")
                     keyframe_prompt = {
                         "video_prompt": scene_prompt.get('parsed_prompt', ''),
-                        "technical_params": {"frame_rate": 24, "resolution": "1920x1080"}
+                        "technical_params": {"frame_rate": 24, "resolution": "1280x720"}
                     }
                     
                     # 实现真正的首尾帧连接：将上一场景的最后一帧作为参考图像
@@ -640,11 +643,19 @@ class VideoProcessingTest:
                 
                 # 确保上一场景的最后一帧严格作为当前场景的第一帧
                 # 1. 如果是后续场景，确保生成的视频从previous_scene_last_frame开始
-                if i > 0 and previous_scene_last_frame and os.path.exists(previous_scene_last_frame):
-                    # 将上一场景的最后一帧作为当前场景的首帧，确保场景之间的连续性
+                if i > 0 and previous_scene_last_frame:
+                    # 将上一场景的最后一帧作为当前场景的首帧，确保视觉上完全一致
                     scene_prompt['parsed_prompt'] += f", 严格将上一场景的最后一帧作为当前场景的第一帧，确保视觉上完全一致"
                     # 将上一场景的最后一帧添加到生成的关键帧列表中
-                    generated_keyframes = [previous_scene_last_frame] + generated_keyframes[:2]  # 确保首帧是上一场景的最后一帧
+                    # 确保上一场景的最后一帧是HTTP URL格式
+                    if os.path.exists(previous_scene_last_frame):
+                        # 将本地路径转换为HTTP URL
+                        relative_path = os.path.relpath(previous_scene_last_frame, os.path.join(os.path.dirname(__file__), 'downloads'))
+                        previous_scene_last_frame_url = f"http://localhost:8000/{relative_path.replace('\\', '/')}"
+                    else:
+                        # 已经是HTTP URL格式
+                        previous_scene_last_frame_url = previous_scene_last_frame
+                    generated_keyframes = [previous_scene_last_frame_url] + generated_keyframes[:2]  # 确保首帧是上一场景的最后一帧
                 
                 # 使用wan2.2生成视频，将处理后的关键帧传给API
                 # 调用generate_video_from_keyframes方法（同步方法，不需要await）
@@ -654,7 +665,7 @@ class VideoProcessingTest:
                         "video_prompt": scene_prompt.get('parsed_prompt', ''),
                         "technical_params": {
                             "frame_rate": 24,
-                            "resolution": "1920x1080",
+                            "resolution": "1280x720",
                             "duration": scene_prompt.get('duration', 4)
                         }
                     }
@@ -692,7 +703,7 @@ class VideoProcessingTest:
                                 "original_prompt": scene_prompt.get('parsed_prompt', ''),
                                 "generation_params": {
                                     "frame_rate": 24,
-                                    "resolution": "1920x1080",
+                                    "resolution": "1280x720",
                                     "duration": scene_prompt.get('duration', 4)
                                 }
                             },
@@ -704,7 +715,7 @@ class VideoProcessingTest:
                                 "original_prompt": self.scene_prompts[i-1].get('parsed_prompt', '') if i > 0 else '',
                                 "generation_params": {
                                     "frame_rate": 24,
-                                    "resolution": "1920x1080",
+                                    "resolution": "1280x720",
                                     "duration": self.scene_prompts[i-1].get('duration', 4) if i > 0 else 4
                                 }
                             },
@@ -714,7 +725,7 @@ class VideoProcessingTest:
                             "original_prompt": scene_prompt.get('parsed_prompt', ''),
                             "generation_params": {
                                 "frame_rate": 24,
-                                "resolution": "1920x1080",
+                                "resolution": "1280x720",
                                 "duration": scene_prompt.get('duration', 4)
                             }
                         }

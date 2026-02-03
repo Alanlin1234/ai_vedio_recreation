@@ -1,6 +1,3 @@
-from .author_service import AuthorService
-from .video_service import VideoService
-from .douyin_service import DouyinService
-from .db_service import DBService
+# 只在需要时导入服务类，避免不必要的依赖
 
-__all__ = ['AuthorService', 'VideoService', 'DouyinService', 'DBService']
+__all__ = []

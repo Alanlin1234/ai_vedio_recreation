@@ -1,16 +1,17 @@
-from flask import Flask
-from flask_cors import CORS
 import sys
 import os
 
 # 添加backend目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config import Config
-from app.models import db
-
+# 只在需要时导入Flask相关模块
 def create_app():
     """应用工厂函数"""
+    from flask import Flask
+    from flask_cors import CORS
+    from config import Config
+    from app.models import db
+    
     app = Flask(__name__)
     app.config.from_object(Config())
     
