@@ -866,3 +866,153 @@ class FFmpegService:
         except Exception as e:
             logger.error(f"音频移除失败: {str(e)}")
             return video_path  # 如果异常，返回原始视频路径
+    
+    async def sync_audio_video(self, video_path: str, audio_path: str, output_path: str) -> Dict[str, Any]:
+        """
+        同步音频和视频
+        
+        Args:
+            video_path: 视频文件路径
+            audio_path: 音频文件路径
+            output_path: 输出文件路径
+            
+        Returns:
+            包含成功状态和输出路径的字典
+        """
+        try:
+            logger.info(f"开始同步音频和视频: {video_path} + {audio_path} -> {output_path}")
+            
+            # 确保输出目录存在
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            
+            # 构建FFmpeg命令
+            cmd = [
+                self.ffmpeg_path,
+                '-i', video_path,
+                '-i', audio_path,
+                '-c:v', 'copy',  # 复制视频轨道
+                '-c:a', 'aac',  # 重新编码音频
+                '-strict', 'experimental',
+                '-shortest',  # 使用最短的时长
+                '-y',  # 覆盖输出文件
+                output_path
+            ]
+            
+            # 执行FFmpeg命令
+            await self._run_ffmpeg_command(cmd)
+            
+            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                logger.info(f"音频视频同步成功: {output_path}")
+                return {
+                    'success': True,
+                    'output_path': output_path
+                }
+            else:
+                logger.error(f"音频视频同步失败: {output_path}")
+                return {
+                    'success': False,
+                    'error': '输出文件不存在或为空'
+                }
+        except Exception as e:
+            logger.error(f"音频视频同步失败: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    async def compose_videos(self, video_paths: List[str], output_path: str) -> Dict[str, Any]:
+        """
+        合成多个视频片段
+        
+        Args:
+            video_paths: 视频片段路径列表
+            output_path: 输出文件路径
+            
+        Returns:
+            包含成功状态和输出路径的字典
+        """
+        try:
+            logger.info(f"开始合成视频片段: {len(video_paths)}个片段 -> {output_path}")
+            
+            # 确保输出目录存在
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            
+            # 过滤掉不存在的视频文件
+            valid_video_paths = []
+            for video_path in video_paths:
+                if os.path.exists(video_path) and os.path.getsize(video_path) > 0:
+                    valid_video_paths.append(video_path)
+                    logger.info(f"添加有效视频片段: {video_path}")
+                else:
+                    logger.warning(f"跳过无效视频片段: {video_path}")
+            
+            if not valid_video_paths:
+                logger.error("没有有效的视频片段可以合成")
+                return {
+                    'success': False,
+                    'error': '没有有效的视频片段可以合成'
+                }
+            
+            # 创建临时文件列表
+            temp_dir = os.path.join(os.path.dirname(output_path), f"temp_{uuid.uuid4().hex[:8]}")
+            os.makedirs(temp_dir, exist_ok=True)
+            
+            # 生成视频片段列表文件
+            segment_list_path = os.path.join(temp_dir, "segments.txt")
+            with open(segment_list_path, 'w', encoding='utf-8') as f:
+                for video_path in valid_video_paths:
+                    # 使用绝对路径，确保FFmpeg能正确找到文件
+                    abs_path = os.path.abspath(video_path)
+                    # 转义路径中的特殊字符
+                    abs_path = abs_path.replace('\\', '/')
+                    f.write(f"file '{abs_path}'\n")
+            
+            # 打印生成的segments.txt文件内容
+            with open(segment_list_path, 'r', encoding='utf-8') as f:
+                logger.info(f"生成的segments.txt内容: {f.read()}")
+            
+            # 构建FFmpeg命令
+            cmd = [
+                self.ffmpeg_path,
+                '-f', 'concat',
+                '-safe', '0',
+                '-i', segment_list_path,
+                '-c', 'copy',
+                '-y',
+                output_path
+            ]
+            
+            logger.info(f"执行FFmpeg命令: {' '.join(cmd)}")
+            
+            # 执行FFmpeg命令
+            result = await self._run_ffmpeg_command(cmd)
+            logger.info(f"FFmpeg命令执行结果: {result}")
+            
+            # 检查输出文件
+            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                logger.info(f"视频合成成功: {output_path}")
+                # 清理临时文件
+                if os.path.exists(segment_list_path):
+                    os.remove(segment_list_path)
+                if os.path.exists(temp_dir):
+                    os.rmdir(temp_dir)
+                return {
+                    'success': True,
+                    'output_path': output_path
+                }
+            else:
+                logger.error(f"视频合成失败: {output_path}")
+                # 保留临时文件以便调试
+                logger.info(f"保留临时文件用于调试: {segment_list_path}")
+                return {
+                    'success': False,
+                    'error': '输出文件不存在或为空'
+                }
+        except Exception as e:
+            logger.error(f"视频合成失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return {
+                'success': False,
+                'error': str(e)
+            }

@@ -188,24 +188,66 @@ class TextToSpeechService:
     def validate_text_length(self, text: str, max_length: int = 4000) -> bool:
         return len(text) <= max_length
     
-    def split_long_text(self, text: str, max_length: int = 4000) -> list:
-        if len(text) <= max_length:
-            return [text]
+    def sync_audio_video(self, video_path: str, audio_path: str, output_path: str) -> Dict[str, Any]:
+        """
+        音画同步，将音频合并到视频中
         
-        # 按句号分割
-        sentences = text.split('。')
-        chunks = []
-        current_chunk = ""
-        
-        for sentence in sentences:
-            if len(current_chunk + sentence + '。') <= max_length:
-                current_chunk += sentence + '。'
+        Args:
+            video_path: 视频文件路径
+            audio_path: 音频文件路径
+            output_path: 输出文件路径
+            
+        Returns:
+            包含success和output_path的字典
+        """
+        try:
+            import subprocess
+            import os
+            
+            print(f"[音画同步] 开始合并音频 {audio_path} 到视频 {video_path}")
+            print(f"[音画同步] 输出路径: {output_path}")
+            
+            # 确保输出目录存在
+            output_dir = os.path.dirname(output_path)
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # 构建FFmpeg命令
+            # 使用-shortest参数确保输出视频时长与较短的媒体一致
+            cmd = [
+                'ffmpeg', '-y',
+                '-i', video_path,
+                '-i', audio_path,
+                '-c:v', 'copy',  # 复制视频流，不重新编码
+                '-c:a', 'aac',     # 重新编码音频为AAC
+                '-shortest',       # 输出视频时长与较短的媒体一致
+                '-strict', 'experimental',
+                output_path
+            ]
+            
+            # 执行FFmpeg命令
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                print(f"[音画同步] 音画同步成功: {output_path}")
+                return {
+                    'success': True,
+                    'output_path': output_path,
+                    'video_path': video_path,
+                    'audio_path': audio_path
+                }
             else:
-                if current_chunk:
-                    chunks.append(current_chunk.rstrip('。'))
-                current_chunk = sentence + '。'
-        
-        if current_chunk:
-            chunks.append(current_chunk.rstrip('。'))
-        
-        return chunks
+                error_msg = f"[音画同步] FFmpeg执行失败: {result.stderr}"
+                print(error_msg)
+                return {
+                    'success': False,
+                    'error': error_msg,
+                    'returncode': result.returncode
+                }
+                
+        except Exception as e:
+            error_msg = f"[音画同步] 音画同步失败: {str(e)}"
+            print(error_msg)
+            return {
+                'success': False,
+                'error': error_msg
+            }

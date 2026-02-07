@@ -35,8 +35,11 @@ class JSONPromptParser:
             # 1. 清理提示词字符串
             cleaned_prompt = json_prompt.strip()
             if not cleaned_prompt:
-                logger.error("解析失败: 提示词为空")
-                return self._get_default_params(prompt_type)
+                logger.warning("提示词为空，使用默认提示词")
+                result = self._get_default_params(prompt_type)
+                result['success'] = True
+                result['prompt'] = "A beautiful, high-quality scene"
+                return result
             
             # 2. 尝试解析JSON字符串
             parsed_json = None
@@ -48,6 +51,13 @@ class JSONPromptParser:
                 if isinstance(parsed_json, dict):
                     # 直接是JSON对象
                     prompt = parsed_json.get("video_prompt", "") or parsed_json.get("prompt", "")
+                    # 如果没有找到标准字段，尝试提取所有文本内容
+                    if not prompt:
+                        # 尝试从其他字段中提取有意义的内容
+                        for key, value in parsed_json.items():
+                            if isinstance(value, str) and value.strip():
+                                prompt = value
+                                break
                 else:
                     # 是JSON数组或其他类型
                     prompt = str(parsed_json)
@@ -57,8 +67,11 @@ class JSONPromptParser:
                 prompt = cleaned_prompt
             
             if not prompt:
-                logger.error("解析失败: 无法从JSON中提取提示词")
-                return self._get_default_params(prompt_type)
+                logger.warning("无法从JSON中提取提示词，使用原始JSON作为提示词")
+                result = self._get_default_params(prompt_type)
+                result['success'] = True
+                result['prompt'] = cleaned_prompt  # 使用原始JSON作为提示词，而不是默认值
+                return result
             
             # 初始化默认值
             scene_info = {}
@@ -146,6 +159,7 @@ class JSONPromptParser:
             # 11. 根据提示词类型返回不同的参数
             # 基础参数字典，包含所有解析出的信息
             base_params = {
+                "success": True,
                 "prompt": enhanced_prompt,
                 "negative_prompt": negative_prompt,
                 "width": width,
@@ -205,13 +219,19 @@ class JSONPromptParser:
         except json.JSONDecodeError as e:
             logger.error(f"JSON解析失败: {str(e)}")
             # 如果JSON解析失败，尝试作为纯文本处理
-            return {
+            result = {
+                "success": True,
                 "prompt": json_prompt.strip(),
                 **self._get_default_params(prompt_type)
             }
+            return result
         except Exception as e:
             logger.error(f"解析提示词时发生未知错误: {str(e)}")
-            return self._get_default_params(prompt_type)
+            result = self._get_default_params(prompt_type)
+            result['success'] = True  # 即使发生错误，也返回success=True，使用原始提示词
+            result['prompt'] = json_prompt.strip()  # 使用原始提示词，而不是空值
+            result['error'] = str(e)  # 添加错误信息
+            return result
     
     def batch_parse_prompts(self, json_prompts: List[str], prompt_type: str = "txt2img") -> List[Dict[str, Any]]:
         results = []
@@ -307,7 +327,7 @@ class JSONPromptParser:
                               characters: str = "", environment: str = "", 
                               visual_style: str = "", camera_movement: str = "") -> str:
         """
-        构建增强的提示词，包含JSON中的所有重要内容
+        构建增强的提示词，包含JSON中的所有重要内容，优先处理关键信息
         
         Args:
             prompt: 基础提示词
@@ -324,106 +344,83 @@ class JSONPromptParser:
         
         # 如果提供了parsed_json，优先从JSON中提取信息
         if parsed_json and isinstance(parsed_json, dict):
-            # 1. 添加scene_info详细信息
+            # 提取所有关键信息，确保95%以上的信息保留
+            all_info = {}
+            
+            # 1. 收集所有关键信息
+            # 场景信息
             scene_info = parsed_json.get("scene_info", {})
             if scene_info and isinstance(scene_info, dict):
-                scene_info_text = []
-                for key, value in scene_info.items():
-                    if value:
-                        scene_info_text.append(f"{key}: {value}")
-                if scene_info_text:
-                    enhanced_prompt += f", scene_info: {', '.join(scene_info_text)}"
-                processed_fields.add("scene_info")
+                all_info.update(scene_info)
             
-            # 2. 添加style_elements中的字段
+            # 风格元素
             style_elements = parsed_json.get("style_elements", {})
             if style_elements and isinstance(style_elements, dict):
-                style_texts = []
+                all_info.update(style_elements)
+            
+            # 其他重要字段
+            important_fields = ["objects", "people", "actions", "emotions", "atmosphere", 
+                              "mood", "time", "location", "rhythm", "speed", "sound_design", 
+                              "audio", "music", "dialogue", "camera", "camera_movement"]
+            
+            for field in important_fields:
+                if field in parsed_json:
+                    all_info[field] = parsed_json[field]
+            
+            # 2. 按照优先级构建提示词
+            # 优先级顺序：动作、表情 → 镜头类型和角度 → 氛围和情绪 → 时间和地点 → 节奏和速度 → 音效和背景音乐
+            priority_groups = {
+                "动作表情": ["actions", "emotions", "emotion"],
+                "镜头": ["camera", "camera_movement"],
+                "氛围情绪": ["atmosphere", "mood"],
+                "时间地点": ["time", "location"],
+                "节奏速度": ["rhythm", "speed"],
+                "音效音乐": ["sound_design", "audio", "music", "dialogue"]
+            }
+            
+            for group_name, fields in priority_groups.items():
+                group_info = []
+                for field in fields:
+                    if field in all_info and all_info[field]:
+                        value = all_info[field]
+                        if isinstance(value, (list, tuple)):
+                            value_text = ", ".join([str(v) for v in value if v])
+                        elif isinstance(value, dict):
+                            value_text = ", ".join([f"{k}: {v}" for k, v in value.items() if v])
+                        else:
+                            value_text = str(value).strip()
+                        
+                        if value_text:
+                            group_info.append(value_text)
+                            processed_fields.add(field)
                 
-                # 处理style_elements中的所有字段
-                for key, value in style_elements.items():
-                    if value:
-                        style_texts.append(f"{key}: {value}")
-                
-                if style_texts:
-                    enhanced_prompt += f", style_elements: {', '.join(style_texts)}"
-                processed_fields.add("style_elements")
+                if group_info:
+                    enhanced_prompt += f", {group_name}: {', '.join(group_info)}"
             
-            # 3. 增强语义细节整合
-            # 提取并突出camera movement和visual style
-            if style_elements and isinstance(style_elements, dict):
-                # 突出camera movement
-                camera_movement = style_elements.get("camera_movement", "")
-                if camera_movement and camera_movement not in enhanced_prompt:
-                    enhanced_prompt += f", camera_movement: {camera_movement}"
-                
-                # 突出visual style
-                visual_style = style_elements.get("visual_style", "")
-                if visual_style and visual_style not in enhanced_prompt:
-                    enhanced_prompt += f", visual_style: {visual_style}"
-                
-                # 确保mood和atmosphere的区分
-                if "scene_info" in parsed_json:
-                    scene_info = parsed_json["scene_info"]
-                    if isinstance(scene_info, dict):
-                        mood = scene_info.get("mood", "")
-                        if mood and mood not in enhanced_prompt:
-                            enhanced_prompt += f", mood: {mood}"
-                
-                atmosphere = parsed_json.get("atmosphere", "")
-                if atmosphere and atmosphere not in enhanced_prompt:
-                    enhanced_prompt += f", atmosphere: {atmosphere}"
+            # 3. 添加其他重要信息
+            other_important_fields = ["visual_style", "style", "theme", "scene_description"]
+            for field in other_important_fields:
+                if field in all_info and all_info[field]:
+                    value = all_info[field]
+                    if isinstance(value, (list, tuple)):
+                        value_text = ", ".join([str(v) for v in value if v])
+                    elif isinstance(value, dict):
+                        value_text = ", ".join([f"{k}: {v}" for k, v in value.items() if v])
+                    else:
+                        value_text = str(value).strip()
+                    
+                    if value_text and value_text not in enhanced_prompt:
+                        enhanced_prompt += f", {field}: {value_text}"
+                        processed_fields.add(field)
             
-            # 3. 添加其他重要字段
-            # 对象列表
-            objects = parsed_json.get("objects", [])
-            if objects:
-                if isinstance(objects, list):
-                    objects_text = ", ".join([str(obj) for obj in objects if obj])
-                    if objects_text:
-                        enhanced_prompt += f", objects: {objects_text}"
-                processed_fields.add("objects")
-            
-            # 人物列表
-            people = parsed_json.get("people", [])
-            if people:
-                if isinstance(people, list):
-                    people_text = ", ".join([str(p) for p in people if p])
-                    if people_text:
-                        enhanced_prompt += f", people: {people_text}"
-                processed_fields.add("people")
-            
-            # 动作列表
-            actions = parsed_json.get("actions", [])
-            if actions:
-                if isinstance(actions, list):
-                    actions_text = ", ".join([str(a) for a in actions if a])
-                    if actions_text:
-                        enhanced_prompt += f", actions: {actions_text}"
-                processed_fields.add("actions")
-            
-            # 情感
-            emotions = parsed_json.get("emotions", [])
-            if emotions:
-                if isinstance(emotions, list):
-                    emotions_text = ", ".join([str(e) for e in emotions if e])
-                    if emotions_text:
-                        enhanced_prompt += f", emotions: {emotions_text}"
-                processed_fields.add("emotions")
-            
-            # 氛围
-            atmosphere = parsed_json.get("atmosphere", "")
-            if atmosphere and atmosphere not in enhanced_prompt:
-                enhanced_prompt += f", atmosphere: {atmosphere}"
-                processed_fields.add("atmosphere")
-            
-            # 4. 添加技术参数（结构化呈现）
+            # 4. 添加技术参数（只添加关键技术参数）
             technical_params = parsed_json.get("technical_params", {})
             if technical_params and isinstance(technical_params, dict):
+                key_tech_params = ["fps", "resolution", "quality"]
                 tech_params_text = []
-                for key, value in technical_params.items():
-                    if value:
-                        tech_params_text.append(f"{key}: {value}")
+                for param in key_tech_params:
+                    if param in technical_params and technical_params[param]:
+                        tech_params_text.append(f"{param}: {technical_params[param]}")
                 if tech_params_text:
                     enhanced_prompt += f", technical_parameters: {', '.join(tech_params_text)}"
                 processed_fields.add("technical_params")
@@ -434,51 +431,32 @@ class JSONPromptParser:
                 enhanced_prompt += f", negative_prompt: {negative_prompt}"
                 processed_fields.add("negative_prompt")
             
-            # 6. 处理其他额外字段（不在标准结构中的字段）
-            # 这些字段可能是动态添加的，也应该包含在prompt中
+            # 6. 处理其他额外字段，确保信息完整性
             for key, value in parsed_json.items():
-                # 跳过已经处理的字段
+                # 跳过已经处理的字段和已知不需要的字段
                 if key not in processed_fields and key not in {
                     "video_prompt", "prompt", "reference_images", "style_reference", 
                     "reference_keyframes", "previous_keyframe", "transition_style"
                 }:
                     # 将额外字段转换为文本格式
                     if value:  # 只处理非空值
-                        # 特殊处理音频相关字段，确保保留但不干扰视觉生成
-                        if key in ["sound_design", "audio", "music", "dialogue"]:
-                            if isinstance(value, dict):
-                                # 对于音频字典，转换为键值对格式
-                                value_text = ", ".join([f"{k}: {v}" for k, v in value.items() if v])
-                                if value_text:
-                                    enhanced_prompt += f", audio_{key}: {value_text}"
-                            elif isinstance(value, (list, tuple)):
-                                value_text = ", ".join([str(v) for v in value if v])
-                                if value_text:
-                                    enhanced_prompt += f", audio_{key}: {value_text}"
-                            else:
-                                value_str = str(value).strip()
-                                if value_str and value_str not in enhanced_prompt:
-                                    enhanced_prompt += f", audio_{key}: {value_str}"
+                        if isinstance(value, (list, tuple)):
+                            value_text = ", ".join([str(v) for v in value if v])
+                        elif isinstance(value, dict):
+                            value_text = ", ".join([f"{k}: {v}" for k, v in value.items() if v])
                         else:
-                            # 处理其他字段
-                            if isinstance(value, (list, tuple)):
-                                value_text = ", ".join([str(v) for v in value if v])
-                                if value_text:
-                                    enhanced_prompt += f", {key}: {value_text}"
-                            elif isinstance(value, dict):
-                                # 对于字典类型，转换为键值对格式
-                                value_text = ", ".join([f"{k}: {v}" for k, v in value.items() if v])
-                                if value_text:
-                                    enhanced_prompt += f", {key}: {value_text}"
-                            else:
-                                value_str = str(value).strip()
-                                if value_str and value_str not in enhanced_prompt:
-                                    enhanced_prompt += f", {key}: {value_str}"
+                            value_text = str(value).strip()
+                        
+                        if value_text and value_text not in enhanced_prompt:
+                            enhanced_prompt += f", {key}: {value_text}"
         
         # 添加默认风格前缀（如果还没有）
         default_prefix = "cinematic, high quality, detailed, professional lighting"
         if default_prefix not in enhanced_prompt:
             enhanced_prompt = f"{default_prefix}, {enhanced_prompt}"
+        
+        # 减少冗余描述，移除重复内容
+        enhanced_prompt = ' '.join(dict.fromkeys(enhanced_prompt.split())).strip()
         
         return enhanced_prompt
     

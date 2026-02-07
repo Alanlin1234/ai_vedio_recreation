@@ -37,15 +37,15 @@ from video_consistency_agent.agent.consistency_agent import ConsistencyAgent
 
 # 不需要Flask应用实例，直接进行测试
 
-class QwenVideoServiceWan22(QwenVideoService):
+class QwenVideoServiceWan26(QwenVideoService):
     """
-    使用wan2.2模型的QwenVideoService子类
+    使用wan2.6模型的QwenVideoService子类
     """
     
     def generate_video_from_keyframes(self, keyframes: List[str], prompt: Dict[str, Any]) -> Dict[str, Any]:
         try:
             # 使用父类的logger
-            logger.info(f"开始使用wan2.2生成视频")
+            logger.info(f"开始使用wan2.6生成视频")
             
             # 获取核心提示词并进行编码检查
             video_prompt = prompt.get('video_prompt', '')
@@ -96,17 +96,21 @@ class QwenVideoServiceWan22(QwenVideoService):
                     # 添加free_tier_only=False参数来禁用免费模式，使用付费模式
                     # 使用wan2.2模型
                     rsp = VideoSynthesis.async_call(
-                        model='wan2.2-kf2v-flash',
+                        model='wan2.6-i2v-flash',
                         prompt=video_prompt,
                         img_url=img_url,
                         api_key=self.api_key,
-                        free_tier_only=False
+                        free_tier_only=False,
+                        video_params={
+                            "resolution": "720p",
+                            "audio": False
+                        }
                     )
                     
                     logger.debug(f"异步调用响应: {rsp}")
                     
                     if rsp.status_code != HTTPStatus.OK:
-                        error_msg = f"wan2.2视频生成失败: HTTP {rsp.status_code}, code: {rsp.code}, message: {rsp.message}"
+                        error_msg = f"wan2.6视频生成失败: HTTP {rsp.status_code}, code: {rsp.code}, message: {rsp.message}"
                         logger.error(error_msg)
                         
                         # 检查是否是API密钥错误
@@ -122,7 +126,7 @@ class QwenVideoServiceWan22(QwenVideoService):
                             }
                     
                     task_id = rsp.output.task_id
-                    logger.info(f"wan2.2视频生成任务创建成功，task_id: {task_id}")
+                    logger.info(f"wan2.6视频生成任务创建成功，task_id: {task_id}")
                     
                     # 等待任务完成 - 使用自定义等待逻辑，增加等待时间和轮询次数
                     logger.info(f"开始等待视频生成任务完成...")
@@ -138,7 +142,7 @@ class QwenVideoServiceWan22(QwenVideoService):
                         logger.debug(f"轮询任务状态: {wait_rsp.output.task_status}, 已等待: {time.time() - start_time:.1f}秒")
                         
                         if wait_rsp.status_code != HTTPStatus.OK:
-                            error_msg = f"wan2.2视频生成失败: HTTP {wait_rsp.status_code}, code: {wait_rsp.code}, message: {wait_rsp.message}"
+                            error_msg = f"wan2.6视频生成失败: HTTP {wait_rsp.status_code}, code: {wait_rsp.code}, message: {wait_rsp.message}"
                             logger.error(error_msg)
                             return {
                                 "success": False,
@@ -227,7 +231,7 @@ class VideoProcessingTest:
         # 初始化服务
         self.ffmpeg_service = FFmpegService()
         self.qwen_vl_service = QwenVLService()
-        self.qwen_video_service = QwenVideoServiceWan22()  # 使用wan2.2模型
+        self.qwen_video_service = QwenVideoServiceWan26()  # 使用wan2.6模型
         self.scene_segmenter = SceneSegmentationService()
         self.json_parser = JSONPromptParser()
         self.frame_continuity_service = FrameContinuityService()
@@ -590,23 +594,25 @@ class VideoProcessingTest:
                     
                     self.log_step(f"场景{i+1}视频生成", f"使用关键帧，数量: {len(generated_keyframes)}")
                     
-                    # 确保关键帧路径是HTTP URL格式，以便远程API能够访问
+                    # 确保关键帧路径是file://格式，以便直接访问本地文件
                     formatted_keyframes = []
                     for keyframe in generated_keyframes:
                         if keyframe and os.path.exists(keyframe):
-                            # 将本地路径转换为HTTP URL
-                            relative_path = os.path.relpath(keyframe, os.path.join(os.path.dirname(__file__), 'downloads'))
-                            http_url = f"http://localhost:8000/{relative_path.replace('\\', '/')}"
-                            formatted_keyframes.append(http_url)
+                            # 将本地路径转换为file://格式
+                            file_url = f"file://{os.path.abspath(keyframe)}"
+                            formatted_keyframes.append(file_url)
+                        elif keyframe.startswith('file://') or keyframe.startswith('http://') or keyframe.startswith('https://'):
+                            # 已经是URL格式，直接使用
+                            formatted_keyframes.append(keyframe)
                     if formatted_keyframes:
                         generated_keyframes = formatted_keyframes
                         self.log_step(f"场景{i+1}视频生成", f"格式化关键帧路径完成，数量: {len(generated_keyframes)}")
-                        for i, url in enumerate(generated_keyframes):
-                            self.log_step(f"场景{i+1}视频生成", f"关键帧 URL {i+1}: {url}")
+                        for j, url in enumerate(generated_keyframes):
+                            self.log_step(f"场景{i+1}视频生成", f"关键帧 URL {j+1}: {url}")
                     else:
                         self.log_step(f"场景{i+1}视频生成", "警告: 没有有效的关键帧")
                         # 使用模拟关键帧
-                        generated_keyframes = [f"https://example.com/simulated_keyframe_{i+1}.jpg"]
+                        generated_keyframes = [f"https://example.com/simulated_keyframe_{i+1}_{j}.jpg" for j in range(3)]
                 else:
                     # 使用qwen-image-edit生成关键帧
                     self.log_step(f"场景{i+1}视频生成", "使用AI生成关键帧")
@@ -646,16 +652,22 @@ class VideoProcessingTest:
                 if i > 0 and previous_scene_last_frame:
                     # 将上一场景的最后一帧作为当前场景的首帧，确保视觉上完全一致
                     scene_prompt['parsed_prompt'] += f", 严格将上一场景的最后一帧作为当前场景的第一帧，确保视觉上完全一致"
-                    # 将上一场景的最后一帧添加到生成的关键帧列表中
-                    # 确保上一场景的最后一帧是HTTP URL格式
+                    # 确保上一场景的最后一帧是file://格式
                     if os.path.exists(previous_scene_last_frame):
-                        # 将本地路径转换为HTTP URL
-                        relative_path = os.path.relpath(previous_scene_last_frame, os.path.join(os.path.dirname(__file__), 'downloads'))
-                        previous_scene_last_frame_url = f"http://localhost:8000/{relative_path.replace('\\', '/')}"
+                        # 将本地路径转换为file://格式
+                        previous_scene_last_frame_url = f"file://{os.path.abspath(previous_scene_last_frame)}"
                     else:
-                        # 已经是HTTP URL格式
+                        # 已经是file://或HTTP URL格式
                         previous_scene_last_frame_url = previous_scene_last_frame
-                    generated_keyframes = [previous_scene_last_frame_url] + generated_keyframes[:2]  # 确保首帧是上一场景的最后一帧
+                    # 确保首帧是上一场景的最后一帧，但保留当前场景的其他关键帧
+                    # 只在关键帧列表的开头添加上一场景的最后一帧
+                    if generated_keyframes:
+                        # 如果已经有其他关键帧，确保上一场景的最后一帧在开头
+                        if generated_keyframes[0] != previous_scene_last_frame_url:
+                            generated_keyframes = [previous_scene_last_frame_url] + generated_keyframes[1:]
+                    else:
+                        # 如果没有其他关键帧，只使用上一场景的最后一帧
+                        generated_keyframes = [previous_scene_last_frame_url]
                 
                 # 使用wan2.2生成视频，将处理后的关键帧传给API
                 # 调用generate_video_from_keyframes方法（同步方法，不需要await）
@@ -754,10 +766,7 @@ class VideoProcessingTest:
                     
                     # 保存当前关键帧供下一个场景使用
                     previous_keyframes = generated_keyframes
-                    # 保存最后一帧供下一个场景使用
-                    if generated_keyframes:
-                        previous_scene_last_frame = generated_keyframes[-1]
-                        self.frame_continuity_service.set_previous_scene_frame(previous_scene_last_frame)
+                    # 保持使用从视频中提取的最后一帧，不覆盖
                     
                     # 一致性检查结果处理
                     if consistency_result.get('passed'):
@@ -844,7 +853,7 @@ class VideoProcessingTest:
             for i, video in enumerate(self.generated_videos):
                 if video['success']:
                     scene_prompt = self.scene_prompts[i]
-                    text = scene_prompt.get('parsed_prompt', '')[:100]  # 限制文本长度
+                    text = scene_prompt.get('optimized_prompt', '')[:100]  # 限制文本长度，使用优化后的prompt
                     
                     # 使用speaker_tts_integration生成音频，确保语音一致性
                     audio_output_path = os.path.join(self.output_dir, f"scene_{i+1}_audio.mp3")
