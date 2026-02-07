@@ -867,6 +867,39 @@ class FFmpegService:
             logger.error(f"音频移除失败: {str(e)}")
             return video_path  # 如果异常，返回原始视频路径
     
+    def normalize_frame_path(self, frame_path: str) -> str:
+        """
+        标准化帧路径为file://格式的绝对路径
+        
+        Args:
+            frame_path: 本地文件路径或URL
+            
+        Returns:
+            file://格式的绝对路径或原URL
+        """
+        try:
+            # 如果已经是URL格式，直接返回
+            if frame_path.startswith('file://') or \
+               frame_path.startswith('http://') or \
+               frame_path.startswith('https://'):
+                return frame_path
+            
+            # 转换为绝对路径
+            abs_path = os.path.abspath(frame_path)
+            
+            # 转换为file://格式
+            # 在Windows上，需要处理盘符（例如：C:\path -> file:///C:/path）
+            if os.name == 'nt':  # Windows
+                # 将反斜杠转换为正斜杠
+                abs_path = abs_path.replace('\\', '/')
+                # 添加file://前缀
+                return f"file:///{abs_path}"
+            else:  # Linux/Mac
+                return f"file://{abs_path}"
+        except Exception as e:
+            logger.error(f"路径标准化失败: {str(e)}")
+            return frame_path  # 失败时返回原路径
+    
     async def sync_audio_video(self, video_path: str, audio_path: str, output_path: str) -> Dict[str, Any]:
         """
         同步音频和视频
@@ -882,42 +915,78 @@ class FFmpegService:
         try:
             logger.info(f"开始同步音频和视频: {video_path} + {audio_path} -> {output_path}")
             
-            # 确保输出目录存在
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            # 1. 验证输入文件
+            if not os.path.exists(video_path):
+                error_msg = f'视频文件不存在: {video_path}'
+                logger.error(error_msg)
+                return {'success': False, 'error': error_msg}
             
-            # 构建FFmpeg命令
+            if not os.path.exists(audio_path):
+                error_msg = f'音频文件不存在: {audio_path}'
+                logger.error(error_msg)
+                return {'success': False, 'error': error_msg}
+            
+            # 2. 确保输出目录存在
+            output_dir = os.path.dirname(output_path)
+            if output_dir:
+                os.makedirs(output_dir, exist_ok=True)
+            
+            # 3. 构建FFmpeg命令（使用更兼容的参数）
             cmd = [
                 self.ffmpeg_path,
                 '-i', video_path,
                 '-i', audio_path,
-                '-c:v', 'copy',  # 复制视频轨道
-                '-c:a', 'aac',  # 重新编码音频
+                '-c:v', 'copy',  # 复制视频流
+                '-c:a', 'aac',   # 重新编码音频为AAC
+                '-b:a', '192k',  # 设置音频比特率
                 '-strict', 'experimental',
-                '-shortest',  # 使用最短的时长
-                '-y',  # 覆盖输出文件
+                '-shortest',     # 使用最短的时长
+                '-y',            # 覆盖输出文件
                 output_path
             ]
             
-            # 执行FFmpeg命令
-            await self._run_ffmpeg_command(cmd)
+            # 4. 执行命令并捕获详细错误
+            logger.info(f"执行音视频同步命令: {' '.join(cmd)}")
             
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await process.communicate()
+            
+            # 5. 检查执行结果
+            if process.returncode != 0:
+                error_msg = stderr.decode('utf-8', errors='ignore')
+                logger.error(f"FFmpeg执行失败: {error_msg}")
+                return {
+                    'success': False,
+                    'error': f'FFmpeg执行失败: {error_msg}',
+                    'returncode': process.returncode
+                }
+            
+            # 6. 验证输出文件
             if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-                logger.info(f"音频视频同步成功: {output_path}")
+                logger.info(f"音视频同步成功: {output_path}, 文件大小: {os.path.getsize(output_path)} 字节")
                 return {
                     'success': True,
                     'output_path': output_path
                 }
             else:
-                logger.error(f"音频视频同步失败: {output_path}")
+                error_msg = '输出文件不存在或为空'
+                logger.error(f"音视频同步失败: {error_msg}")
                 return {
                     'success': False,
-                    'error': '输出文件不存在或为空'
+                    'error': error_msg
                 }
         except Exception as e:
-            logger.error(f"音频视频同步失败: {str(e)}")
+            error_msg = f"音视频同步异常: {str(e)}"
+            logger.error(error_msg)
+            import traceback
+            traceback.print_exc()
             return {
                 'success': False,
-                'error': str(e)
+                'error': error_msg
             }
     
     async def compose_videos(self, video_paths: List[str], output_path: str) -> Dict[str, Any]:

@@ -35,6 +35,29 @@ class FrameContinuityService:
         """获取上一个场景的最后一帧"""
         return self.previous_scene_last_frame
     
+    def build_keyframe_list(self, current_keyframes: List[str], 
+                           use_previous_frame: bool = True) -> List[str]:
+        """
+        构建关键帧列表，确保首尾帧连接
+        
+        Args:
+            current_keyframes: 当前场景的关键帧列表
+            use_previous_frame: 是否使用上一场景的最后一帧
+            
+        Returns:
+            处理后的关键帧列表，第一个元素是上一场景的最后一帧（如果可用）
+        """
+        if use_previous_frame and self.previous_scene_last_frame:
+            # 将上一场景的最后一帧放在列表开头
+            # 避免重复：如果current_keyframes已经包含了previous_scene_last_frame，先移除
+            filtered_keyframes = [f for f in current_keyframes if f != self.previous_scene_last_frame]
+            result = [self.previous_scene_last_frame] + filtered_keyframes
+            logger.info(f"构建关键帧列表：使用上一场景的最后一帧作为首帧，总数: {len(result)}")
+            return result
+        else:
+            logger.info(f"构建关键帧列表：使用原始关键帧，总数: {len(current_keyframes)}")
+            return current_keyframes
+    
     def build_contextual_prompt(
         self, 
         current_prompt: str,

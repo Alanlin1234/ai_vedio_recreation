@@ -41,61 +41,39 @@ class JSONPromptParser:
                 result['prompt'] = "A beautiful, high-quality scene"
                 return result
             
-            # 2. 尝试解析JSON字符串
-            parsed_json = None
-            try:
-                parsed_json = json.loads(cleaned_prompt)
-                logger.debug(f"解析后的JSON: {parsed_json}")
-                
-                # 3. 提取基本提示词
-                if isinstance(parsed_json, dict):
-                    # 直接是JSON对象
-                    prompt = parsed_json.get("video_prompt", "") or parsed_json.get("prompt", "")
-                    # 如果没有找到标准字段，尝试提取所有文本内容
-                    if not prompt:
-                        # 尝试从其他字段中提取有意义的内容
-                        for key, value in parsed_json.items():
-                            if isinstance(value, str) and value.strip():
-                                prompt = value
-                                break
-                else:
-                    # 是JSON数组或其他类型
-                    prompt = str(parsed_json)
-            except json.JSONDecodeError as e:
-                logger.warning(f"JSON解析失败，将作为纯文本处理: {str(e)}")
-                # JSON解析失败，使用原始字符串作为提示词
-                prompt = cleaned_prompt
+            # 2. 检测输入格式（JSON或纯文本）
+            is_json = self._detect_json_format(cleaned_prompt)
+            logger.info(f"检测到格式: {'JSON' if is_json else '纯文本'}")
             
-            if not prompt:
-                logger.warning("无法从JSON中提取提示词，使用原始JSON作为提示词")
-                result = self._get_default_params(prompt_type)
-                result['success'] = True
-                result['prompt'] = cleaned_prompt  # 使用原始JSON作为提示词，而不是默认值
-                return result
-            
-            # 初始化默认值
-            scene_info = {}
-            duration = 0
-            style_elements = {}
-            characters = ""
-            environment = ""
-            visual_style = ""
-            camera_movement = ""
-            technical_params = {}
-            aspect_ratio = "16:9"
-            fps = self.default_config["default_fps"]
-            quality = "high"
-            width = 0
-            height = 0
-            steps = self.default_config["default_steps"]
-            cfg_scale = self.default_config["default_cfg_scale"]
-            sampler_name = self.default_config["default_sampler"]
-            scheduler = self.default_config["default_scheduler"]
-            negative_prompt = self.default_config["default_negative_prompt"]
-            additional_fields = {}  # 用于保存额外的JSON字段
-            
-            # 只有当JSON解析成功时，才提取详细参数
-            if parsed_json is not None:
+            # 3. 根据格式选择解析策略
+            if is_json:
+                return self._parse_json_prompt(cleaned_prompt, prompt_type)
+            else:
+                return self._parse_text_prompt(cleaned_prompt, prompt_type)
+        """
+        # 初始化默认值
+        scene_info = {}
+        duration = 0
+        style_elements = {}
+        characters = ""
+        environment = ""
+        visual_style = ""
+        camera_movement = ""
+        technical_params = {}
+        aspect_ratio = "16:9"
+        fps = self.default_config["default_fps"]
+        quality = "high"
+        width = 0
+        height = 0
+        steps = self.default_config["default_steps"]
+        cfg_scale = self.default_config["default_cfg_scale"]
+        sampler_name = self.default_config["default_sampler"]
+        scheduler = self.default_config["default_scheduler"]
+        negative_prompt = self.default_config["default_negative_prompt"]
+        additional_fields = {}  # 用于保存额外的JSON字段
+        
+        # 只有当JSON解析成功时，才提取详细参数
+        if parsed_json is not None:
                 # 3. 提取场景信息
                 if isinstance(parsed_json, dict):
                     scene_info = parsed_json.get("scene_info", {})
@@ -296,6 +274,108 @@ class JSONPromptParser:
             })
         
         return default_params
+    
+    def _detect_json_format(self, text: str) -> bool:
+        """
+        检测文本是否为JSON格式
+        
+        Args:
+            text: 输入文本
+            
+        Returns:
+            True if JSON格式, False if 纯文本
+        """
+        text = text.strip()
+        # 检查是否以JSON对象或数组的标记开始和结束
+        return (text.startswith('{') and text.endswith('}')) or \
+               (text.startswith('[') and text.endswith(']'))
+    
+    def _parse_json_prompt(self, json_text: str, prompt_type: str) -> Dict[str, Any]:
+        """
+        解析JSON格式的提示词
+        
+        Args:
+            json_text: JSON格式的文本
+            prompt_type: 提示词类型
+            
+        Returns:
+            解析结果字典
+        """
+        try:
+            parsed_json = json.loads(json_text)
+            logger.debug(f"成功解析JSON: {parsed_json}")
+            
+            # 提取基本提示词
+            prompt = ""
+            if isinstance(parsed_json, dict):
+                # 尝试从标准字段提取
+                prompt = parsed_json.get("video_prompt", "") or parsed_json.get("prompt", "")
+                
+                # 如果没有找到标准字段，尝试提取所有文本内容
+                if not prompt:
+                    for key, value in parsed_json.items():
+                        if isinstance(value, str) and value.strip():
+                            prompt = value
+                            break
+            else:
+                # 是JSON数组或其他类型，转换为字符串
+                prompt = str(parsed_json)
+            
+            # 如果仍然没有提取到内容，使用原始JSON文本
+            if not prompt:
+                logger.warning("无法从JSON中提取提示词，使用原始JSON文本")
+                prompt = json_text
+            
+            # 继续原有的详细解析逻辑...
+            return self._build_full_result(prompt, parsed_json, prompt_type)
+            
+        except json.JSONDecodeError as e:
+            logger.warning(f"JSON解析失败: {str(e)}，回退到纯文本模式")
+            # JSON解析失败，回退到纯文本解析
+            return self._parse_text_prompt(json_text, prompt_type)
+    
+    def _parse_text_prompt(self, text: str, prompt_type: str) -> Dict[str, Any]:
+        """
+        解析纯文本格式的提示词
+        
+        Args:
+            text: 纯文本提示词
+            prompt_type: 提示词类型
+            
+        Returns:
+            解析结果字典
+        """
+        logger.info(f"使用纯文本模式解析，文本长度: {len(text)}")
+        
+        # 直接使用文本内容，不进行JSON解析
+        prompt = text.strip()
+        
+        # 构建基本结果
+        result = self._get_default_params(prompt_type)
+        result['success'] = True
+        result['prompt'] = prompt
+        result['parsed_json'] = None  # 纯文本模式没有JSON
+        
+        # 验证内容完整性
+        if len(prompt) < len(text) * 0.95:  # 如果丢失超过5%的内容
+            logger.warning(f"内容可能被截断: 原始长度={len(text)}, 解析后长度={len(prompt)}")
+        
+        logger.info(f"纯文本解析完成，提示词长度: {len(prompt)}")
+        return result
+    
+    def _build_full_result(self, prompt: str, parsed_json: Optional[Dict[str, Any]], 
+                          prompt_type: str) -> Dict[str, Any]:
+        """
+        构建完整的解析结果（原有的详细解析逻辑）
+        
+        Args:
+            prompt: 基础提示词
+            parsed_json: 解析后的JSON对象
+            prompt_type: 提示词类型
+            
+        Returns:
+            完整的解析结果字典
+        """
     
     def _calculate_dimensions(self, aspect_ratio: str, fps: int, quality: str) -> tuple:
         try:

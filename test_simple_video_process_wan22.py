@@ -581,29 +581,23 @@ class VideoProcessingTest:
                 if self.use_original_keyframes:
                     self.log_step(f"场景{i+1}视频生成", "使用原视频的关键帧，跳过AI生成步骤")
                     
-                    # 实现真正的首尾帧连接：将上一场景的最后一帧作为当前场景的第一帧
-                    if i > 0 and previous_scene_last_frame:
-                        self.log_step(f"场景{i+1}视频生成", f"使用上一场景的最后一帧作为当前场景的第一帧: {previous_scene_last_frame}")
-                        # 创建新的关键帧列表，以上一场景的最后一帧为第一帧
-                        generated_keyframes = [previous_scene_last_frame] + reference_keyframes
-                        # 确保关键帧数量不超过3个
-                        generated_keyframes = generated_keyframes[:3]
-                    else:
-                        # 第一个场景或没有上一场景的最后一帧，使用原关键帧
-                        generated_keyframes = reference_keyframes[:3]  # 限制关键帧数量为3个
+                    # 使用FrameContinuityService构建关键帧列表
+                    generated_keyframes = self.frame_continuity_service.build_keyframe_list(
+                        current_keyframes=reference_keyframes[:3],  # 限制为3个
+                        use_previous_frame=(i > 0)  # 第一个场景不使用上一帧
+                    )
                     
                     self.log_step(f"场景{i+1}视频生成", f"使用关键帧，数量: {len(generated_keyframes)}")
                     
-                    # 确保关键帧路径是file://格式，以便直接访问本地文件
+                    # 标准化所有关键帧路径为file://格式
                     formatted_keyframes = []
                     for keyframe in generated_keyframes:
-                        if keyframe and os.path.exists(keyframe):
-                            # 将本地路径转换为file://格式
-                            file_url = f"file://{os.path.abspath(keyframe)}"
-                            formatted_keyframes.append(file_url)
-                        elif keyframe.startswith('file://') or keyframe.startswith('http://') or keyframe.startswith('https://'):
-                            # 已经是URL格式，直接使用
-                            formatted_keyframes.append(keyframe)
+                        if keyframe:
+                            # 使用FFmpegService的normalize_frame_path方法
+                            normalized_path = self.ffmpeg_service.normalize_frame_path(keyframe)
+                            formatted_keyframes.append(normalized_path)
+                            self.log_step(f"场景{i+1}视频生成", f"标准化关键帧路径: {keyframe} -> {normalized_path}")
+                    
                     if formatted_keyframes:
                         generated_keyframes = formatted_keyframes
                         self.log_step(f"场景{i+1}视频生成", f"格式化关键帧路径完成，数量: {len(generated_keyframes)}")
@@ -647,29 +641,7 @@ class VideoProcessingTest:
                     generated_keyframes = keyframe_result.get('keyframes', [])
                     self.log_step(f"场景{i+1}视频生成", f"关键帧生成完成，数量: {len(generated_keyframes)}")
                 
-                # 确保上一场景的最后一帧严格作为当前场景的第一帧
-                # 1. 如果是后续场景，确保生成的视频从previous_scene_last_frame开始
-                if i > 0 and previous_scene_last_frame:
-                    # 将上一场景的最后一帧作为当前场景的首帧，确保视觉上完全一致
-                    scene_prompt['parsed_prompt'] += f", 严格将上一场景的最后一帧作为当前场景的第一帧，确保视觉上完全一致"
-                    # 确保上一场景的最后一帧是file://格式
-                    if os.path.exists(previous_scene_last_frame):
-                        # 将本地路径转换为file://格式
-                        previous_scene_last_frame_url = f"file://{os.path.abspath(previous_scene_last_frame)}"
-                    else:
-                        # 已经是file://或HTTP URL格式
-                        previous_scene_last_frame_url = previous_scene_last_frame
-                    # 确保首帧是上一场景的最后一帧，但保留当前场景的其他关键帧
-                    # 只在关键帧列表的开头添加上一场景的最后一帧
-                    if generated_keyframes:
-                        # 如果已经有其他关键帧，确保上一场景的最后一帧在开头
-                        if generated_keyframes[0] != previous_scene_last_frame_url:
-                            generated_keyframes = [previous_scene_last_frame_url] + generated_keyframes[1:]
-                    else:
-                        # 如果没有其他关键帧，只使用上一场景的最后一帧
-                        generated_keyframes = [previous_scene_last_frame_url]
-                
-                # 使用wan2.2生成视频，将处理后的关键帧传给API
+                # 使用wan2.6生成视频，将处理后的关键帧传给API
                 # 调用generate_video_from_keyframes方法（同步方法，不需要await）
                 video_result = self.qwen_video_service.generate_video_from_keyframes(
                     generated_keyframes,
@@ -852,23 +824,39 @@ class VideoProcessingTest:
             
             for i, video in enumerate(self.generated_videos):
                 if video['success']:
-                    scene_prompt = self.scene_prompts[i]
-                    text = scene_prompt.get('optimized_prompt', '')[:100]  # 限制文本长度，使用优化后的prompt
+                    # 关键修复：使用原视频切片的完整音频转录文本
+                    slice_info = self.video_slices[i]
+                    audio_text = slice_info.get('audio_content', '')
                     
-                    # 使用speaker_tts_integration生成音频，确保语音一致性
+                    # 如果没有音频转录，回退到场景提示词
+                    if not audio_text:
+                        scene_prompt = self.scene_prompts[i]
+                        audio_text = scene_prompt.get('optimized_prompt', '')
+                        self.log_step(f"场景{i+1}音频合成", "警告: 没有音频转录，使用优化提示词")
+                    else:
+                        self.log_step(f"场景{i+1}音频合成", f"使用完整音频转录文本，长度: {len(audio_text)} 字符")
+                    
+                    # 验证文本长度
+                    if len(audio_text) < 10:
+                        self.log_step(f"场景{i+1}音频合成", f"警告: 音频文本过短 ({len(audio_text)} 字符)，可能导致音频质量问题")
+                    
+                    # 不要截断文本！使用完整内容
+                    # 错误做法: text = audio_text[:100]
+                    # 正确做法: text = audio_text
+                    
                     audio_output_path = os.path.join(self.output_dir, f"scene_{i+1}_audio.mp3")
                     
                     if speaker_id:
                         self.log_step(f"场景{i+1}音频合成", "使用说话人识别和voice seed确保语音一致性")
                         audio_result = self.speaker_tts_integration.generate_audio_with_speaker(
-                            text=text,
+                            text=audio_text,  # 使用完整文本
                             speaker_id=speaker_id,
                             output_path=audio_output_path
                         )
                     else:
                         self.log_step(f"场景{i+1}音频合成", "使用默认TTS")
                         audio_result = self.content_generator.text_to_speech(
-                            text=text,
+                            text=audio_text,  # 使用完整文本
                             output_path=audio_output_path
                         )
                     
@@ -878,6 +866,21 @@ class VideoProcessingTest:
                         if 'voice_seed' in audio_result:
                             video['voice_seed'] = audio_result['voice_seed']
                             self.log_step(f"场景{i+1}音频合成", f"保存voice seed: {audio_result['voice_seed']}")
+                        
+                        # 验证音频文件
+                        audio_path = audio_result.get('audio_path', '')
+                        if os.path.exists(audio_path):
+                            audio_size = os.path.getsize(audio_path)
+                            self.log_step(f"场景{i+1}音频合成", f"音频生成成功，文件大小: {audio_size} 字节")
+                            
+                            # 验证音频时长（粗略估算）
+                            estimated_duration = len(audio_text) / 10  # 假设每10个字符约1秒
+                            self.log_step(f"场景{i+1}音频合成", f"预估音频时长: {estimated_duration:.1f} 秒")
+                        else:
+                            self.log_step(f"场景{i+1}音频合成", f"警告: 音频文件不存在: {audio_path}")
+                    else:
+                        error_msg = audio_result.get('error', '未知错误')
+                        self.log_step(f"场景{i+1}音频合成", f"失败: {error_msg}")
             
             self.log_step("音频合成", "完成")
             return True
