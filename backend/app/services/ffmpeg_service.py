@@ -259,7 +259,7 @@ class FFmpegService:
             return None
     
     async def synthesize_final_video(self, video_segments: List[Dict[str, Any]], audio_path: str = None, story_data: Dict[str, Any] = None) -> str:
-# 合成最终视频
+        temp_dir = None
         try:
             logger.info(f"开始合成最终视频，使用 {len(video_segments)} 个片段")
             
@@ -267,23 +267,19 @@ class FFmpegService:
                 logger.error("没有视频片段可以合成")
                 return None
             
-            # 创建临时目录
             temp_dir = os.path.join(os.path.dirname(video_segments[0]['output_file']), f"temp_{uuid.uuid4().hex[:8]}")
             os.makedirs(temp_dir, exist_ok=True)
             
-            # 1. 生成视频片段列表文件
             segment_list_path = os.path.join(temp_dir, "segments.txt")
             with open(segment_list_path, 'w') as f:
                 for segment in video_segments:
                     f.write(f"file '{segment['output_file']}'\n")
             
-            # 2. 生成最终视频文件名
             output_video_path = os.path.join(
                 os.path.dirname(video_segments[0]['output_file']),
                 f"final_{uuid.uuid4().hex[:8]}.mp4"
             )
             
-            # 3. 构建FFmpeg命令
             cmd = [
                 self.ffmpeg_path,
                 '-f', 'concat',
@@ -294,10 +290,8 @@ class FFmpegService:
                 output_video_path
             ]
             
-            # 执行FFmpeg命令合并视频片段
             await self._run_ffmpeg_command(cmd)
             
-            # 4. 如果有音频，合并音频到视频
             if audio_path and os.path.exists(audio_path):
                 final_with_audio_path = os.path.join(
                     os.path.dirname(video_segments[0]['output_file']),
@@ -318,13 +312,15 @@ class FFmpegService:
                 
                 await self._run_ffmpeg_command(cmd)
                 
-                # 替换原视频文件
-                os.replace(final_with_audio_path, output_video_path)
-                logger.info(f"音频合并成功: {output_video_path}")
-            
-            # 5. 清理临时文件
-            os.remove(segment_list_path)
-            os.rmdir(temp_dir)
+                if os.path.exists(final_with_audio_path) and os.path.getsize(final_with_audio_path) > 0:
+                    try:
+                        if os.path.exists(output_video_path):
+                            os.remove(output_video_path)
+                        os.rename(final_with_audio_path, output_video_path)
+                        logger.info(f"音频合并成功: {output_video_path}")
+                    except Exception as e:
+                        logger.warning(f"重命名音频视频文件失败: {e}")
+                        output_video_path = final_with_audio_path
             
             if os.path.exists(output_video_path) and os.path.getsize(output_video_path) > 0:
                 logger.info(f"最终视频合成成功: {output_video_path}")
@@ -335,6 +331,14 @@ class FFmpegService:
         except Exception as e:
             logger.error(f"最终视频合成失败: {str(e)}")
             return None
+        finally:
+            if temp_dir and os.path.exists(temp_dir):
+                try:
+                    import shutil
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                    logger.debug(f"已清理临时目录: {temp_dir}")
+                except Exception as e:
+                    logger.warning(f"清理临时目录失败: {e}")
     
     async def _extract_keyframes(self, video_path: str, num_keyframes: int = 3) -> List[str]:
         """从视频中提取多个关键帧，优化版"""

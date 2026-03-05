@@ -18,9 +18,9 @@ class DashScopeChatModel(BaseChatModel):
     """基于DashScope的LangChain聊天模型"""
     
     api_key: str = Field(default="")
-    model_name: str = Field(default="qwen-omni-turbo")
+    model_name: str = Field(default="qwen-omni-turbo-latest")
     
-    def __init__(self, api_key: str = None, model_name: str = "qwen-omni-turbo", **kwargs):
+    def __init__(self, api_key: str = None, model_name: str = "qwen-omni-turbo-latest", **kwargs):
         # 设置默认值
         if api_key is None:
             api_key = config.DASHSCOPE_API_KEY
@@ -127,13 +127,7 @@ class DashScopeChatModel(BaseChatModel):
             import traceback
             print(f"[DashScope] 异常堆栈: {traceback.format_exc()}")
             
-            # Fallback机制：返回模拟结果
-            print(f"[DashScope] 使用模拟结果作为fallback")
-            
-            # 生成模拟内容
-            simulated_content = "这是一个模拟的视频分析结果。视频中包含小动物和豌豆藤蔓的内容，场景生动有趣。"
-            generation = ChatGeneration(message=HumanMessage(content=simulated_content))
-            return ChatResult(generations=[generation])
+            raise Exception(f"DashScope API调用失败: {str(e)}")
     
     def _convert_messages(self, messages: list[BaseMessage]) -> list[Dict[str, Any]]:
         """将LangChain消息格式转换为DashScope格式"""
@@ -180,7 +174,7 @@ class DashScopeChatModel(BaseChatModel):
 class VideoAnalysisAgent:
     """基于LangChain的视频分析智能体"""
     
-    def __init__(self, api_key: str = None, model_name: str = "qwen-omni-turbo"):
+    def __init__(self, api_key: str = None, model_name: str = "qwen-omni-turbo-latest"):
 # 初始化视频分析智能体
         self.llm = DashScopeChatModel(
             api_key=api_key,
@@ -337,7 +331,7 @@ class VideoAnalysisAgent:
             
             integrated_analysis += "  # # 切片分析结果\n\n"
             for i, slice_data in enumerate(all_analysis_results):
-                integrated_analysis += f"
+                integrated_analysis += f"## 切片 {i+1}\n\n"
                 integrated_analysis += f"**音频内容**: {slice_data['audio_content'][:100]}...\n\n" if slice_data['audio_content'] else "\n"
                 integrated_analysis += slice_data['analysis'] + "\n\n"
             

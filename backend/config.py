@@ -8,7 +8,7 @@ class Config:
     DIFY_WORKFLOW_URL = 'http://localhost/v1/workflows/run'
     
     # 添加DashScope API密钥配置
-    DASHSCOPE_API_KEY = os.getenv('DASHSCOPE_API_KEY', 'sk-d433c2f93eff433583a88e3bdb37289f')
+    DASHSCOPE_API_KEY = os.getenv('DASHSCOPE_API_KEY', 'sk-6feb1f6d41e44107b326e99ac232427a')
     
     # SQLAlchemy配置 - 使用SQLite数据库
     SQLALCHEMY_DATABASE_URI = 'sqlite:///video_agent.db'

@@ -11,7 +11,15 @@ class VideoUtils:
         pass
     
     def extract_keyframes(self, video_path: str, num_keyframes: int = 2) -> List[str]:
-# 提取视频关键帧
+        """提取视频关键帧
+        
+        Args:
+            video_path: 视频文件路径
+            num_keyframes: 要提取的关键帧数量，默认提取开始和结束帧
+            
+        Returns:
+            关键帧文件路径列表
+        """
         if not os.path.exists(video_path):
             raise FileNotFoundError(f"视频文件不存在: {video_path}")
         
@@ -29,7 +37,7 @@ class VideoUtils:
                 timestamps = [duration / 2]
             elif num_keyframes == 2:
                 # 提取开始和结束帧
-                timestamps = [1, duration]
+                timestamps = [1, duration - 1]
             else:
                 # 均匀分布提取
                 timestamps = [i * duration / (num_keyframes + 1) for i in range(1, num_keyframes + 1)]
@@ -53,7 +61,14 @@ class VideoUtils:
             raise e
     
     def get_video_info(self, video_path: str) -> Dict[str, Any]:
-# 获取视频基本信息
+        """获取视频基本信息
+        
+        Args:
+            video_path: 视频文件路径
+            
+        Returns:
+            包含视频信息的字典
+        """
         if not os.path.exists(video_path):
             raise FileNotFoundError(f"视频文件不存在: {video_path}")
         
@@ -80,7 +95,14 @@ class VideoUtils:
         }
     
     def get_last_frame(self, video_path: str) -> str:
-# 获取视频最后一帧
+        """获取视频最后一帧
+        
+        Args:
+            video_path: 视频文件路径
+            
+        Returns:
+            最后一帧图像路径
+        """
         video_info = self.get_video_info(video_path)
         duration = video_info['duration']
         
@@ -89,29 +111,26 @@ class VideoUtils:
         last_frame_path = os.path.join(temp_dir, "last_frame.jpg")
         
         try:
-            # 提取真正的最后一帧（使用视频总时长作为时间戳）
-            # 对于极短视频，确保时间戳不为负数
-            timestamp = max(0, duration)
-            self._extract_frame_at_timestamp(video_path, timestamp, last_frame_path)
+            # 提取最后一帧（留出1秒的缓冲）
+            self._extract_frame_at_timestamp(video_path, duration - 1, last_frame_path)
             
             if os.path.exists(last_frame_path) and os.path.getsize(last_frame_path) > 0:
                 return last_frame_path
             else:
-                # 如果提取失败，尝试使用视频结束前0.1秒作为备选
-                fallback_timestamp = max(0, duration - 0.1)
-                self._extract_frame_at_timestamp(video_path, fallback_timestamp, last_frame_path)
-                
-                if os.path.exists(last_frame_path) and os.path.getsize(last_frame_path) > 0:
-                    return last_frame_path
-                else:
-                    raise RuntimeError(f"最后一帧提取失败: {last_frame_path}")
+                raise RuntimeError(f"最后一帧提取失败: {last_frame_path}")
         except Exception as e:
             # 清理临时文件
             self._cleanup_temp_files(temp_dir)
             raise e
     
     def _extract_frame_at_timestamp(self, video_path: str, timestamp: float, output_path: str) -> None:
-# 在指定时间戳提取视频帧
+        """在指定时间戳提取视频帧
+        
+        Args:
+            video_path: 视频文件路径
+            timestamp: 时间戳（秒）
+            output_path: 输出帧路径
+        """
         # 构建FFmpeg命令
         cmd = [
             'ffmpeg',
@@ -130,13 +149,24 @@ class VideoUtils:
             raise RuntimeError(f"FFmpeg命令执行失败: {result.stderr}")
     
     def _cleanup_temp_files(self, temp_dir: str) -> None:
-# 清理临时文件
+        """清理临时文件
+        
+        Args:
+            temp_dir: 临时目录路径
+        """
         import shutil
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
     
     def extract_audio(self, video_path: str) -> str:
-# 提取视频中的音频
+        """提取视频中的音频
+        
+        Args:
+            video_path: 视频文件路径
+            
+        Returns:
+            音频文件路径
+        """
         if not os.path.exists(video_path):
             raise FileNotFoundError(f"视频文件不存在: {video_path}")
         
@@ -173,7 +203,14 @@ class VideoUtils:
             raise e
     
     def get_first_frame(self, video_path: str) -> str:
-# 获取视频第一帧
+        """获取视频第一帧
+        
+        Args:
+            video_path: 视频文件路径
+            
+        Returns:
+            第一帧图像路径
+        """
         # 创建临时文件
         temp_dir = tempfile.mkdtemp()
         first_frame_path = os.path.join(temp_dir, "first_frame.jpg")
@@ -190,4 +227,3 @@ class VideoUtils:
             # 清理临时文件
             self._cleanup_temp_files(temp_dir)
             raise e
-

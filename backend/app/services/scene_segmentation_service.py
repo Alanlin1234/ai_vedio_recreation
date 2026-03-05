@@ -11,6 +11,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from config import config
 from .json_prompt_parser import JSONPromptParser
+from app.utils.subtitle_utils import ensure_utf8_encoding, clean_subtitle_text, prepare_subtitle_prompt
 
 # 初始化JSON解析器
 json_parser = JSONPromptParser()
@@ -34,7 +35,7 @@ class SceneSegmentationService:
         
         # 使用用户提供的多个API密钥作为备用
         self.api_keys = [
-            "sk-d433c2f93eff433583a88e3bdb37289f",  # 主密钥（用户提供的有效密钥）
+            "sk-6feb1f6d41e44107b326e99ac232427a",  # 主密钥（用户新提供的有效密钥）
             "sk-234d5ff939d843068e23b698d5df8616",   # 备用密钥1
             "sk-bfb72b1c875748c48b0c747fb0c17fc8",   # 备用密钥2
             "sk-c91a6b7c1b004289956c35d7a1c72496"     # 备用密钥3
@@ -389,8 +390,11 @@ class SceneSegmentationService:
             if "动画" in video_understanding or "cartoon" in video_understanding.lower():
                 style_info = "\n非常重要：视频必须是动画风格，保持与原始视频一致的卡通风格。"
             
-            # 添加统一的字幕生成指令
-            subtitle_instruction = "\n非常重要：视频必须生成清晰的中文字幕，字体美观，位置居中，确保观众能够清晰阅读。字幕内容应与场景的音频内容一致。"
+            # 清理和处理音频文本编码
+            cleaned_audio_text = clean_subtitle_text(audio_text)
+            
+            # 添加统一的字幕生成指令（优化编码处理）
+            subtitle_instruction = "\n\n[Subtitle Instructions]\nIMPORTANT: The video must include clear Chinese subtitles with the following specifications:\n1. Subtitle encoding: UTF-8\n2. Font: Clear and readable Chinese font\n3. Position: Centered at the bottom of the screen\n4. Color: White text with black outline for better readability\n5. Content: The subtitles must match the audio content of the scene\n6. Timing: Subtitles should be properly synchronized with the audio\n\n[字幕要求]\n非常重要：视频必须生成清晰的中文字幕，使用UTF-8编码，字体美观，位置居中，确保观众能够清晰阅读。字幕内容应与场景的音频内容一致。"
             
             # 添加上一场景的参考信息（如果有）- 增强版，包含更详细的上下文
             previous_info = ""
@@ -433,7 +437,7 @@ class SceneSegmentationService:
 {video_understanding}
 
 音频转录文本：
-{audio_text}
+{cleaned_audio_text}
 {previous_info}
 
 请生成一个详细的英文文生视频提示词，包含：
@@ -488,7 +492,7 @@ class SceneSegmentationService:
 {video_understanding}
 
 音频转录文本：
-{audio_text}
+{cleaned_audio_text}
 {previous_info}
 
 请生成一个详细的英文文生视频提示词，包含：

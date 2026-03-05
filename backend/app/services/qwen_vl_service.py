@@ -22,7 +22,7 @@ class QwenVLService:
         default_config = {
             "base_url": "http://localhost:8000",  # 假设Qwen-VL服务运行在8000端口
             "timeout": 60,
-            "model": "qwen-omni-turbo",  # 用户指定的模型
+            "model": "qwen-omni-turbo-latest",  # 用户指定的模型
             "default_params": {
                 "temperature": 0.8,
                 "top_p": 0.9,

@@ -50,165 +50,12 @@ class JSONPromptParser:
                 return self._parse_json_prompt(cleaned_prompt, prompt_type)
             else:
                 return self._parse_text_prompt(cleaned_prompt, prompt_type)
-        """
-        # 初始化默认值
-        scene_info = {}
-        duration = 0
-        style_elements = {}
-        characters = ""
-        environment = ""
-        visual_style = ""
-        camera_movement = ""
-        technical_params = {}
-        aspect_ratio = "16:9"
-        fps = self.default_config["default_fps"]
-        quality = "high"
-        width = 0
-        height = 0
-        steps = self.default_config["default_steps"]
-        cfg_scale = self.default_config["default_cfg_scale"]
-        sampler_name = self.default_config["default_sampler"]
-        scheduler = self.default_config["default_scheduler"]
-        negative_prompt = self.default_config["default_negative_prompt"]
-        additional_fields = {}  # 用于保存额外的JSON字段
-        
-        # 只有当JSON解析成功时，才提取详细参数
-        if parsed_json is not None:
-                # 3. 提取场景信息
-                if isinstance(parsed_json, dict):
-                    scene_info = parsed_json.get("scene_info", {})
-                    duration = scene_info.get("duration", 0)
-                    
-                    # 4. 提取风格元素
-                    style_elements = parsed_json.get("style_elements", {})
-                    characters = style_elements.get("characters", "")
-                    environment = style_elements.get("environment", "")
-                    visual_style = style_elements.get("visual_style", "")
-                    camera_movement = style_elements.get("camera_movement", "")
-                    
-                    # 5. 提取技术参数
-                    technical_params = parsed_json.get("technical_params", {})
-                    aspect_ratio = technical_params.get("aspect_ratio", "16:9")
-                    fps = technical_params.get("fps", self.default_config["default_fps"])
-                    quality = technical_params.get("quality", "high")
-                    
-                    # 6. 提取尺寸信息
-                    width = technical_params.get("width", 0)
-                    height = technical_params.get("height", 0)
-                    
-                    # 7. 提取采样参数
-                    steps = technical_params.get("steps", self.default_config["default_steps"])
-                    cfg_scale = technical_params.get("cfg_scale", self.default_config["default_cfg_scale"])
-                    sampler_name = technical_params.get("sampler_name", self.default_config["default_sampler"])
-                    scheduler = technical_params.get("scheduler", self.default_config["default_scheduler"])
-                    
-                    # 8. 提取负向提示词
-                    negative_prompt = parsed_json.get("negative_prompt", "") or self.default_config["default_negative_prompt"]
-                    
-                    # 9. 提取其他可能的字段，确保不丢失内容
-                    # 这些字段可能在JSON中存在但不在标准结构中
-                    known_fields = {"video_prompt", "prompt", "scene_info", "style_elements", 
-                                  "technical_params", "negative_prompt", "objects", "people", 
-                                  "actions", "emotions", "atmosphere", "reference_images",
-                                  "style_reference", "reference_keyframes", "previous_keyframe",
-                                  "transition_style"}
-                    for key, value in parsed_json.items():
-                        # 保存不在已知字段列表中的字段
-                        if key not in known_fields:
-                            additional_fields[key] = value
-                    
-                    if additional_fields:
-                        logger.debug(f"发现额外的JSON字段: {list(additional_fields.keys())}")
-            
-            # 如果没有指定尺寸，根据默认配置或帧率计算
-            if not width or not height:
-                width, height = self._calculate_dimensions(aspect_ratio, fps, quality)
-            
-            # 10. 构建增强提示词（传递parsed_json以包含所有字段）
-            enhanced_prompt = self._build_enhanced_prompt(
-                prompt, 
-                parsed_json=parsed_json,  # 传递完整的JSON对象
-                characters=characters, 
-                environment=environment, 
-                visual_style=visual_style, 
-                camera_movement=camera_movement
-            )
-            
-            # 11. 根据提示词类型返回不同的参数
-            # 基础参数字典，包含所有解析出的信息
-            base_params = {
-                "success": True,
-                "prompt": enhanced_prompt,
-                "negative_prompt": negative_prompt,
-                "width": width,
-                "height": height,
-                "steps": steps,
-                "cfg_scale": cfg_scale,
-                "sampler_name": sampler_name,
-                "scheduler": scheduler,
-                "scene_info": scene_info,
-                "style_elements": style_elements,
-                "technical_params": technical_params,
-                "objects": parsed_json.get("objects", []) if parsed_json else [],
-                "people": parsed_json.get("people", []) if parsed_json else [],
-                "actions": parsed_json.get("actions", []) if parsed_json else [],
-                "emotions": parsed_json.get("emotions", []) if parsed_json else [],
-                "atmosphere": parsed_json.get("atmosphere", "") if parsed_json else "",
-                "additional_fields": additional_fields if parsed_json else {}  # 保存额外字段，避免丢失
-            }
-            
-            if prompt_type == "txt2img":
-                return base_params
-            elif prompt_type == "img2img":
-                base_params["denoising_strength"] = 0.75
-                return base_params
-            elif prompt_type == "img2video":
-                # 视频生成参数
-                video_length = int(duration * fps) if duration > 0 else 16
-                base_params.update({
-                    "length": video_length,
-                    "fps": fps
-                })
-                return base_params
-            elif prompt_type == "i2i-preview":
-                # wan2.5-i2i-preview 关键帧生成参数
-                base_params.update({
-                    "reference_images": parsed_json.get("reference_images", []) if parsed_json else [],
-                    "style_reference": parsed_json.get("style_reference", "") if parsed_json else "",
-                    "denoising_strength": 0.6,  # 关键帧生成推荐值
-                    "sampler_name": "dpm_2_a"  # 关键帧生成推荐采样器
-                })
-                return base_params
-            elif prompt_type == "r2v":
-                # wan2.6-r2v 视频生成参数
-                video_length = int(duration * fps) if duration > 0 else 16
-                base_params.update({
-                    "length": video_length,
-                    "fps": fps,
-                    "reference_keyframes": parsed_json.get("reference_keyframes", []) if parsed_json else [],
-                    "previous_keyframe": parsed_json.get("previous_keyframe", "") if parsed_json else "",
-                    "transition_style": parsed_json.get("transition_style", "smooth") if parsed_json else "smooth"
-                })
-                return base_params
-            else:
-                logger.error(f"不支持的提示词类型: {prompt_type}")
-                return base_params
-                
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON解析失败: {str(e)}")
-            # 如果JSON解析失败，尝试作为纯文本处理
-            result = {
-                "success": True,
-                "prompt": json_prompt.strip(),
-                **self._get_default_params(prompt_type)
-            }
-            return result
         except Exception as e:
             logger.error(f"解析提示词时发生未知错误: {str(e)}")
             result = self._get_default_params(prompt_type)
-            result['success'] = True  # 即使发生错误，也返回success=True，使用原始提示词
-            result['prompt'] = json_prompt.strip()  # 使用原始提示词，而不是空值
-            result['error'] = str(e)  # 添加错误信息
+            result['success'] = True
+            result['prompt'] = json_prompt.strip()
+            result['error'] = str(e)
             return result
     
     def batch_parse_prompts(self, json_prompts: List[str], prompt_type: str = "txt2img") -> List[Dict[str, Any]]:
@@ -376,6 +223,42 @@ class JSONPromptParser:
         Returns:
             完整的解析结果字典
         """
+        result = self._get_default_params(prompt_type)
+        result['success'] = True
+        result['prompt'] = prompt
+        result['parsed_json'] = parsed_json
+        
+        if parsed_json and isinstance(parsed_json, dict):
+            if 'scene_info' in parsed_json:
+                result['scene_info'] = parsed_json['scene_info']
+            if 'style_elements' in parsed_json:
+                result['style_elements'] = parsed_json['style_elements']
+            if 'technical_params' in parsed_json:
+                result['technical_params'] = parsed_json['technical_params']
+                tech_params = parsed_json['technical_params']
+                if isinstance(tech_params, dict):
+                    if 'aspect_ratio' in tech_params:
+                        try:
+                            width, height = self._calculate_dimensions(
+                                tech_params.get('aspect_ratio', '16:9'),
+                                tech_params.get('fps', 24),
+                                tech_params.get('quality', 'high')
+                            )
+                            result['width'] = width
+                            result['height'] = height
+                        except Exception:
+                            pass
+                    if 'fps' in tech_params:
+                        result['fps'] = tech_params['fps']
+            
+            for field in ['objects', 'people', 'actions', 'emotions', 'atmosphere']:
+                if field in parsed_json:
+                    result[field] = parsed_json[field]
+            
+            enhanced_prompt = self._build_enhanced_prompt(prompt, parsed_json)
+            result['prompt'] = enhanced_prompt
+        
+        return result
     
     def _calculate_dimensions(self, aspect_ratio: str, fps: int, quality: str) -> tuple:
         try:

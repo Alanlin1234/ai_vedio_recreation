@@ -16,9 +16,9 @@ class Qwen72BService:
     def __init__(self, config: Dict[str, Any] = None):
         # 默认配置
         default_config = {
-            "base_url": "http://localhost:8001",  # 假设Qwen-72B服务运行在8001端口
+            "base_url": "http://localhost:8001",  
             "timeout": 120,
-            "model": "qwen-plus",  # 用户指定的模型
+            "model": "qwen-plus",  
             "default_params": {
                 "temperature": 0.9,
                 "top_p": 0.95,
@@ -318,17 +318,17 @@ class Qwen72BService:
                 # 返回原始文本而非空字符串，保留可能的有效内容
                 return response.text.strip()
             
+            result = response.json()
+            return result["choices"][0]["message"]["content"].strip()
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON解析失败: {str(e)}")
+            # 返回原始文本而非空字符串
+            return response.text.strip() if 'response' in locals() else ""
+        except KeyError as e:
+            logger.error(f"JSON结构错误: {str(e)}")
+            # 尝试提取部分有效内容
             try:
-                result = response.json()
-                return result["choices"][0]["message"]["content"].strip()
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON解析失败: {str(e)}")
-                # 返回原始文本而非空字符串
-                return response.text.strip()
-            except KeyError as e:
-                logger.error(f"JSON结构错误: {str(e)}")
-                # 尝试提取部分有效内容
-                try:
+                if 'response' in locals():
                     parsed_result = response.json()
                     # 逐级尝试获取内容，避免完全失败
                     choices = parsed_result.get("choices", [{}])
@@ -337,13 +337,14 @@ class Qwen72BService:
                         content = message.get("content", response.text.strip())
                         return content
                     return response.text.strip()
-                except Exception:
-                    # 最终兜底，返回原始文本
-                    return response.text.strip()
-            except Exception as e:
-                logger.error(f"生成故事标题失败: {str(e)}")
-                # 任何异常情况下都返回原始文本，确保不丢失内容
-                return response.text.strip()
+                return ""
+            except Exception:
+                # 最终兜底，返回原始文本
+                return response.text.strip() if 'response' in locals() else ""
+        except Exception as e:
+            logger.error(f"生成故事标题失败: {str(e)}")
+            # 任何异常情况下都返回原始文本，确保不丢失内容
+            return response.text.strip() if 'response' in locals() else ""
     
     async def _generate_synopsis(self, content_analysis: Dict[str, Any], scenes: List[Dict[str, Any]]) -> str:
         """生成故事简介"""
@@ -380,32 +381,23 @@ class Qwen72BService:
                 # 返回原始文本而非空字符串，保留可能的有效内容
                 return response.text.strip()
             
+            result = response.json()
+            return result["choices"][0]["message"]["content"].strip()
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON解析失败: {str(e)}")
+            # 返回原始文本而非空字符串
+            return response.text.strip()
+        except KeyError as e:
+            logger.error(f"JSON结构错误: {str(e)}")
+            # 尝试提取部分有效内容
             try:
-                result = response.json()
-                return result["choices"][0]["message"]["content"].strip()
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON解析失败: {str(e)}")
-                # 返回原始文本而非空字符串
                 return response.text.strip()
-            except KeyError as e:
-                logger.error(f"JSON结构错误: {str(e)}")
-                # 尝试提取部分有效内容
-                try:
-                    parsed_result = response.json()
-                    # 逐级尝试获取内容，避免完全失败
-                    choices = parsed_result.get("choices", [{}])
-                    if choices:
-                        message = choices[0].get("message", {})
-                        content = message.get("content", response.text.strip())
-                        return content
-                    return response.text.strip()
-                except Exception:
-                    # 最终兜底，返回原始文本
-                    return response.text.strip()
-            except Exception as e:
-                logger.error(f"生成故事简介失败: {str(e)}")
-                # 任何异常情况下都返回原始文本，确保不丢失内容
-                return response.text.strip()
+            except:
+                return ""
+        except Exception as e:
+            logger.error(f"生成故事简介失败: {str(e)}")
+            # 任何异常情况下都返回原始文本，确保不丢失内容
+            return response.text.strip() if 'response' in locals() else ""
     
     def _parse_story_outline(self, content: str) -> Dict[str, Any]:
         """解析故事主线文本"""

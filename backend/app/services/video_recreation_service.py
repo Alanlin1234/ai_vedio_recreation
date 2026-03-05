@@ -9,6 +9,11 @@ from datetime import datetime
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from config import Config
+
+# 添加视频一致性检查代理
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from video_consistency_agent.agent.consistency_agent import ConsistencyAgent
+
 from .video_analysis_agent import VideoAnalysisAgent
 from .speech_recognition_service import SimpleSpeechRecognizer
 from .scene_segmentation_service import SceneSegmentationService
@@ -21,10 +26,6 @@ from app.services.comfyui_service import ComfyUIService
 from app.services.comfyui_prompt_converter import ComfyUIPromptConverter
 from app.services.nano_banana_service import NanoBananaService
 from app.services.qwen_video_service import QwenVideoService
-
-# 添加视频一致性检查代理
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'video_consistency_agent'))
-from video_consistency_agent.agent.consistency_agent import ConsistencyAgent
 
 class VideoRecreationService:
     
@@ -72,6 +73,13 @@ class VideoRecreationService:
         # 初始化说话人服务和TTS集成服务
         self.speaker_voice_service = SpeakerVoiceService()
         self.speaker_tts_integration = SpeakerTTSIntegration()
+        
+        # 初始化FFmpeg服务
+        from .ffmpeg_service import FFmpegService
+        self.ffmpeg_service = FFmpegService()
+        
+        # 初始化storyboard为默认值
+        self.storyboard = []
     
     def calculate_video_hash(self, video_path: str) -> str:
         import hashlib
@@ -724,7 +732,9 @@ class VideoRecreationService:
                     print("步骤5: Nano Banana视频生成...")
                     self.log_step(recreation_id, 'video_generation', 'processing', '开始Nano Banana视频生成')
                     
-                    video_generation_result = self.generate_videos_with_nano_banana(
+                    # Nano Banana视频生成功能尚未实现，使用默认的ComfyUI生成方式
+                    print("[Nano Banana] 暂未实现，使用ComfyUI生成方式")
+                    video_generation_result = self.generate_videos_from_scenes(
                         scene_analysis=scene_analysis,
                         video_path=video_path,
                         recreation_id=recreation_id,
@@ -742,13 +752,13 @@ class VideoRecreationService:
                                 if scene:
                                     scene.generated_video_path = video_info.get('local_path')
                                     scene.generation_status = 'completed'
-                                    scene.generation_service = 'nano_banana'
+                                    scene.generation_service = 'comfyui'  # 标记为ComfyUI生成
                                     scene.generation_completed_at = datetime.now()
                         db.session.commit()
                         
-                        self.log_step(recreation_id, 'video_generation', 'success', f'Nano Banana视频生成完成，成功: {video_generation_result.get("successful_count", 0)}')
+                        self.log_step(recreation_id, 'video_generation', 'success', f'视频生成完成，成功: {video_generation_result.get("successful_count", 0)}')
                     else:
-                        self.log_step(recreation_id, 'video_generation', 'failed', video_generation_result.get('error', 'Nano Banana视频生成失败'))
+                        self.log_step(recreation_id, 'video_generation', 'failed', video_generation_result.get('error', '视频生成失败'))
                 else:
                     print("步骤5: ComfyUI关键帧生成与视频生成...")
                     self.log_step(recreation_id, 'video_generation', 'processing', '开始ComfyUI关键帧生成')
@@ -792,7 +802,7 @@ class VideoRecreationService:
                     'tags': [],  # 可以从视频理解结果中提取标签
                     'audio_transcription': audio_transcription
                 },
-                'storyboard': storyboard
+                'storyboard': self.storyboard
             }
             
             # 执行一致性检查
@@ -887,23 +897,59 @@ class VideoRecreationService:
                     final_video_path = os.path.join(task_dir, 'final', 'final_video.mp4')
                     os.makedirs(os.path.dirname(final_video_path), exist_ok=True)
                     
-                    composition_result = self.content_generator.compose_videos(
-                        video_paths=video_paths,
-                        output_path=final_video_path
+                    # 使用FFmpegService的synthesize_final_video方法，同时处理视频和音频
+                    print(f"[视频合成] 使用FFmpegService合成最终视频，包含 {len(successful_videos)} 个片段")
+                    final_video_with_audio_path = os.path.join(task_dir, 'final', 'final_video_with_audio.mp4')
+                    os.makedirs(os.path.dirname(final_video_with_audio_path), exist_ok=True)
+                    
+                    # 准备视频片段列表
+                    video_segments = []
+                    for video in successful_videos:
+                        video_segments.append({
+                            'output_file': video.get('local_path')
+                        })
+                    
+                    # 调用FFmpegService的synthesize_final_video方法，同时处理视频和音频
+                    final_video_path = await self.ffmpeg_service.synthesize_final_video(
+                        video_segments=video_segments,
+                        audio_path=tts_result.get('audio_path')
                     )
                     
-                    if composition_result.get('success'):
+                    if final_video_path:
+                        # 获取视频信息
+                        import os
+                        video_info = await self.ffmpeg_service.get_video_info(final_video_path)
+                        
+                        # 更新组合结果
+                        composition_result = {
+                            'success': True,
+                            'output_path': final_video_path,
+                            'duration': video_info.get('duration', 0),
+                            'file_size': os.path.getsize(final_video_path),
+                            'resolution': video_info.get('resolution', ''),
+                            'fps': video_info.get('fps', 0)
+                        }
+                        
+                        # 更新音画同步结果
+                        sync_result = {
+                            'success': True,
+                            'output_path': final_video_path
+                        }
+                        
+                        # 更新数据库
                         self.update_recreation_step(recreation_id, {
-                            'final_video_path': composition_result.get('output_path'),
+                            'final_video_path': final_video_path,
+                            'final_video_with_audio_path': final_video_path,
                             'composition_status': 'completed',
-                            'total_duration': composition_result.get('duration', 0),
-                            'final_file_size': composition_result.get('file_size', 0),
-                            'video_resolution': composition_result.get('resolution', ''),
-                            'video_fps': composition_result.get('fps', 0)
+                            'total_duration': video_info.get('duration', 0),
+                            'final_file_size': os.path.getsize(final_video_path),
+                            'video_resolution': video_info.get('resolution', ''),
+                            'video_fps': video_info.get('fps', 0)
                         })
                         self.log_step(recreation_id, 'video_composition', 'success', '视频拼接完成')
+                        self.log_step(recreation_id, 'audio_video_sync', 'success', '音画同步完成')
                     else:
-                        error_msg = composition_result.get('error', '视频拼接失败')
+                        error_msg = '视频合成失败'
                         self.log_step(recreation_id, 'video_composition', 'failed', error_msg)
                         raise Exception(error_msg)
                 else:

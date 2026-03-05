@@ -248,11 +248,144 @@ class SpeakerVoiceService:
     ) -> Optional[np.ndarray]:
         """
         提取说话人的声纹embedding
-        这里使用简化方法，实际应用中可以使用专业的声纹识别模型
+        使用音频特征提取方法生成声纹特征向量
+        
+        Args:
+            audio_path: 音频文件路径
+            segments: 说话人时间段列表
+            
+        Returns:
+            声纹特征向量，如果提取失败返回None
         """
-        # TODO: 实现真正的声纹特征提取
-        # 可以使用wav2vec2或其他声纹识别模型
-        return None
+        try:
+            import subprocess
+            import tempfile
+            import wave
+            import struct
+            
+            embeddings = []
+            
+            for segment in segments[:3]:
+                start_time = segment.get('start', 0)
+                end_time = segment.get('end', 5)
+                duration = end_time - start_time
+                
+                if duration <= 0:
+                    continue
+                
+                with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
+                    temp_path = temp_file.name
+                
+                try:
+                    cmd = [
+                        'ffmpeg', '-y', '-i', audio_path,
+                        '-ss', str(start_time), '-t', str(min(duration, 10)),
+                        '-ac', '1', '-ar', '16000',
+                        '-f', 'wav', temp_path
+                    ]
+                    
+                    result = subprocess.run(cmd, capture_output=True, timeout=30)
+                    
+                    if result.returncode != 0:
+                        continue
+                    
+                    if not os.path.exists(temp_path) or os.path.getsize(temp_path) < 1000:
+                        continue
+                    
+                    with wave.open(temp_path, 'rb') as wf:
+                        n_frames = wf.getnframes()
+                        framerate = wf.getframerate()
+                        n_channels = wf.getnchannels()
+                        sample_width = wf.getsampwidth()
+                        
+                        frames = wf.readframes(min(n_frames, framerate * 5))
+                        
+                        if sample_width == 2:
+                            samples = np.array(struct.unpack(f'{len(frames)//2}h', frames), dtype=np.float32)
+                        else:
+                            samples = np.frombuffer(frames, dtype=np.uint8).astype(np.float32)
+                        
+                        samples = samples / (2 ** (8 * sample_width - 1))
+                        
+                        def extract_mfcc_simple(signal, sr, n_mfcc=13):
+                            n_fft = 512
+                            hop_length = 256
+                            
+                            if len(signal) < n_fft:
+                                signal = np.pad(signal, (0, n_fft - len(signal)))
+                            
+                            frames_list = []
+                            for i in range(0, len(signal) - n_fft + 1, hop_length):
+                                frame = signal[i:i+n_fft]
+                                windowed = frame * np.hamming(n_fft)
+                                fft_result = np.abs(np.fft.rfft(windowed))
+                                frames_list.append(fft_result)
+                            
+                            if not frames_list:
+                                return np.zeros(n_mfcc)
+                            
+                            spectrogram = np.array(frames_list).T
+                            
+                            low_freq = 0
+                            high_freq = sr // 2
+                            n_mels = 26
+                            
+                            mel_points = np.linspace(
+                                2595 * np.log10(1 + low_freq / 700),
+                                2595 * np.log10(1 + high_freq / 700),
+                                n_mels + 2
+                            )
+                            hz_points = 700 * (10 ** (mel_points / 2595) - 1)
+                            
+                            bin_points = np.floor((n_fft + 1) * hz_points / sr).astype(int)
+                            
+                            filterbank = np.zeros((n_mels, spectrogram.shape[0]))
+                            for m in range(n_mels):
+                                f_left = bin_points[m]
+                                f_center = bin_points[m + 1]
+                                f_right = bin_points[m + 2]
+                                
+                                for k in range(f_left, f_center):
+                                    if k < filterbank.shape[1]:
+                                        filterbank[m, k] = (k - f_left) / (f_center - f_left + 1e-10)
+                                for k in range(f_center, f_right):
+                                    if k < filterbank.shape[1]:
+                                        filterbank[m, k] = (f_right - k) / (f_right - f_center + 1e-10)
+                            
+                            mel_spectrum = np.dot(filterbank, spectrogram)
+                            mel_spectrum = np.where(mel_spectrum == 0, np.finfo(float).eps, mel_spectrum)
+                            log_mel_spectrum = np.log(mel_spectrum)
+                            
+                            dct_matrix = np.zeros((n_mfcc, n_mels))
+                            for i in range(n_mfcc):
+                                for j in range(n_mels):
+                                    dct_matrix[i, j] = np.cos(np.pi * i * (j + 0.5) / n_mels)
+                            
+                            mfcc = np.dot(dct_matrix, log_mel_spectrum)
+                            return np.mean(mfcc, axis=1)
+                        
+                        mfcc_features = extract_mfcc_simple(samples, framerate)
+                        embeddings.append(mfcc_features)
+                        
+                except Exception as e:
+                    print(f"[声纹提取] 片段处理失败: {e}")
+                    continue
+                finally:
+                    if os.path.exists(temp_path):
+                        try:
+                            os.remove(temp_path)
+                        except:
+                            pass
+            
+            if embeddings:
+                final_embedding = np.mean(embeddings, axis=0)
+                return final_embedding.astype(np.float32)
+            
+            return None
+            
+        except Exception as e:
+            print(f"[声纹提取] 提取失败: {e}")
+            return None
     
     def _calculate_file_hash(self, file_path: str) -> str:
         """计算文件的MD5哈希"""

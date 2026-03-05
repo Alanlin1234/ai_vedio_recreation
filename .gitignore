@@ -68,3 +68,23 @@ dist/
 # Crawler
 crawler_config/
 instance/
+
+# Generated outputs
+downloads/
+last_frames/
+test_compose_output/
+comfyui_test_output/
+backend/data/
+
+# IDE tools
+.kiro/
+.trae/documents/
+
+# Temporary files
+*.mp4
+*.mp3
+*.jpg
+*.png
+*.json
+!backend/video_agent.sql
+!backend/app/services/json/

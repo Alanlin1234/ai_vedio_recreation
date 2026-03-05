@@ -62,28 +62,31 @@ class PerceptionModule:
         return scene
     
     def parse_prompt_info(self, prompt_data: Dict[str, Any]) -> Dict[str, Any]:
-# 解析prompt中的关键信息
-        # 提取主要元素
+        """解析prompt中的关键信息"""
         main_elements = []
         style_info = {}
         
-        # 简单解析，实际实现中应使用更复杂的NLP方法
-        if 'description' in prompt_data:
-            description = prompt_data['description']
-            # 提取主要人物
-            if '人物' in description or '角色' in description:
+        original_prompt = prompt_data.get('original_prompt', '') or prompt_data.get('description', '')
+        generation_params = prompt_data.get('generation_params', {})
+        
+        if original_prompt:
+            if '人物' in original_prompt or '角色' in original_prompt or 'person' in original_prompt.lower():
                 main_elements.append('人物')
-            # 提取场景类型
-            if '场景' in description or '背景' in description:
+            if '场景' in original_prompt or '背景' in original_prompt or 'scene' in original_prompt.lower():
                 main_elements.append('场景')
-            # 提取风格信息
-            if '风格' in description or '画风' in description:
+            if '风格' in original_prompt or '画风' in original_prompt or 'style' in original_prompt.lower():
                 style_info['type'] = 'art'
+            if '动作' in original_prompt or 'action' in original_prompt.lower():
+                main_elements.append('动作')
+            if '表情' in original_prompt or 'emotion' in original_prompt.lower():
+                main_elements.append('表情')
         
         return {
             'main_elements': main_elements,
             'style_info': style_info,
-            'raw_prompt': prompt_data
+            'raw_prompt': prompt_data,
+            'original_prompt': original_prompt,
+            'generation_params': generation_params
         }
     
     def get_prev_scene_info(self, previous_scene: Dict[str, Any]) -> Dict[str, Any]:
