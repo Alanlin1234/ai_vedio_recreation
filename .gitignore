@@ -48,9 +48,10 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
-test_*.py
-*_test.py
-backend/test_*.py
+# test_*.py
+# *_test.py
+# backend/test_*.py
+!backend/tests/*.py
 compose_videos_script.py
 compress_core_code.py
 simplify_backend_comments.py
