@@ -920,3 +920,348 @@ class QwenVideoService:
                 "success": False,
                 "error": error_msg
             }
+    
+    def generate_structured_prompt(self, slice_info: Dict[str, Any], scene_index: int, 
+                                   previous_scene_info: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        生成结构化的视频脚本提示词，包含Shot Breakdown和Summary
+        
+        Args:
+            slice_info: 切片信息，包含analysis, vl_analysis, audio_content等
+            scene_index: 场景索引
+            previous_scene_info: 上一个场景的信息（用于保持连续性）
+            
+        Returns:
+            结构化的提示词数据
+        """
+        try:
+            logger.info(f"开始生成结构化提示词，场景 {scene_index + 1}")
+            
+            shot_info = self._extract_shot_info(slice_info, scene_index)
+            visual_content = self._extract_visual_content(slice_info)
+            audio_info = self._extract_audio_info(slice_info)
+            
+            shot_breakdown = self._build_shot_breakdown(
+                scene_index + 1, shot_info, visual_content, audio_info,
+                slice_info.get('duration', 4)
+            )
+            
+            video_prompt = self._build_video_prompt(shot_breakdown, scene_index, previous_scene_info)
+            
+            optimize_context = {
+                'audio_content': slice_info.get('audio_content', ''),
+                'keyframes': slice_info.get('keyframes', []),
+                'scene_order': scene_index + 1,
+                'shot_breakdown': shot_breakdown,
+                'optimization_focus': '镜头语言,视觉风格,音频设计,场景连续性,专业术语'
+            }
+            
+            if previous_scene_info:
+                optimize_context['previous_scene_info'] = previous_scene_info
+            
+            optimize_result = self.optimize_prompt_with_qwen_plus_latest(video_prompt, optimize_context)
+            
+            if optimize_result.get('success'):
+                optimized_prompt = optimize_result.get('optimized_prompt', video_prompt)
+                style_elements = optimize_result.get('style_elements', {})
+            else:
+                optimized_prompt = video_prompt
+                style_elements = {}
+            
+            return {
+                'success': True,
+                'scene_id': scene_index + 1,
+                'shot_breakdown': shot_breakdown,
+                'shot_info': shot_info,
+                'visual_content': visual_content,
+                'audio_info': audio_info,
+                'video_prompt': video_prompt,
+                'optimized_prompt': optimized_prompt,
+                'style_elements': style_elements,
+                'start_time': slice_info.get('start_time', 0),
+                'end_time': slice_info.get('end_time', 0),
+                'duration': slice_info.get('duration', 4)
+            }
+            
+        except Exception as e:
+            error_msg = f"生成结构化提示词失败: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            return {
+                'success': False,
+                'error': error_msg
+            }
+    
+    def _extract_shot_info(self, slice_info: Dict[str, Any], scene_index: int) -> Dict[str, Any]:
+        shot_info = {
+            "shot_number": scene_index + 1,
+            "framing": "Medium Shot",
+            "angle": "Eye Level",
+            "movement": "Static",
+            "duration": slice_info.get('duration', 4)
+        }
+        
+        if 'vl_analysis' in slice_info and slice_info['vl_analysis'].get('success'):
+            vl_result = slice_info['vl_analysis'].get('analysis_result', {})
+            camera_info = vl_result.get('camera', '')
+            
+            framing_keywords = {
+                'extreme close-up': 'Extreme Close-up',
+                'close-up': 'Close-up',
+                'medium close-up': 'Medium Close-up',
+                'medium shot': 'Medium Shot',
+                'medium wide': 'Medium Wide',
+                'wide shot': 'Wide Shot',
+                'long shot': 'Long Shot',
+                'extreme wide': 'Extreme Wide Shot',
+                '全景': 'Wide Shot',
+                '中景': 'Medium Shot',
+                '近景': 'Close-up',
+                '特写': 'Extreme Close-up'
+            }
+            
+            angle_keywords = {
+                'eye level': 'Eye Level',
+                'low angle': 'Low Angle',
+                'high angle': 'High Angle',
+                'top-down': 'Top-down',
+                'dutch angle': 'Dutch Angle',
+                '平视': 'Eye Level',
+                '仰视': 'Low Angle',
+                '俯视': 'High Angle'
+            }
+            
+            movement_keywords = {
+                'static': 'Static',
+                'tracking': 'Tracking',
+                'pan': 'Pan',
+                'tilt': 'Tilt',
+                'zoom in': 'Zoom In',
+                'zoom out': 'Zoom Out',
+                'dolly': 'Dolly',
+                'handheld': 'Handheld',
+                '静止': 'Static',
+                '跟拍': 'Tracking',
+                '推': 'Zoom In',
+                '拉': 'Zoom Out'
+            }
+            
+            camera_lower = camera_info.lower() if camera_info else ''
+            
+            for keyword, framing in framing_keywords.items():
+                if keyword in camera_lower:
+                    shot_info['framing'] = framing
+                    break
+            
+            for keyword, angle in angle_keywords.items():
+                if keyword in camera_lower:
+                    shot_info['angle'] = angle
+                    break
+            
+            for keyword, movement in movement_keywords.items():
+                if keyword in camera_lower:
+                    shot_info['movement'] = movement
+                    break
+        
+        return shot_info
+    
+    def _extract_visual_content(self, slice_info: Dict[str, Any]) -> Dict[str, Any]:
+        visual_content = {
+            "characters": "",
+            "environment": "",
+            "action": "",
+            "emotion": "",
+            "visual_style": "",
+            "atmosphere": "",
+            "time": "",
+            "location": "",
+            "color_notes": "",
+            "lighting": ""
+        }
+        
+        if 'analysis' in slice_info:
+            analysis = slice_info['analysis']
+            if isinstance(analysis, dict):
+                storyboards = analysis.get('storyboards', [])
+                if storyboards:
+                    for sb in storyboards[:1]:
+                        if isinstance(sb, dict):
+                            visual_content['environment'] = sb.get('description', '')
+                            visual_content['action'] = sb.get('action', '')
+                
+                raw_analysis = analysis.get('raw_analysis', '')
+                if raw_analysis:
+                    visual_content['environment'] = visual_content['environment'] or raw_analysis[:200]
+        
+        if 'vl_analysis' in slice_info and slice_info['vl_analysis'].get('success'):
+            vl_result = slice_info['vl_analysis'].get('analysis_result', {})
+            
+            if 'style' in vl_result:
+                visual_content['visual_style'] = vl_result['style']
+            if 'action' in vl_result:
+                visual_content['action'] = vl_result['action']
+            if 'emotion' in vl_result:
+                visual_content['emotion'] = vl_result['emotion']
+            if 'atmosphere' in vl_result:
+                visual_content['atmosphere'] = vl_result['atmosphere']
+            if 'mood' in vl_result:
+                visual_content['emotion'] = visual_content['emotion'] or vl_result['mood']
+            if 'time' in vl_result:
+                visual_content['time'] = vl_result['time']
+            if 'location' in vl_result:
+                visual_content['location'] = vl_result['location']
+            if 'characters' in vl_result:
+                visual_content['characters'] = vl_result['characters']
+            if 'color' in vl_result:
+                visual_content['color_notes'] = vl_result['color']
+            if 'lighting' in vl_result:
+                visual_content['lighting'] = vl_result['lighting']
+        
+        return visual_content
+    
+    def _extract_audio_info(self, slice_info: Dict[str, Any]) -> Dict[str, Any]:
+        audio_info = {
+            "bgm": "",
+            "sfx": [],
+            "narration": "",
+            "dialogue": ""
+        }
+        
+        audio_content = slice_info.get('audio_content', '')
+        if audio_content:
+            audio_info['dialogue'] = audio_content
+            audio_info['narration'] = audio_content[:100] + "..." if len(audio_content) > 100 else audio_content
+        
+        if 'vl_analysis' in slice_info and slice_info['vl_analysis'].get('success'):
+            vl_result = slice_info['vl_analysis'].get('analysis_result', {})
+            
+            if 'bgm' in vl_result:
+                audio_info['bgm'] = vl_result['bgm']
+            if 'sfx' in vl_result:
+                sfx = vl_result['sfx']
+                if isinstance(sfx, list):
+                    audio_info['sfx'] = sfx
+                elif isinstance(sfx, str):
+                    audio_info['sfx'] = [sfx]
+        
+        return audio_info
+    
+    def _build_shot_breakdown(self, shot_number: int, shot_info: Dict,
+                              visual_content: Dict, audio_info: Dict,
+                              duration: float) -> Dict[str, Any]:
+        shot_description_parts = []
+        
+        if visual_content.get('environment'):
+            shot_description_parts.append(visual_content['environment'])
+        if visual_content.get('characters'):
+            shot_description_parts.append(f"人物: {visual_content['characters']}")
+        if visual_content.get('action'):
+            shot_description_parts.append(f"动作: {visual_content['action']}")
+        if visual_content.get('emotion'):
+            shot_description_parts.append(f"表情: {visual_content['emotion']}")
+        
+        shot_description = ". ".join(shot_description_parts) if shot_description_parts else "Scene content"
+        
+        audio_parts = []
+        if audio_info.get('bgm'):
+            audio_parts.append(f"BGM: {audio_info['bgm']}")
+        if audio_info.get('sfx'):
+            audio_parts.append(f"SFX: {', '.join(audio_info['sfx'])}")
+        if audio_info.get('narration'):
+            audio_parts.append(f"Narration: {audio_info['narration']}")
+        
+        audio_description = "; ".join(audio_parts) if audio_parts else "Background audio"
+        
+        return {
+            "shot_number": shot_number,
+            "framing": shot_info.get('framing', 'Medium Shot'),
+            "angle": shot_info.get('angle', 'Eye Level'),
+            "movement": shot_info.get('movement', 'Static'),
+            "shot_description": shot_description,
+            "audio": audio_description,
+            "duration": duration
+        }
+    
+    def _build_video_prompt(self, shot_breakdown: Dict, scene_index: int, 
+                            previous_scene_info: Dict[str, Any] = None) -> str:
+        prompt_parts = [
+            f"Shot {shot_breakdown['shot_number']}:",
+            f"[Framing] {shot_breakdown['framing']} / {shot_breakdown['angle']}",
+            f"[Movement] {shot_breakdown['movement']}",
+            f"[Description] {shot_breakdown['shot_description']}",
+            f"[Audio] {shot_breakdown['audio']}",
+            f"[Duration] {shot_breakdown['duration']}s"
+        ]
+        
+        if scene_index > 0 and previous_scene_info:
+            prompt_parts.append("[Continuity] Maintain visual consistency with previous shot")
+        
+        return " | ".join(prompt_parts)
+    
+    def generate_overall_summary(self, scene_prompts: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        根据所有场景生成整体风格总结
+        
+        Args:
+            scene_prompts: 所有场景的提示词列表
+            
+        Returns:
+            整体风格总结
+        """
+        try:
+            visual_style = {
+                "color_palette": [],
+                "lighting": "",
+                "camera_style": "",
+                "description": ""
+            }
+            audio_style = {
+                "bgm_style": "",
+                "sfx_style": "",
+                "narration_style": "",
+                "description": ""
+            }
+            
+            for scene in scene_prompts:
+                visual_content = scene.get('visual_content', {})
+                audio_info = scene.get('audio_info', {})
+                
+                if visual_content.get('color_notes'):
+                    color = visual_content['color_notes']
+                    if color not in visual_style['color_palette']:
+                        visual_style['color_palette'].append(color)
+                
+                if visual_content.get('lighting') and not visual_style['lighting']:
+                    visual_style['lighting'] = visual_content['lighting']
+                
+                if visual_content.get('visual_style') and not visual_style['camera_style']:
+                    visual_style['camera_style'] = visual_content['visual_style']
+                
+                if audio_info.get('bgm') and not audio_style['bgm_style']:
+                    audio_style['bgm_style'] = audio_info['bgm']
+                
+                if audio_info.get('sfx') and not audio_style['sfx_style']:
+                    audio_style['sfx_style'] = ", ".join(audio_info['sfx'][:3])
+            
+            return {
+                'success': True,
+                'overall_visual_style': {
+                    "color_palette": visual_style['color_palette'],
+                    "lighting": visual_style['lighting'] or "Standard commercial lighting",
+                    "camera_style": visual_style['camera_style'] or "Dynamic but stable, social media aesthetic",
+                    "description": "High-saturation color palette with vibrant visuals. Commercial-grade lighting with attention to detail."
+                },
+                'overall_audio_style': {
+                    "bgm_style": audio_style['bgm_style'] or "Upbeat, engaging background music",
+                    "sfx_style": audio_style['sfx_style'] or "Natural ambient sounds with accent effects",
+                    "narration_style": "Clear, engaging narration matching the visual tone",
+                    "description": "Audio designed to complement the visual style with appropriate BGM, SFX, and narration."
+                }
+            }
+            
+        except Exception as e:
+            error_msg = f"生成整体风格总结失败: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            return {
+                'success': False,
+                'error': error_msg
+            }
