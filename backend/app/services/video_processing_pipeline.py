@@ -230,7 +230,7 @@ class VideoProcessingPipeline:
     
     def combine_and_optimize_prompts(self) -> Dict[str, Any]:
         """
-        结合和优化提示词
+        结合和优化提示词，包含全局人物档案构建
         
         Returns:
             优化结果
@@ -238,19 +238,31 @@ class VideoProcessingPipeline:
         self.log("提示词优化", "开始")
         
         try:
+            self.log("全局档案构建", "开始构建人物档案")
+            global_profile_result = self.qwen_video_service.build_global_character_profile(self.video_slices)
+            
+            global_character_profile = None
+            if global_profile_result.get('success') and global_profile_result.get('character_id'):
+                global_character_profile = global_profile_result
+                self.log("全局档案构建", f"完成，主角色: {global_profile_result.get('description', '未知')[:50]}")
+            else:
+                self.log("全局档案构建", "未检测到明确人物，将在各场景单独处理")
+            
             for i, slice_info in enumerate(self.video_slices):
                 previous_scene_info = None
                 if i > 0 and self.scene_prompts:
                     previous_scene_info = {
                         'shot_breakdown': self.scene_prompts[i-1].get('shot_breakdown', {}),
                         'visual_content': self.scene_prompts[i-1].get('visual_content', {}),
-                        'audio_info': self.scene_prompts[i-1].get('audio_info', {})
+                        'audio_info': self.scene_prompts[i-1].get('audio_info', {}),
+                        'keyframe_quality': self.scene_prompts[i-1].get('keyframe_quality', {})
                     }
                 
                 result = self.qwen_video_service.generate_structured_prompt(
                     slice_info=slice_info,
                     scene_index=i,
-                    previous_scene_info=previous_scene_info
+                    previous_scene_info=previous_scene_info,
+                    global_character_profile=global_character_profile
                 )
                 
                 if result.get('success'):
@@ -266,6 +278,7 @@ class VideoProcessingPipeline:
                         "video_prompt": result['video_prompt'],
                         "optimized_prompt": result['optimized_prompt'],
                         "style_elements": result['style_elements'],
+                        "keyframe_quality": result.get('keyframe_quality', {}),
                         "original_video_info": {
                             "slice_path": slice_info['output_file'],
                             "audio_path": slice_info.get('audio_file', ''),
@@ -280,9 +293,12 @@ class VideoProcessingPipeline:
                 summary_result = self.qwen_video_service.generate_overall_summary(self.scene_prompts)
                 if summary_result.get('success'):
                     self.scene_prompts[0]["overall_summary"] = summary_result
+                
+                if global_character_profile:
+                    self.scene_prompts[0]["global_character_profile"] = global_character_profile
             
             self.log("提示词优化", f"完成，生成{len(self.scene_prompts)}个场景提示词")
-            return {'success': True, 'prompts': self.scene_prompts}
+            return {'success': True, 'prompts': self.scene_prompts, 'global_character_profile': global_character_profile}
         except Exception as e:
             self.log("提示词优化", f"失败: {str(e)}")
             logger.error(f"提示词优化失败: {str(e)}", exc_info=True)
@@ -448,31 +464,10 @@ class VideoProcessingPipeline:
                     
                     consistency_result = None
                     if self.consistency_agent:
-                        consistency_data = {
-                            "current_scene": {
-                                "keyframes": generated_keyframes,
-                                "prompt_data": {
-                                    "original_prompt": scene_prompt.get('parsed_prompt', ''),
-                                    "generation_params": {
-                                        "frame_rate": 24,
-                                        "resolution": "1920x1080",
-                                        "duration": scene_prompt.get('duration', 4)
-                                    }
-                                },
-                                "order": i
-                            },
-                            "previous_scene": {
-                                "keyframes": previous_keyframes,
-                                "prompt_data": {
-                                    "original_prompt": self.scene_prompts[i-1].get('parsed_prompt', '') if i > 0 else '',
-                                    "generation_params": {
-                                        "frame_rate": 24,
-                                        "resolution": "1920x1080",
-                                        "duration": self.scene_prompts[i-1].get('duration', 4) if i > 0 else 4
-                                    }
-                                },
-                                "order": i-1
-                            },
+                        scene_data = {
+                            "scene_id": i + 1,
+                            "keyframes": generated_keyframes,
+                            "video_path": video_path,
                             "prompt_data": {
                                 "original_prompt": scene_prompt.get('parsed_prompt', ''),
                                 "generation_params": {
@@ -480,14 +475,31 @@ class VideoProcessingPipeline:
                                     "resolution": "1920x1080",
                                     "duration": scene_prompt.get('duration', 4)
                                 }
-                            }
+                            },
+                            "order": i
                         }
                         
-                        consistency_result = await self.consistency_agent.check_consistency(
-                            consistency_data["current_scene"],
-                            consistency_data["previous_scene"],
-                            consistency_data["prompt_data"]
+                        max_retries = self.config.get('consistency_max_retries', 3)
+                        
+                        check_loop_result = await self.consistency_agent.run_check_loop(
+                            video_generation_pipeline=self,
+                            scene_data=scene_data,
+                            max_retries=max_retries
                         )
+                        
+                        if check_loop_result['status'] == 'success':
+                            self.log(f"场景{i+1}一致性检查", "通过", f"重试次数: {check_loop_result.get('retry_count', 0)}")
+                            consistency_result = check_loop_result.get('check_result', {})
+                            if check_loop_result.get('scene'):
+                                updated_scene = check_loop_result['scene']
+                                video_path = updated_scene.get('video_path', video_path)
+                                generated_keyframes = updated_scene.get('keyframes', generated_keyframes)
+                        else:
+                            self.log(f"场景{i+1}一致性检查", 
+                                    f"失败，已重试{check_loop_result.get('retry_count', 0)}次", 
+                                    f"原因: {check_loop_result.get('message', '未知')}")
+                            consistency_result = check_loop_result.get('check_result', {})
+                        
                         self.consistency_results.append(consistency_result)
                     
                     self.generated_videos.append({
@@ -498,6 +510,8 @@ class VideoProcessingPipeline:
                         'quality_score': quality_result.get('overall_score', 0) if quality_result.get('success') else 0,
                         'quality_grade': quality_result.get('grade', '未知') if quality_result.get('success') else '未知',
                         'quality_passed': quality_result.get('passed', False) if quality_result.get('success') else False,
+                        'consistency_passed': consistency_result.get('passed', False) if consistency_result else True,
+                        'retry_count': check_loop_result.get('retry_count', 0) if self.consistency_agent else 0,
                         'success': True
                     })
                     
@@ -506,7 +520,7 @@ class VideoProcessingPipeline:
                     if consistency_result and consistency_result.get('passed'):
                         self.log(f"场景{i+1}视频生成", "完成")
                     else:
-                        self.log(f"场景{i+1}视频生成", "一致性检查未通过，但继续执行")
+                        self.log(f"场景{i+1}视频生成", "一致性检查未通过，已尝试优化重试，继续执行后续流程")
                 else:
                     self.log(f"场景{i+1}视频生成", f"失败: {video_result.get('error')}")
             
@@ -671,6 +685,177 @@ class VideoProcessingPipeline:
             self.log("最终视频合成", f"失败: {str(e)}")
             logger.error(f"最终视频合成失败: {str(e)}", exc_info=True)
             return {'success': False, 'error': str(e)}
+    
+    def get_previous_scene(self, scene_order: int) -> Optional[Dict[str, Any]]:
+        """
+        获取前一个场景的数据
+        
+        Args:
+            scene_order: 场景序号
+            
+        Returns:
+            前一个场景的数据，如果不存在则返回None
+        """
+        if scene_order < 0 or scene_order >= len(self.generated_videos):
+            return None
+        
+        if scene_order == 0:
+            return None
+        
+        previous_video = self.generated_videos[scene_order - 1]
+        previous_prompt = self.scene_prompts[scene_order - 1] if scene_order - 1 < len(self.scene_prompts) else {}
+        
+        return {
+            'scene_id': previous_video.get('scene_id'),
+            'order': scene_order - 1,
+            'video_path': previous_video.get('video_path'),
+            'keyframes': previous_video.get('keyframes', []),
+            'prompt_data': {
+                'original_prompt': previous_prompt.get('parsed_prompt', ''),
+                'generation_params': previous_prompt.get('generation_params', {
+                    'frame_rate': 24,
+                    'resolution': '1920x1080',
+                    'duration': previous_prompt.get('duration', 4)
+                })
+            },
+            'consistency_score': previous_video.get('consistency_score', 0),
+            'success': previous_video.get('success', False)
+        }
+    
+    async def regenerate_scene(self, scene_order: int, optimized_prompt: str, adjusted_params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        根据优化后的提示词和参数重新生成场景视频
+        
+        Args:
+            scene_order: 场景序号
+            optimized_prompt: 优化后的提示词
+            adjusted_params: 调整后的生成参数
+            
+        Returns:
+            重新生成后的场景数据
+        """
+        self.log(f"场景{scene_order+1}重新生成", "开始", f"使用优化后的提示词和参数")
+        
+        try:
+            scene_prompt = self.scene_prompts[scene_order]
+            slice_info = self.video_slices[scene_order]
+            
+            scene_prompt['parsed_prompt'] = optimized_prompt
+            scene_prompt['generation_params'] = adjusted_params
+            
+            reference_keyframes = slice_info.get('keyframes', [])
+            
+            previous_scene_last_frame = None
+            if scene_order > 0 and scene_order - 1 < len(self.generated_videos):
+                prev_video = self.generated_videos[scene_order - 1]
+                if prev_video.get('success') and prev_video.get('video_path'):
+                    last_frame_path = os.path.join(self.output_dir, f"scene_{scene_order}_last_frame_retry.jpg")
+                    last_frame_result = await self.ffmpeg_service.extract_last_frame(
+                        prev_video['video_path'],
+                        last_frame_path
+                    )
+                    if last_frame_result.get('success'):
+                        previous_scene_last_frame = last_frame_result.get('frame_path', last_frame_path)
+            
+            generated_keyframes = reference_keyframes[:3]
+            
+            if previous_scene_last_frame and os.path.exists(previous_scene_last_frame):
+                generated_keyframes = [previous_scene_last_frame] + generated_keyframes[:2]
+            
+            formatted_keyframes = []
+            for keyframe in generated_keyframes:
+                if keyframe and os.path.exists(keyframe):
+                    normalized_path = self.ffmpeg_service.normalize_frame_path(keyframe)
+                    formatted_keyframes.append(normalized_path)
+            
+            if formatted_keyframes:
+                generated_keyframes = formatted_keyframes
+            
+            enhanced_prompt = optimized_prompt
+            if previous_scene_last_frame:
+                enhanced_prompt = self.frame_continuity_service.build_contextual_prompt(
+                    current_prompt=optimized_prompt,
+                    previous_scene_info={
+                        'prompt_data': {
+                            'original_prompt': self.scene_prompts[scene_order-1].get('parsed_prompt', '') if scene_order > 0 else '',
+                            'generation_params': {}
+                        },
+                        'last_frame': previous_scene_last_frame
+                    },
+                    use_first_frame_constraint=True
+                )
+                enhanced_prompt += ", 保持与上一场景的连续性，确保当前场景的第一帧与上一场景的最后一帧自然过渡"
+            
+            video_result = self.qwen_video_service.generate_video_from_keyframes(
+                generated_keyframes,
+                {
+                    "video_prompt": enhanced_prompt,
+                    "technical_params": {
+                        "frame_rate": adjusted_params.get('frame_rate', 24),
+                        "resolution": adjusted_params.get('resolution', '1920x1080'),
+                        "duration": adjusted_params.get('duration', scene_prompt.get('duration', 4))
+                    }
+                }
+            )
+            
+            if video_result.get('success'):
+                video_path = await self.ffmpeg_service.download_video(
+                    video_result.get('video_url', ''),
+                    os.path.join(self.output_dir, f"scene_{scene_order+1}_retry.mp4")
+                )
+                
+                quality_result = self.video_quality_service.assess_video_quality(video_path)
+                if quality_result.get('success'):
+                    self.log(f"场景{scene_order+1}重新生成", 
+                            f"质量得分: {quality_result.get('overall_score', 0):.2f}, "
+                            f"等级: {quality_result.get('grade', '未知')}")
+                
+                last_frame_path = os.path.join(self.output_dir, f"scene_{scene_order+1}_last_frame.jpg")
+                last_frame_result = await self.ffmpeg_service.extract_last_frame(
+                    video_path,
+                    last_frame_path
+                )
+                
+                regenerated_scene = {
+                    'scene_id': scene_order + 1,
+                    'order': scene_order,
+                    'video_path': video_path,
+                    'keyframes': generated_keyframes,
+                    'prompt_data': {
+                        'original_prompt': optimized_prompt,
+                        'generation_params': adjusted_params
+                    },
+                    'quality_score': quality_result.get('overall_score', 0) if quality_result.get('success') else 0,
+                    'quality_grade': quality_result.get('grade', '未知') if quality_result.get('success') else '未知',
+                    'quality_passed': quality_result.get('passed', False) if quality_result.get('success') else False,
+                    'success': True
+                }
+                
+                if scene_order < len(self.generated_videos):
+                    self.generated_videos[scene_order] = regenerated_scene
+                else:
+                    self.generated_videos.append(regenerated_scene)
+                
+                self.log(f"场景{scene_order+1}重新生成", "完成")
+                return regenerated_scene
+            else:
+                self.log(f"场景{scene_order+1}重新生成", f"失败: {video_result.get('error')}")
+                return {
+                    'scene_id': scene_order + 1,
+                    'order': scene_order,
+                    'success': False,
+                    'error': video_result.get('error', '视频生成失败')
+                }
+                
+        except Exception as e:
+            self.log(f"场景{scene_order+1}重新生成", f"异常: {str(e)}")
+            logger.error(f"场景{scene_order+1}重新生成失败: {str(e)}", exc_info=True)
+            return {
+                'scene_id': scene_order + 1,
+                'order': scene_order,
+                'success': False,
+                'error': str(e)
+            }
     
     async def run_full_pipeline(self, video_path: str) -> Dict[str, Any]:
         """

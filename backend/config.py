@@ -8,7 +8,7 @@ class Config:
     DIFY_WORKFLOW_URL = 'http://localhost/v1/workflows/run'
     
     # 添加DashScope API密钥配置
-    DASHSCOPE_API_KEY = os.getenv('DASHSCOPE_API_KEY', 'sk-6feb1f6d41e44107b326e99ac232427a')
+    DASHSCOPE_API_KEY = os.getenv('DASHSCOPE_API_KEY', 'sk-5eeb025e53df459b9f8a4b4209bd5fa5')
     
     # SQLAlchemy配置 - 使用SQLite数据库
     SQLALCHEMY_DATABASE_URI = 'sqlite:///video_agent.db'
@@ -45,7 +45,7 @@ class Config:
     DOUYIN_API_ENDPOINT = os.getenv('DOUYIN_API_ENDPOINT', '')
     
     # 大模型 API 配置
-    LLM_API_KEY = os.getenv('LLM_API_KEY', 'sk-198a7f0f22c749adae5aef316b517e28')
+    LLM_API_KEY = os.getenv('LLM_API_KEY', 'sk-5eeb025e53df459b9f8a4b4209bd5fa5')
     LLM_API_ENDPOINT = os.getenv('LLM_API_ENDPOINT', 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation')
     LLM_MODEL = os.getenv('LLM_MODEL', 'qwen-omni-turbo-latest')
     

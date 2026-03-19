@@ -8,11 +8,18 @@ from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.callbacks.manager import CallbackManagerForLLMRun
 from langchain_core.outputs import ChatResult, ChatGeneration
+import dashscope
 from dashscope import MultiModalConversation
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
 from config import config
+
+# 设置DashScope API的base_url（重要：必须在API调用之前设置）
+# 以下为北京地域base_url，若使用弗吉尼亚地域模型，需要将base_url换成 https://dashscope-us.aliyuncs.com/api/v1
+# 若使用新加坡地域的模型，需将base_url替换为：https://dashscope-intl.aliyuncs.com/api/v1
+dashscope.base_http_api_url = "https://dashscope.aliyuncs.com/api/v1"
 
 class DashScopeChatModel(BaseChatModel):
     """基于DashScope的LangChain聊天模型"""

@@ -21,7 +21,7 @@ models:
   model_type: "api"
   timeout: 30
   # 阿里云API配置（从环境变量读取）
-  dashscope_api_key: "sk-d433c2f93eff433583a88e3bdb37289f"  # 使用经过测试可用的API密钥
+  dashscope_api_key: "sk-5eeb025e53df459b9f8a4b4209bd5fa5"  # 使用经过测试可用的API密钥
   aliyun_access_key_id: "${ALIBABA_CLOUD_ACCESS_KEY_ID}"
   aliyun_access_key_secret: "${ALIBABA_CLOUD_ACCESS_KEY_SECRET}"
   aliyun_region_id: "${ALIBABA_CLOUD_REGION_ID}"

@@ -117,31 +117,27 @@ class ConsistencyAgent:
             }
     
     async def run_check_loop(self, video_generation_pipeline, scene_data: Dict[str, Any], max_retries: int = 3) -> Dict[str, Any]:
-# 运行一致性检查循环
         retry_count = 0
         current_scene = scene_data.copy()
         
         while retry_count <= max_retries:
-            # 获取前一场景
-            previous_scene = video_generation_pipeline.get_previous_scene(current_scene['order'] - 1)
+            previous_scene = video_generation_pipeline.get_previous_scene(current_scene['order'])
             
-            # 检查一致性
             check_result = await self.check_consistency(
                 current_scene,
                 previous_scene,
                 current_scene.get('prompt_data', {})
             )
             
-            if check_result['passed']:
-                # 一致性检查通过
+            if check_result.get('passed', False):
                 return {
                     'status': 'success',
                     'message': '一致性检查通过',
                     'scene': current_scene,
-                    'retry_count': retry_count
+                    'retry_count': retry_count,
+                    'check_result': check_result
                 }
             
-            # 检查是否达到最大重试次数
             if retry_count >= max_retries:
                 return {
                     'status': 'failure',
@@ -151,23 +147,34 @@ class ConsistencyAgent:
                     'check_result': check_result
                 }
             
-            # 获取优化建议
-            optimized_prompt = check_result['optimization_feedback']['optimized_prompt']
-            adjusted_params = check_result['optimization_feedback']['adjusted_params']
+            optimization_feedback = check_result.get('optimization_feedback', {})
+            optimized_prompt = optimization_feedback.get('optimized_prompt', 
+                                    current_scene.get('prompt_data', {}).get('original_prompt', ''))
+            adjusted_params = optimization_feedback.get('optimized_params',
+                                    current_scene.get('prompt_data', {}).get('generation_params', {}))
             
-            # 更新场景数据
             current_scene['prompt_data']['optimized_prompt'] = optimized_prompt
             current_scene['prompt_data']['generation_params'] = adjusted_params
             
-            # 重新生成视频
             regenerated_scene = await video_generation_pipeline.regenerate_scene(
                 current_scene['order'],
                 optimized_prompt,
                 adjusted_params
             )
             
-            # 更新当前场景
-            current_scene = regenerated_scene
+            if not regenerated_scene.get('success', False):
+                self.log_if_available(f"场景{current_scene['order']+1}重新生成失败: {regenerated_scene.get('error', '未知错误')}")
+                retry_count += 1
+                continue
+            
+            current_scene = {
+                'scene_id': regenerated_scene.get('scene_id', current_scene.get('scene_id')),
+                'order': regenerated_scene.get('order', current_scene.get('order')),
+                'keyframes': regenerated_scene.get('keyframes', []),
+                'video_path': regenerated_scene.get('video_path', ''),
+                'prompt_data': regenerated_scene.get('prompt_data', current_scene.get('prompt_data', {})),
+                'success': True
+            }
             retry_count += 1
         
         return {
@@ -177,4 +184,11 @@ class ConsistencyAgent:
             'retry_count': retry_count,
             'check_result': check_result
         }
+    
+    def log_if_available(self, message: str):
+        try:
+            import logging
+            logging.info(message)
+        except:
+            print(message)
 

@@ -35,10 +35,7 @@ class SceneSegmentationService:
         
         # 使用用户提供的多个API密钥作为备用
         self.api_keys = [
-            "sk-6feb1f6d41e44107b326e99ac232427a",  # 主密钥（用户新提供的有效密钥）
-            "sk-234d5ff939d843068e23b698d5df8616",   # 备用密钥1
-            "sk-bfb72b1c875748c48b0c747fb0c17fc8",   # 备用密钥2
-            "sk-c91a6b7c1b004289956c35d7a1c72496"     # 备用密钥3
+            "sk-5eeb025e53df459b9f8a4b4209bd5fa5"
         ]
         self.current_key_index = 0
         
@@ -404,61 +401,113 @@ class SceneSegmentationService:
                 previous_scene_data = previous_scene_info.get('scene_info', {})
                 
                 previous_info = (
-                    f"\n\n【上一个场景的详细上下文信息】\n"
-                    f"上一场景内容描述: {previous_prompt[:300]}\n"
-                    f"上一场景风格: {previous_style.get('visual_style', '')}\n"
-                    f"上一场景人物: {previous_style.get('characters', '')}\n"
-                    f"上一场景环境: {previous_style.get('environment', '')}\n"
-                    f"上一场景摄像机运动: {previous_style.get('camera_movement', '')}\n"
-                    f"\n【关键约束】\n"
-                    f"当前场景的第一个关键帧必须与上一个场景的最后一个关键帧完全相同！\n"
-                    f"这意味着当前场景的起始画面必须无缝衔接上一个场景的结束画面。\n"
-                    f"请确保第一个关键帧的视觉元素、构图、色彩、光线等都与上一场景的最后一帧保持完全一致。\n"
-                    f"后续关键帧可以逐渐过渡到当前场景的主要内容，但必须保持视觉风格的连贯性。\n"
-                    f"\n【场景连贯性要求】\n"
-                    f"1. 第一个关键帧必须完美衔接上一场景的最后一帧（这是强制要求）\n"
-                    f"2. 保持视觉风格的一致性（色彩、光线、画质）\n"
-                    f"3. 保持人物外观的一致性（服装、发型、表情特征）\n"
-                    f"4. 保持环境元素的一致性（背景、道具、氛围）\n"
-                    f"5. 确保场景过渡自然流畅，没有突兀的跳跃"
+                    f"\n\n【上一个场景的详细视觉信息】\n"
+                    f"上一场景内容概要: {previous_prompt[:300]}\n"
+                    f"上一场景整体视觉风格: {previous_style.get('visual_style', '')}\n"
+                    f"上一场景主要人物造型: {previous_style.get('characters', '')}\n"
+                    f"上一场景环境与背景: {previous_style.get('environment', '')}\n"
+                    f"上一场景摄像机机位与运动: {previous_style.get('camera_movement', '')}\n"
+                    f"\n【请你先做对比分析】\n"
+                    f"1. 先用心回顾上一场景的“最后一帧画面”，从以下角度在内部完成分析：\n"
+                    f"   - 画面主体是谁 / 是什么（人物、物体或场景）\n"
+                    f"   - 摄像机机位（远景 / 中景 / 近景 / 特写，俯拍 / 仰拍 / 平视）\n"
+                    f"   - 构图方式（主体在画面中的位置、左右平衡、前景/背景层次）\n"
+                    f"   - 光线方向和明暗关系（光从哪侧打来、整体明亮还是昏暗）\n"
+                    f"   - 色彩氛围（冷暖色倾向、主色调）\n"
+                    f"\n【当前场景开头的硬性约束】\n"
+                    f"当前场景的第一个关键帧必须与上一场景的最后一个关键帧在**主体、机位、构图、光线方向和色彩氛围上高度一致**，做到几乎无感切换：\n"
+                    f"1. **禁止** 突然更换人物服装、发型、身体比例或明显改变人物年龄。\n"
+                    f"2. **禁止** 突然改变光线方向或光比（例如从左侧逆光突然变成右侧顶光）。\n"
+                    f"3. **禁止** 从特写瞬间跳到完全不同的远景机位，除非上一场景已有明确的运动铺垫。\n"
+                    f"4. **禁止** 色调从冷色调瞬间跳到过饱和暖色调等极端变化。\n"
+                    f"5. 如需切换视角，只允许做“小步变化”（例如从中近景缓慢推到近景，或从平视略微变为轻微俯视），不要“大跳跃”。\n"
+                    f"\n【场景过渡与连贯性要求】\n"
+                    f"- 第一个关键帧 = 上一场景最后一帧的自然延续，可以理解为“同一时间点，同一机位，继续拍摄下一秒”。\n"
+                    f"- 后续关键帧可以推动剧情发展，但必须保持人物造型、整体光线和画面风格完全统一，只允许小幅度、连贯的镜头运动。\n"
+                    f"- 场景过渡必须像电影级剪辑一样自然，不允许出现任何突然突兀的跳切感。"
                 )            
-            # 根据输出格式构建不同的提示词
+            # 根据输出格式构建不同的提示词：分为 背景 / 硬约束 / 输出要求 三段
             if output_format == "json":
                 prompt = f"""
-基于以下信息为场景 {scene_index + 1} 生成详细的英文文生视频提示词，并按指定JSON格式返回结果：
+You are a video prompt engineer for diffusion-based video models (such as wan2.5).
+Your task is to generate a single unified English video generation prompt and a small set of structured fields,
+focused on visual continuity, camera language and technical quality, not on explanations.
 
-场景信息：
-- 开始时间: {scene['start_time']:.1f}秒
-- 结束时间: {scene['end_time']:.1f}秒
-- 时长: {scene['duration']:.1f}秒
-- 描述: {scene.get('description', '')}
+==================== [BACKGROUND CONTEXT] ====================
 
-视频理解内容：
+Scene basic info:
+- scene_index: {scene_index + 1}
+- start_time: {scene['start_time']:.1f} seconds
+- end_time: {scene['end_time']:.1f} seconds
+- duration: {scene['duration']:.1f} seconds
+- description: {scene.get('description', '')}
+
+Global video understanding (summary of the whole original video and story):
 {video_understanding}
 
-音频转录文本：
+Audio transcript of this scene (Chinese, already cleaned):
 {cleaned_audio_text}
 {previous_info}
 
-请生成一个详细的英文文生视频提示词，包含：
-1. 人物描述（外观、服装、表情、动作）
-2. 环境场景（背景、道具、氛围）
-3. 视觉风格（色彩、光线、画面质感）
-4. 摄像机运动（角度、运动方式、景别）
-5. 技术参数（画质、特效等）
+==================== [HARD VISUAL CONSTRAINTS] ====================
 
-要求：
-- 提示词要具体详细，便于AI视频生成
-- 保持与整体视频风格的一致性{style_info}
-- 长度控制在100-200个英文单词
-- 使用专业的视频制作术语
-- 确保生成的内容与原始视频内容高度相关
-- 如果是动画视频，必须保持动画风格
-- 必须包含生成清晰中文字幕的指令{subtitle_instruction}
+Your highest priority is **visual continuity** between this scene and the previous one:
 
-请严格按照以下JSON格式返回结果，不要添加任何其他解释，不要包含任何markdown格式（如```json等）：
+1. Character continuity (must not change unless explicitly required):
+   - Keep the same characters, body proportions, age, hairstyle, hair color, skin tone and clothing style as in the previous scene.
+   - It is strictly forbidden to suddenly change clothes, hairstyle, body shape or age for main characters.
+
+2. Camera and composition continuity:
+   - The first frame of this scene must visually look like the natural continuation of the last frame of the previous scene.
+   - Keep a very similar camera type (wide / medium / close-up), angle (eye-level / low-angle / high-angle) and subject framing.
+   - Do NOT jump from close-up directly to a distant wide shot without any motivation.
+   - Allowed changes are only small & smooth (e.g. slight dolly-in / dolly-out, gentle pan or tilt).
+
+3. Lighting and color continuity:
+   - Keep the same global light direction, light softness (soft / hard light) and contrast level as in the previous scene.
+   - Keep a consistent color temperature and overall color palette (do NOT jump from cold blue to over-saturated warm orange).
+   - If the original video is animation style{style_info} then the generated video MUST keep this animation style strictly.
+
+4. Motion and stability:
+   - The camera movement should be smooth and cinematic, avoid strong shake or chaotic motion.
+   - The image should be sharp, detailed and low-noise, avoid compression artifacts or over-blur.
+
+5. Subtitles (lower priority but still required):
+   - Add clear Chinese subtitles at the bottom of the frame, white text with black outline, aligned center, matching the audio content.
+
+If there is any conflict between story description and continuity rules, always prioritize visual continuity and style consistency.
+
+==================== [OUTPUT REQUIREMENTS] ====================
+
+Now, based on the background, audio and constraints above, generate:
+
+- "video_prompt": one single, dense English prompt for a diffusion video model, describing only:
+  - characters (appearance & clothing),
+  - environment & background,
+  - visual style (color, lighting, rendering style, mood),
+  - camera language (shot type, angle, motion),
+  - and any important motion or action in this scene.
+  The prompt should be concrete and executable, around 150–250 English words if needed,
+  using professional film / cinematography terminology, and NOT explaining the task.
+
+- "style_elements": a compact summary of:
+  - "characters": 1–3 sentences describing character look and outfit;
+  - "environment": 1–3 sentences describing the environment / background;
+  - "visual_style": 1–3 sentences describing color, rendering style, mood;
+  - "camera_movement": 1–2 sentences describing shot type, angle and motion.
+
+- "technical_params": keep simple, but explicit:
+  - "aspect_ratio": "16:9"
+  - "fps": 24
+  - "quality": "high"
+
+You MUST:
+- Respond in pure JSON, strictly following the schema below.
+- Do NOT add any explanation, markdown, code block markers, or extra keys.
+- Do NOT include Chinese in keys; Chinese can only appear inside string values.
+
 {{
-  "video_prompt": "详细的英文视频提示词",
+  "video_prompt": "detailed English video generation prompt",
   "scene_info": {{
     "scene_id": {scene_index + 1},
     "start_time": {scene['start_time']:.1f},
@@ -466,10 +515,10 @@ class SceneSegmentationService:
     "duration": {scene['duration']:.1f}
   }},
   "style_elements": {{
-    "characters": "人物描述",
-    "environment": "环境描述",
-    "visual_style": "视觉风格",
-    "camera_movement": "摄像机运动"
+    "characters": "brief but concrete description of characters",
+    "environment": "brief but concrete description of environment/background",
+    "visual_style": "brief but concrete description of visual style and mood",
+    "camera_movement": "brief but concrete description of camera shot type and motion"
   }},
   "technical_params": {{
     "aspect_ratio": "16:9",
@@ -480,36 +529,40 @@ class SceneSegmentationService:
 """
             else:
                 prompt = f"""
-基于以下信息为场景 {scene_index + 1} 生成详细的英文文生视频提示词：
+You are a video prompt engineer for diffusion-based video models (such as wan2.5).
+Based on the context below, generate one single English prompt for this scene {scene_index + 1}.
 
-场景信息：
-- 开始时间: {scene['start_time']:.1f}秒
-- 结束时间: {scene['end_time']:.1f}秒
-- 时长: {scene['duration']:.1f}秒
-- 描述: {scene.get('description', '')}
+Scene basic info:
+- start_time: {scene['start_time']:.1f} seconds
+- end_time: {scene['end_time']:.1f} seconds
+- duration: {scene['duration']:.1f} seconds
+- description: {scene.get('description', '')}
 
-视频理解内容：
+Global video understanding:
 {video_understanding}
 
-音频转录文本：
+Audio transcript of this scene (Chinese):
 {cleaned_audio_text}
 {previous_info}
 
-请生成一个详细的英文文生视频提示词，包含：
-1. 人物描述（外观、服装、表情、动作）
-2. 环境场景（背景、道具、氛围）
-3. 视觉风格（色彩、光线、画面质感）
-4. 摄像机运动（角度、运动方式、景别）
-5. 技术参数（画质、特效等）
+Hard constraints (must follow):
+- Keep characters’ appearance and clothing fully consistent with the previous scene.
+- Keep camera type, angle and composition of the first frame very close to the previous scene’s last frame.
+- Keep lighting direction and overall color palette consistent with the previous scene.
+- Camera motion should be smooth and cinematic, avoid strong shake.
+- If the original video is animation style{style_info}, keep the same animation style.
+- Add clear Chinese subtitles at the bottom (white with black outline), matching the audio content.
 
-要求：
-- 提示词要具体详细，便于AI视频生成
-- 保持与整体视频风格的一致性{style_info}
-- 长度控制在100-200个英文单词
-- 使用专业的视频制作术语
-- 确保生成的内容与原始视频内容高度相关
+Now write ONE dense English prompt that:
+- Describes characters (look, clothing, expression, action),
+- Describes environment & background,
+- Describes visual style (color, lighting, rendering style, mood),
+- Describes camera language (shot type, angle, motion),
+- Mentions subtitle requirement briefly at the end,
+- Uses professional cinematography terms,
+- Is concrete and executable for a video diffusion model.
 
-请直接返回英文提示词，不需要其他解释。
+Do NOT explain what you are doing, just output the prompt text itself.
 """
             
             # 使用 dashscope 库调用 qwen-plus-latest 模型
@@ -800,3 +853,105 @@ class SceneSegmentationService:
             print(f"📝 生成的prompt已保存到文件: {file_path}")
         except Exception as e:
             print(f"保存prompt到文件失败: {e}")
+    
+    def generate_shot_breakdown_prompt(self, scene: Dict[str, Any], video_understanding: str,
+                                       audio_text: str, scene_index: int,
+                                       previous_scene_info: Dict[str, Any] = None,
+                                       omni_analysis: Dict[str, Any] = None,
+                                       vl_analysis: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        生成专业的Shot Breakdown格式提示词
+        
+        Args:
+            scene: 场景信息
+            video_understanding: 视频理解内容
+            audio_text: 音频转录文本
+            scene_index: 场景索引
+            previous_scene_info: 上一个场景的信息
+            omni_analysis: qwen-omni分析结果
+            vl_analysis: qwen3-vl分析结果
+        
+        Returns:
+            包含Shot Breakdown格式的提示词字典
+        """
+        try:
+            from .camera_script_generator import CameraScriptGenerator
+            
+            camera_generator = CameraScriptGenerator()
+            
+            scene_info = {
+                'scene_id': scene_index + 1,
+                'start_time': scene.get('start_time', 0),
+                'end_time': scene.get('end_time', 5),
+                'duration': scene.get('duration', 5),
+                'description': scene.get('description', ''),
+                'narrative_role': scene.get('narrative_role', 'development'),
+                'merge_type': scene.get('merge_type', 'original'),
+                'omni_analysis': omni_analysis,
+                'vl_analysis': vl_analysis
+            }
+            
+            scene_prompt_v2 = camera_generator.generate_shot_breakdown(
+                scene_info=scene_info,
+                video_understanding=video_understanding,
+                previous_scene=previous_scene_info,
+                omni_analysis=omni_analysis,
+                vl_analysis=vl_analysis
+            )
+            
+            result = scene_prompt_v2.to_dict()
+            result['success'] = True
+            result['shot_breakdown_table'] = scene_prompt_v2.to_shot_breakdown_table()
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"生成Shot Breakdown提示词失败: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'video_prompt': scene.get('description', '')
+            }
+    
+    def generate_camera_script_for_scenes(self, scenes: List[Dict[str, Any]],
+                                          video_understanding: str,
+                                          omni_analyses: List[Dict[str, Any]] = None,
+                                          vl_analyses: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        为多个场景生成完整的镜头脚本
+        
+        Args:
+            scenes: 场景列表
+            video_understanding: 视频理解内容
+            omni_analyses: qwen-omni分析结果列表
+            vl_analyses: qwen3-vl分析结果列表
+        
+        Returns:
+            完整的镜头脚本
+        """
+        try:
+            from .camera_script_generator import CameraScriptGenerator
+            
+            camera_generator = CameraScriptGenerator()
+            
+            camera_script = camera_generator.generate_camera_script(
+                scenes=scenes,
+                video_understanding=video_understanding,
+                omni_analyses=omni_analyses,
+                vl_analyses=vl_analyses
+            )
+            
+            return {
+                'success': True,
+                'camera_script': camera_script.to_dict(),
+                'full_script_text': camera_script.to_full_script(),
+                'total_scenes': len(camera_script.scenes),
+                'total_duration': camera_script.total_duration
+            }
+            
+        except Exception as e:
+            self.logger.error(f"生成镜头脚本失败: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }

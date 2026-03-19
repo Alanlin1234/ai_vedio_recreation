@@ -34,11 +34,7 @@ class QwenVideoService:
         self.config = config or default_config
         # 使用用户提供的多个API密钥作为备用
         self.api_keys = [
-            "sk-3d1d05dacca64b1ab4e969608e8a26a8",  # 主密钥（用户新提供的有效密钥）
-            "sk-6feb1f6d41e44107b326e99ac232427a",  # 备用密钥1
-            "sk-086bb95a3c984504ac415c4bdca96aed",  # 备用密钥2
-            "sk-234d5ff939d843068e23b698d5df8616",  # 备用密钥3
-            "sk-bfb72b1c875748c48b0c747fb0c17fc8"  # 备用密钥4
+            "sk-a48e659d43af4009b4dbaa5ae878f473"
         ]
         self.current_key_index = 0
         self.base_url = self.config.get("base_url", "https://dashscope.aliyuncs.com/api/v1")
@@ -530,7 +526,7 @@ class QwenVideoService:
     
     def generate_video_from_keyframes(self, keyframes: List[str], prompt: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            logger.info(f"开始使用wan2.5-i2v-preview生成视频")
+            logger.info(f"开始使用wan2.6-i2v-flash生成视频")
             
             # 获取核心提示词并进行编码检查
             video_prompt = prompt.get('video_prompt', '')
@@ -557,7 +553,7 @@ class QwenVideoService:
             
             # 5. 检查关键帧数量，确保至少有一个关键帧
             if not keyframes:
-                error_msg = "wan2.5-i2v-preview视频生成失败: 没有可用的关键帧"
+                error_msg = "wan2.6-i2v-flash视频生成失败: 没有可用的关键帧"
                 logger.error(error_msg)
                 return {
                     "success": False,
@@ -581,7 +577,7 @@ class QwenVideoService:
                     # 添加free_tier_only=False参数来禁用免费模式，使用付费模式
                     # 尝试直接作为kwargs传递，同时确保参数名称正确
                     rsp = VideoSynthesis.async_call(
-                        model='wan2.5-i2v-preview',
+                        model='wan2.6-i2v-flash',
                         prompt=video_prompt,
                         img_url=img_url,
                         api_key=self.api_key,
@@ -591,7 +587,7 @@ class QwenVideoService:
                     logger.debug(f"异步调用响应: {rsp}")
                     
                     if rsp.status_code != HTTPStatus.OK:
-                        error_msg = f"wan2.5-i2v-preview视频生成失败: HTTP {rsp.status_code}, code: {rsp.code}, message: {rsp.message}"
+                        error_msg = f"wan2.6-i2v-flash视频生成失败: HTTP {rsp.status_code}, code: {rsp.code}, message: {rsp.message}"
                         logger.error(error_msg)
                         
                         # 检查是否是API密钥错误
@@ -607,7 +603,7 @@ class QwenVideoService:
                             }
                     
                     task_id = rsp.output.task_id
-                    logger.info(f"wan2.5-i2v-preview视频生成任务创建成功，task_id: {task_id}")
+                    logger.info(f"wan2.6-i2v-flash视频生成任务创建成功，task_id: {task_id}")
                     
                     # 8. 等待任务完成 - 使用自定义等待逻辑，增加等待时间和轮询次数
                     logger.info(f"开始等待视频生成任务完成...")
@@ -623,7 +619,7 @@ class QwenVideoService:
                         logger.debug(f"轮询任务状态: {wait_rsp.output.task_status}, 已等待: {time.time() - start_time:.1f}秒")
                         
                         if wait_rsp.status_code != HTTPStatus.OK:
-                            error_msg = f"wan2.5-i2v-preview视频生成失败: HTTP {wait_rsp.status_code}, code: {wait_rsp.code}, message: {wait_rsp.message}"
+                            error_msg = f"wan2.6-i2v-flash视频生成失败: HTTP {wait_rsp.status_code}, code: {wait_rsp.code}, message: {wait_rsp.message}"
                             logger.error(error_msg)
                             return {
                                 "success": False,
@@ -646,7 +642,7 @@ class QwenVideoService:
                                 logger.warning("任务状态为SUCCEEDED，但未返回视频URL，继续等待...")
                         elif task_status in ["FAILED", "CANCELED"]:
                             # 任务失败或被取消
-                            error_msg = f"wan2.5-i2v-preview视频生成失败: 任务状态为 {task_status}"
+                            error_msg = f"wan2.6-i2v-flash视频生成失败: 任务状态为 {task_status}"
                             logger.error(error_msg)
                             return {
                                 "success": False,
@@ -658,7 +654,7 @@ class QwenVideoService:
                         time.sleep(poll_interval)
                     
                     # 等待超时
-                    error_msg = f"wan2.5-i2v-preview视频生成超时: 超过 {max_wait_time} 秒仍未完成"
+                    error_msg = f"wan2.6-i2v-flash视频生成超时: 超过 {max_wait_time} 秒仍未完成"
                     logger.error(error_msg)
                     return {
                         "success": False,
@@ -666,7 +662,7 @@ class QwenVideoService:
                     }
                 
                 except Exception as e:
-                    error_msg = f"wan2.5-i2v-preview视频生成异常: {str(e)}"
+                    error_msg = f"wan2.6-i2v-flash视频生成异常: {str(e)}"
                     logger.error(error_msg, exc_info=True)
                     import traceback
                     traceback.print_exc()
@@ -690,7 +686,7 @@ class QwenVideoService:
             }
             
         except Exception as e:
-            error_msg = f"wan2.5-i2v-preview视频生成异常: {str(e)}"
+            error_msg = f"wan2.6-i2v-flash视频生成异常: {str(e)}"
             logger.error(error_msg, exc_info=True)
             import traceback
             traceback.print_exc()
@@ -701,11 +697,11 @@ class QwenVideoService:
     
     def optimize_prompt_with_qwen_plus_latest(self, prompt: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
-        使用qwen-plus-latest模型优化提示词，确保95%以上信息保留，专注于关键信息
+        使用qwen-plus-latest模型优化提示词，生成专业的Shot Breakdown表格格式
         
         Args:
             prompt: 原始提示词
-            context: 上下文信息，包括音频内容、关键帧信息等
+            context: 上下文信息，包括音频内容、关键帧信息、shot_breakdown等
             
         Returns:
             优化后的提示词和相关信息
@@ -713,35 +709,150 @@ class QwenVideoService:
         try:
             logger.info(f"开始使用qwen-plus-latest优化提示词")
             
-            # 构建优化提示词的系统提示，包含改进建议
-            system_prompt = "你是一个专业的视频提示词优化专家，能够根据提供的原始提示词和上下文信息，生成更精确、更适合视频生成的提示词。\n\n优化要求：\n1. 保持原始提示词95%以上的核心内容\n2. 减少对画面和人物的详细描述，因为已经使用了原视频关键帧作为参考\n3. 增加具体的动作和表情描述\n4. 明确指定镜头类型和角度\n5. 丰富氛围和情绪描述\n6. 明确指定场景的时间和地点\n7. 添加合适的节奏和速度描述\n8. 添加相关的音效和背景音乐描述\n9. 结合上下文信息（如音频内容、关键帧信息）\n10. 生成的提示词应清晰、具体、易于理解\n11. 输出格式应为纯文本，不包含任何其他格式\n12. 所有场景统一使用中文\n13. 减少冗余描述，专注于场景变化、相机运动和动作/情绪\n14. 确保与原视频的镜头语言一致\n15. 确保生成的提示词能够生成高质量、连贯的视频"
+            system_prompt = """你是一个专业的视频分镜脚本专家。你的任务是将原始视频分析转化为专业的JSON格式Shot Breakdown。
+
+## 输出格式要求
+
+必须严格按照以下JSON格式输出，不要包含任何其他文字：
+
+```json
+{
+    "shot_breakdown": [
+        {
+            "shot_number": 1,
+            "framing": "景别（英文）",
+            "angle": "角度（英文）",
+            "movement": "运动（英文）",
+            "shot_description": "详细场景描述（中文）",
+            "audio": {
+                "bgm": "背景音乐描述",
+                "sfx": "音效描述",
+                "narration": "旁白描述"
+            },
+            "duration": 3
+        }
+    ],
+    "summary": "整体风格总结，包含视觉风格、色彩、光线、音频风格等（中文）"
+}
+```
+
+## 字段说明
+
+### framing（景别）
+- Extreme Close-up: 极特写（眼睛、嘴唇等局部）
+- Close-up: 特写（面部）
+- Medium Close-up: 中近景（胸部以上）
+- Medium Shot: 中景（腰部以上）
+- Medium Wide: 中远景（膝盖以上）
+- Wide Shot: 远景（全身）
+- Extreme Wide: 极远景（环境为主）
+
+### angle（角度）
+- Eye Level: 平视
+- Low Angle: 仰视
+- High Angle: 俯视
+- Bird Eye: 鸟瞰
+- Dutch Angle: 倾斜角度
+
+### movement（运动）
+- Static: 静止
+- Push In: 推镜头
+- Pull Out: 拉镜头
+- Pan: 摇镜头（水平）
+- Tilt: 倾斜镜头（垂直）
+- Tracking: 跟踪镜头
+- Dolly: 移动镜头
+- Zoom: 变焦
+
+### shot_description（场景描述）
+详细描述画面内容，包括：
+- 人物动作和表情
+- 物品和道具
+- 光线条件
+- 色彩和氛围
+- 构图特点
+
+### audio（音频）
+- bgm: 背景音乐描述，如果没有则为null
+- sfx: 音效描述，如果没有则为null
+- narration: 旁白描述，如果没有则为null
+
+### duration（时长）
+每个镜头的持续时间（秒），整数
+
+## 优化原则
+1. 每个场景生成一个shot对象
+2. shot_description要详细生动，体现食物/人物的质感
+3. framing/angle/movement使用英文专业术语
+4. shot_description和summary使用中文描述
+5. 确保与原视频的镜头语言一致
+6. 如果提供了关键帧，减少对人物外观的详细描述
+7. 只输出JSON，不要包含任何其他文字或markdown标记"""
+
+            user_prompt = f"""请根据以下信息生成专业的JSON格式Shot Breakdown：
+
+【原始提示词】
+{prompt}
+
+"""
             
-            # 构建用户提示
-            user_prompt = f"请优化以下视频生成提示词：\n\n原始提示词：{prompt}\n\n" 
-            
-            # 添加上下文信息
             if context:
-                if 'audio_content' in context and context['audio_content']:
-                    user_prompt += f"\n音频内容参考：{context['audio_content']}\n" 
-                if 'keyframes' in context and context['keyframes']:
-                    user_prompt += f"\n关键帧数量：{len(context['keyframes'])}\n" 
-                    user_prompt += f"\n注意：已经使用了原视频关键帧作为参考，减少对画面和人物的详细描述\n" 
-                if 'scene_order' in context:
-                    user_prompt += f"\n场景顺序：第{context['scene_order']}个场景\n" 
-                if 'optimization_focus' in context:
-                    user_prompt += f"\n优化重点：{context['optimization_focus']}\n" 
-                if 'previous_scene_info' in context:
-                    user_prompt += f"\n上一个场景信息：{context['previous_scene_info']}\n" 
-                    user_prompt += f"\n注意：确保当前场景与上一个场景保持连续性\n" 
+                if context.get('audio_content'):
+                    user_prompt += f"""【音频内容参考】
+{context['audio_content'][:200]}
+
+"""
+                
+                if context.get('shot_breakdown'):
+                    shot = context['shot_breakdown']
+                    user_prompt += f"""【分镜信息】
+- 景别：{shot.get('framing', 'Medium Shot')}
+- 角度：{shot.get('angle', 'Eye Level')}
+- 运动：{shot.get('movement', 'Static')}
+- 时长：{shot.get('duration', 4)}秒
+
+"""
+                
+                if context.get('keyframe_quality'):
+                    kq = context['keyframe_quality']
+                    if kq.get('quality_level') == 'high':
+                        user_prompt += """【关键帧质量】高质量，已提供清晰的视觉参考，无需详细描述人物外观。
+
+"""
+                    else:
+                        user_prompt += """【关键帧质量】中等/低质量，需要补充人物外观描述。
+
+"""
+                
+                if context.get('needs_character_description') == False:
+                    user_prompt += """【重要提示】已使用原视频关键帧作为参考，请减少对人物外观和环境的详细描述，专注于动作、情感和镜头运动。
+
+"""
+                
+                if context.get('scene_order', 0) > 0:
+                    user_prompt += f"""【场景顺序】第{context['scene_order']}个场景，请确保与前一场景的连续性。
+
+"""
+                
+                if context.get('previous_scene_info'):
+                    prev = context['previous_scene_info']
+                    if prev.get('shot_breakdown'):
+                        prev_shot = prev['shot_breakdown']
+                        user_prompt += f"""【上一场景信息】
+- 景别：{prev_shot.get('framing', '未知')}
+- 动作：{prev_shot.get('shot_description', '未知')[:50]}
+
+请确保当前场景与上一场景自然衔接。
+
+"""
             
-            # 导入DashScope SDK的相关类
+            user_prompt += """请生成专业的Shot Breakdown表格和Summary："""
+
             from dashscope import Generation
             
-            # 遍历所有API密钥，尝试优化提示词
             optimized_prompt = None
             
             for key_index in range(len(self.api_keys)):
-                # 手动切换到当前索引的API密钥
                 self.api_key = self.api_keys[key_index]
                 logger.info(f"使用API密钥 {self.api_key[:10]}... 尝试优化提示词")
                 
@@ -765,140 +876,314 @@ class QwenVideoService:
                                 optimized_prompt = choice.message.content
                                 logger.info("qwen-plus-latest提示词优化成功")
                                 
-                                # 进一步优化，确保满足改进建议
-                                optimized_prompt = optimized_prompt.replace("详细描述", "简要描述").replace("详细", "")
+                                optimized_prompt = optimized_prompt.strip()
                                 
-                                # 确保提示词包含所有关键元素，优先级顺序：动作表情 → 镜头 → 氛围情绪 → 时间地点 → 节奏速度 → 音效音乐
-                                key_elements = {
-                                    "动作": "，添加具体动作描述",
-                                    "表情": "，添加具体表情描述",
-                                    "镜头": "，添加明确的镜头类型和角度",
-                                    "氛围": "，添加丰富的氛围和情绪描述",
-                                    "情绪": "，添加丰富的氛围和情绪描述",
-                                    "时间": "，添加明确的时间和地点",
-                                    "地点": "，添加明确的时间和地点",
-                                    "节奏": "，添加合适的节奏和速度描述",
-                                    "速度": "，添加合适的节奏和速度描述",
-                                    "音效": "，添加相关的音效和背景音乐描述",
-                                    "背景音乐": "，添加相关的音效和背景音乐描述"
-                                }
-                                
-                                for element, description in key_elements.items():
-                                    if element not in optimized_prompt:
-                                        optimized_prompt += description
-                                
-                                # 确保使用中文
-                                if any(char in optimized_prompt for char in "abcdefghijklmnopqrstuvwxyz") and "中文" not in optimized_prompt:
-                                    optimized_prompt += "，使用中文"
+                                shot_description = self._extract_shot_description_from_json(optimized_prompt)
+                                summary = self._extract_summary_from_json(optimized_prompt)
+                                shot_breakdown = self._parse_shot_breakdown_json(optimized_prompt)
                                 
                                 return {
                                     "success": True,
                                     "original_prompt": prompt,
                                     "optimized_prompt": optimized_prompt,
-                                    "model": "qwen-plus-latest"
+                                    "shot_description": shot_description,
+                                    "summary": summary,
+                                    "shot_breakdown": shot_breakdown,
+                                    "model": "qwen-plus-latest",
+                                    "prompt_length": len(optimized_prompt)
                                 }
                     else:
                         error_msg = f"提示词优化失败: HTTP {response.status_code}"
                         if hasattr(response, 'message'):
                             error_msg += f", 错误信息: {response.message}"
                         logger.error(error_msg)
-                        # 检查是否是API密钥错误
                         if "InvalidApiKey" in str(response) or "api_key" in str(response).lower():
                             logger.error("API密钥无效，切换到下一个密钥")
                             continue
                 except Exception as e:
-                    error_msg = f"提示词优化异常: {str(e)}"
-                    logger.error(error_msg)
-                    logger.debug(f"异常类型: {type(e).__name__}")
-                    # 检查是否是API密钥错误
-                    if "InvalidApiKey" in str(e) or "api_key" in str(e).lower():
-                        logger.error("API密钥无效，切换到下一个密钥")
+                    logger.error(f"API密钥 {self.api_key[:10]}... 调用失败: {str(e)}")
+                    if key_index < len(self.api_keys) - 1:
+                        self.rotate_api_key()
                         continue
+                    else:
+                        break
             
-            # 如果所有API密钥都尝试过仍失败，手动优化提示词
-            logger.error("qwen-plus-latest提示词优化失败，手动优化提示词")
-            
-            # 手动优化提示词，确保满足改进建议
-            optimized_prompt = prompt.replace("详细描述", "简要描述").replace("详细", "")
-            
-            # 确保提示词包含所有关键元素，优先级顺序：动作表情 → 镜头 → 氛围情绪 → 时间地点 → 节奏速度 → 音效音乐
-            key_elements = {
-                "动作": "，添加具体动作描述",
-                "表情": "，添加具体表情描述",
-                "镜头": "，添加明确的镜头类型和角度",
-                "氛围": "，添加丰富的氛围和情绪描述",
-                "情绪": "，添加丰富的氛围和情绪描述",
-                "时间": "，添加明确的时间和地点",
-                "地点": "，添加明确的时间和地点",
-                "节奏": "，添加合适的节奏和速度描述",
-                "速度": "，添加合适的节奏和速度描述",
-                "音效": "，添加相关的音效和背景音乐描述",
-                "背景音乐": "，添加相关的音效和背景音乐描述"
-            }
-            
-            for element, description in key_elements.items():
-                if element not in optimized_prompt:
-                    optimized_prompt += description
-            
-            # 确保使用中文
-            if any(char in optimized_prompt for char in "abcdefghijklmnopqrstuvwxyz") and "中文" not in optimized_prompt:
-                optimized_prompt += "，使用中文"
-            
+            logger.warning("所有API密钥都尝试过，使用原始提示词")
             return {
                 "success": True,
                 "original_prompt": prompt,
-                "optimized_prompt": optimized_prompt,  # 使用手动优化的提示词
-                "model": "qwen-plus-latest",
-                "warning": "使用了手动优化的提示词，因为API调用失败"
+                "optimized_prompt": prompt,
+                "shot_description": prompt,
+                "summary": "",
+                "shot_breakdown": [],
+                "model": "fallback",
+                "note": "使用原始提示词"
             }
             
         except Exception as e:
-            error_msg = f"qwen-plus-latest提示词优化异常: {str(e)}"
+            error_msg = f"提示词优化异常: {str(e)}"
             logger.error(error_msg, exc_info=True)
-            
-            # 手动优化提示词，确保满足改进建议
-            optimized_prompt = prompt.replace("详细描述", "简要描述").replace("详细", "")
-            
-            # 确保提示词包含所有关键元素，优先级顺序：动作表情 → 镜头 → 氛围情绪 → 时间地点 → 节奏速度 → 音效音乐
-            key_elements = {
-                "动作": "，添加具体动作描述",
-                "表情": "，添加具体表情描述",
-                "镜头": "，添加明确的镜头类型和角度",
-                "氛围": "，添加丰富的氛围和情绪描述",
-                "情绪": "，添加丰富的氛围和情绪描述",
-                "时间": "，添加明确的时间和地点",
-                "地点": "，添加明确的时间和地点",
-                "节奏": "，添加合适的节奏和速度描述",
-                "速度": "，添加合适的节奏和速度描述",
-                "音效": "，添加相关的音效和背景音乐描述",
-                "背景音乐": "，添加相关的音效和背景音乐描述"
-            }
-            
-            for element, description in key_elements.items():
-                if element not in optimized_prompt:
-                    optimized_prompt += description
-            
-            # 确保使用中文
-            if any(char in optimized_prompt for char in "abcdefghijklmnopqrstuvwxyz") and "中文" not in optimized_prompt:
-                optimized_prompt += "，使用中文"
-            
             return {
-                "success": True,
-                "original_prompt": prompt,
-                "optimized_prompt": optimized_prompt,  # 使用手动优化的提示词
-                "model": "qwen-plus-latest",
-                "warning": f"使用了手动优化的提示词，因为发生异常: {str(e)}"
+                "success": False,
+                "error": error_msg,
+                "optimized_prompt": prompt,
+                "shot_description": prompt,
+                "summary": "",
+                "shot_breakdown": []
             }
+    
+    def _extract_shot_description_from_json(self, json_prompt: str) -> str:
+        """
+        从JSON格式的Shot Breakdown中提取Shot Description用于视频生成
+        
+        Args:
+            json_prompt: JSON格式的提示词
+            
+        Returns:
+            提取的Shot Description文本
+        """
+        try:
+            import json
+            import re
+            
+            json_str = json_prompt.strip()
+            if json_str.startswith('```json'):
+                json_str = json_str[7:]
+            if json_str.startswith('```'):
+                json_str = json_str[3:]
+            if json_str.endswith('```'):
+                json_str = json_str[:-3]
+            json_str = json_str.strip()
+            
+            data = json.loads(json_str)
+            
+            descriptions = []
+            shot_breakdown = data.get('shot_breakdown', [])
+            
+            for shot in shot_breakdown:
+                shot_num = shot.get('shot_number', 1)
+                framing = shot.get('framing', '')
+                angle = shot.get('angle', '')
+                movement = shot.get('movement', '')
+                shot_desc = shot.get('shot_description', '')
+                
+                framing_angle = f"{framing}/{angle}" if framing and angle else framing or angle
+                descriptions.append(f"Shot {shot_num}: {framing_angle}, {movement}. {shot_desc}")
+            
+            if descriptions:
+                return '\n'.join(descriptions)
+            else:
+                return json_prompt
+                
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON解析失败: {str(e)}")
+            return json_prompt
+        except Exception as e:
+            logger.error(f"提取Shot Description失败: {str(e)}")
+            return json_prompt
+    
+    def _extract_summary_from_json(self, json_prompt: str) -> str:
+        """
+        从JSON格式的提示词中提取Summary部分
+        
+        Args:
+            json_prompt: JSON格式的提示词
+            
+        Returns:
+            Summary文本
+        """
+        try:
+            import json
+            
+            json_str = json_prompt.strip()
+            if json_str.startswith('```json'):
+                json_str = json_str[7:]
+            if json_str.startswith('```'):
+                json_str = json_str[3:]
+            if json_str.endswith('```'):
+                json_str = json_str[:-3]
+            json_str = json_str.strip()
+            
+            data = json.loads(json_str)
+            return data.get('summary', '')
+                
+        except Exception as e:
+            logger.error(f"提取Summary失败: {str(e)}")
+            return ""
+    
+    def _parse_shot_breakdown_json(self, json_prompt: str) -> list:
+        """
+        从JSON格式的提示词中解析完整的shot_breakdown列表
+        
+        Args:
+            json_prompt: JSON格式的提示词
+            
+        Returns:
+            shot_breakdown列表
+        """
+        try:
+            import json
+            
+            json_str = json_prompt.strip()
+            if json_str.startswith('```json'):
+                json_str = json_str[7:]
+            if json_str.startswith('```'):
+                json_str = json_str[3:]
+            if json_str.endswith('```'):
+                json_str = json_str[:-3]
+            json_str = json_str.strip()
+            
+            data = json.loads(json_str)
+            return data.get('shot_breakdown', [])
+                
+        except Exception as e:
+            logger.error(f"解析shot_breakdown失败: {str(e)}")
+            return []
+    
+    def _extract_shot_description_from_table(self, table_prompt: str) -> str:
+        """
+        从Shot Breakdown表格中提取Shot Description用于视频生成（兼容旧格式）
+        
+        Args:
+            table_prompt: 完整的表格提示词
+            
+        Returns:
+            提取的Shot Description文本
+        """
+        try:
+            import re
+            
+            lines = table_prompt.split('\n')
+            descriptions = []
+            
+            for line in lines:
+                if '|' in line and not line.strip().startswith('|---') and not line.strip().startswith('| Shot'):
+                    parts = [p.strip() for p in line.split('|') if p.strip()]
+                    if len(parts) >= 4:
+                        shot_num = parts[0]
+                        framing_angle = parts[1]
+                        movement = parts[2]
+                        shot_desc = parts[3] if len(parts) > 3 else ""
+                        
+                        if shot_desc and not shot_desc.startswith('Shot'):
+                            descriptions.append(f"Shot {shot_num}: {framing_angle}, {movement}. {shot_desc}")
+            
+            if descriptions:
+                return '\n'.join(descriptions)
+            else:
+                return table_prompt
+                
+        except Exception as e:
+            logger.error(f"提取Shot Description失败: {str(e)}")
+            return table_prompt
+    
+    def _extract_summary(self, table_prompt: str) -> str:
+        """
+        从提示词中提取Summary部分
+        
+        Args:
+            table_prompt: 完整的提示词
+            
+        Returns:
+            Summary文本
+        """
+        try:
+            if '## Summary' in table_prompt:
+                parts = table_prompt.split('## Summary')
+                if len(parts) > 1:
+                    summary = parts[1].strip()
+                    if '##' in summary:
+                        summary = summary.split('##')[0].strip()
+                    return summary
+            return ""
+        except Exception as e:
+            logger.error(f"提取Summary失败: {str(e)}")
+            return ""
+    
+    def _extract_shot_info(self, slice_info: Dict[str, Any], scene_index: int) -> Dict[str, Any]:
+        shot_info = {
+            "shot_number": scene_index + 1,
+            "framing": "Medium Shot",
+            "angle": "Eye Level",
+            "movement": "Static",
+            "duration": slice_info.get('duration', 4)
+        }
+        
+        if 'vl_analysis' in slice_info and slice_info['vl_analysis'].get('success'):
+            vl_result = slice_info['vl_analysis'].get('analysis_result', {})
+            camera_info = vl_result.get('camera', '')
+            
+            framing_keywords = {
+                'extreme close-up': 'Extreme Close-up',
+                'close-up': 'Close-up',
+                'medium close-up': 'Medium Close-up',
+                'medium shot': 'Medium Shot',
+                'medium wide': 'Medium Wide',
+                'wide shot': 'Wide Shot',
+                'extreme wide': 'Extreme Wide',
+                '全景': 'Wide Shot',
+                '中景': 'Medium Shot',
+                '近景': 'Close-up',
+                '特写': 'Extreme Close-up',
+                '远景': 'Extreme Wide'
+            }
+            
+            for keyword, framing in framing_keywords.items():
+                if keyword in camera_info.lower():
+                    shot_info['framing'] = framing
+                    break
+            
+            if '仰视' in camera_info or 'low angle' in camera_info.lower():
+                shot_info['angle'] = 'Low Angle'
+            elif '俯视' in camera_info or 'high angle' in camera_info.lower():
+                shot_info['angle'] = 'High Angle'
+            elif '鸟瞰' in camera_info or 'bird' in camera_info.lower():
+                shot_info['angle'] = 'Bird Eye'
+            
+            movement_keywords = {
+                '推': 'Push In',
+                '拉': 'Pull Out',
+                '摇': 'Pan',
+                '移': 'Tracking',
+                '跟': 'Following',
+                '静止': 'Static',
+                '固定': 'Static',
+                'push': 'Push In',
+                'pull': 'Pull Out',
+                'pan': 'Pan',
+                'tilt': 'Tilt',
+                'tracking': 'Tracking',
+                'static': 'Static'
+            }
+            
+            for keyword, movement in movement_keywords.items():
+                if keyword in camera_info.lower():
+                    shot_info['movement'] = movement
+                    break
+        
+        if 'analysis' in slice_info:
+            analysis = slice_info['analysis']
+            if isinstance(analysis, dict):
+                storyboards = analysis.get('storyboards', [])
+                if storyboards:
+                    for sb in storyboards[:1]:
+                        if isinstance(sb, dict):
+                            if sb.get('framing'):
+                                shot_info['framing'] = sb['framing']
+                            if sb.get('angle'):
+                                shot_info['angle'] = sb['angle']
+                            if sb.get('movement'):
+                                shot_info['movement'] = sb['movement']
+        
+        return shot_info
     
     def download_video(self, video_url: str, local_path: str) -> Dict[str, Any]:
         try:
             logger.info(f"开始下载视频: {video_url}")
             logger.info(f"保存路径: {local_path}")
             
-            # 确保目录存在
             os.makedirs(os.path.dirname(local_path), exist_ok=True)
             
-            # 下载视频
             response = requests.get(video_url, stream=True, timeout=60)
             response.raise_for_status()
             
@@ -922,7 +1207,8 @@ class QwenVideoService:
             }
     
     def generate_structured_prompt(self, slice_info: Dict[str, Any], scene_index: int, 
-                                   previous_scene_info: Dict[str, Any] = None) -> Dict[str, Any]:
+                                   previous_scene_info: Dict[str, Any] = None,
+                                   global_character_profile: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         生成结构化的视频脚本提示词，包含Shot Breakdown和Summary
         
@@ -930,6 +1216,7 @@ class QwenVideoService:
             slice_info: 切片信息，包含analysis, vl_analysis, audio_content等
             scene_index: 场景索引
             previous_scene_info: 上一个场景的信息（用于保持连续性）
+            global_character_profile: 全局人物档案（用于保持人物一致性）
             
         Returns:
             结构化的提示词数据
@@ -937,23 +1224,36 @@ class QwenVideoService:
         try:
             logger.info(f"开始生成结构化提示词，场景 {scene_index + 1}")
             
+            keyframes = slice_info.get('keyframes', [])
+            keyframe_quality = self._assess_keyframe_quality(keyframes)
+            
             shot_info = self._extract_shot_info(slice_info, scene_index)
-            visual_content = self._extract_visual_content(slice_info)
+            visual_content = self._extract_visual_content(slice_info, keyframe_quality)
             audio_info = self._extract_audio_info(slice_info)
+            
+            if global_character_profile and visual_content.get('needs_character_in_prompt'):
+                if not visual_content.get('character_anchor'):
+                    visual_content['character_anchor'] = global_character_profile
+                    visual_content['characters'] = global_character_profile.get('description', '')
             
             shot_breakdown = self._build_shot_breakdown(
                 scene_index + 1, shot_info, visual_content, audio_info,
                 slice_info.get('duration', 4)
             )
             
-            video_prompt = self._build_video_prompt(shot_breakdown, scene_index, previous_scene_info)
+            video_prompt = self._build_video_prompt(
+                shot_breakdown, scene_index, previous_scene_info,
+                visual_content, keyframe_quality
+            )
             
             optimize_context = {
                 'audio_content': slice_info.get('audio_content', ''),
-                'keyframes': slice_info.get('keyframes', []),
+                'keyframes': keyframes,
                 'scene_order': scene_index + 1,
                 'shot_breakdown': shot_breakdown,
-                'optimization_focus': '镜头语言,视觉风格,音频设计,场景连续性,专业术语'
+                'keyframe_quality': keyframe_quality,
+                'needs_character_description': keyframe_quality.get('needs_character_description', True),
+                'optimization_focus': '镜头语言,动作描述,场景连续性'
             }
             
             if previous_scene_info:
@@ -978,6 +1278,7 @@ class QwenVideoService:
                 'video_prompt': video_prompt,
                 'optimized_prompt': optimized_prompt,
                 'style_elements': style_elements,
+                'keyframe_quality': keyframe_quality,
                 'start_time': slice_info.get('start_time', 0),
                 'end_time': slice_info.get('end_time', 0),
                 'duration': slice_info.get('duration', 4)
@@ -1064,7 +1365,103 @@ class QwenVideoService:
         
         return shot_info
     
-    def _extract_visual_content(self, slice_info: Dict[str, Any]) -> Dict[str, Any]:
+    def _assess_keyframe_quality(self, keyframes: List[str]) -> Dict[str, Any]:
+        """
+        评估关键帧质量，判断是否需要补充人物描述
+        
+        Args:
+            keyframes: 关键帧路径列表
+            
+        Returns:
+            质量评估结果
+        """
+        quality_result = {
+            "has_valid_keyframes": False,
+            "character_clarity": 0.0,
+            "character_detected": False,
+            "face_detected": False,
+            "quality_level": "low",
+            "needs_character_description": True,
+            "assessment_details": {}
+        }
+        
+        if not keyframes:
+            quality_result["assessment_details"]["reason"] = "没有关键帧"
+            return quality_result
+        
+        valid_keyframes = [kf for kf in keyframes if kf and os.path.exists(kf)]
+        if not valid_keyframes:
+            quality_result["assessment_details"]["reason"] = "关键帧文件不存在"
+            return quality_result
+        
+        quality_result["has_valid_keyframes"] = True
+        
+        try:
+            from PIL import Image
+            import numpy as np
+            
+            total_clarity = 0.0
+            character_detected_count = 0
+            face_detected_count = 0
+            
+            for kf_path in valid_keyframes[:3]:
+                try:
+                    img = Image.open(kf_path)
+                    img_array = np.array(img)
+                    
+                    brightness = np.mean(img_array)
+                    contrast = np.std(img_array)
+                    
+                    if brightness > 50 and brightness < 200 and contrast > 30:
+                        frame_clarity = min(1.0, (contrast / 50.0) * (1 - abs(brightness - 128) / 128))
+                    else:
+                        frame_clarity = 0.3
+                    
+                    total_clarity += frame_clarity
+                    
+                    if 'vl_analysis' in locals() or True:
+                        pass
+                    
+                except Exception as e:
+                    logger.debug(f"评估关键帧质量失败: {kf_path}, 错误: {str(e)}")
+                    total_clarity += 0.3
+            
+            quality_result["character_clarity"] = total_clarity / len(valid_keyframes)
+            
+            if quality_result["character_clarity"] >= 0.7:
+                quality_result["quality_level"] = "high"
+                quality_result["needs_character_description"] = False
+            elif quality_result["character_clarity"] >= 0.4:
+                quality_result["quality_level"] = "medium"
+                quality_result["needs_character_description"] = True
+            else:
+                quality_result["quality_level"] = "low"
+                quality_result["needs_character_description"] = True
+            
+            quality_result["assessment_details"] = {
+                "valid_keyframe_count": len(valid_keyframes),
+                "average_clarity": round(quality_result["character_clarity"], 2),
+                "quality_level": quality_result["quality_level"]
+            }
+            
+        except Exception as e:
+            logger.error(f"关键帧质量评估失败: {str(e)}")
+            quality_result["needs_character_description"] = True
+        
+        return quality_result
+    
+    def _extract_visual_content(self, slice_info: Dict[str, Any], 
+                                 keyframe_quality: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        提取视觉内容，根据关键帧质量智能决定是否需要人物描述
+        
+        Args:
+            slice_info: 切片信息
+            keyframe_quality: 关键帧质量评估结果
+            
+        Returns:
+            视觉内容字典
+        """
         visual_content = {
             "characters": "",
             "environment": "",
@@ -1075,8 +1472,16 @@ class QwenVideoService:
             "time": "",
             "location": "",
             "color_notes": "",
-            "lighting": ""
+            "lighting": "",
+            "character_anchor": None,
+            "needs_character_in_prompt": True
         }
+        
+        if keyframe_quality is None:
+            keyframes = slice_info.get('keyframes', [])
+            keyframe_quality = self._assess_keyframe_quality(keyframes)
+        
+        visual_content["needs_character_in_prompt"] = keyframe_quality.get("needs_character_description", True)
         
         if 'analysis' in slice_info:
             analysis = slice_info['analysis']
@@ -1109,14 +1514,73 @@ class QwenVideoService:
                 visual_content['time'] = vl_result['time']
             if 'location' in vl_result:
                 visual_content['location'] = vl_result['location']
-            if 'characters' in vl_result:
-                visual_content['characters'] = vl_result['characters']
             if 'color' in vl_result:
                 visual_content['color_notes'] = vl_result['color']
             if 'lighting' in vl_result:
                 visual_content['lighting'] = vl_result['lighting']
+            
+            if visual_content["needs_character_in_prompt"]:
+                character_info = self._extract_character_anchor(vl_result)
+                if character_info:
+                    visual_content['characters'] = character_info.get('description', '')
+                    visual_content['character_anchor'] = character_info
         
         return visual_content
+    
+    def _extract_character_anchor(self, vl_result: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        从视觉分析结果中提取人物锚点信息
+        
+        Args:
+            vl_result: 视觉分析结果
+            
+        Returns:
+            人物锚点信息
+        """
+        character_anchor = {
+            "description": "",
+            "appearance": {},
+            "clothing": {},
+            "position": ""
+        }
+        
+        if 'characters' in vl_result:
+            chars = vl_result['characters']
+            if isinstance(chars, str):
+                character_anchor['description'] = chars
+            elif isinstance(chars, dict):
+                character_anchor['description'] = chars.get('description', '')
+                character_anchor['appearance'] = {
+                    'hair': chars.get('hair', ''),
+                    'skin': chars.get('skin', ''),
+                    'body_type': chars.get('body_type', ''),
+                    'age': chars.get('age', ''),
+                    'gender': chars.get('gender', '')
+                }
+                character_anchor['clothing'] = {
+                    'type': chars.get('clothing_type', ''),
+                    'color': chars.get('clothing_color', ''),
+                    'style': chars.get('clothing_style', '')
+                }
+                character_anchor['position'] = chars.get('position', 'center')
+        
+        if 'character' in vl_result and not character_anchor['description']:
+            character_anchor['description'] = vl_result['character']
+        
+        appearance_fields = ['hair', 'skin', 'body_type', 'age', 'gender', 'face', 'eyes']
+        for field in appearance_fields:
+            if field in vl_result and field not in character_anchor['appearance']:
+                character_anchor['appearance'][field] = vl_result[field]
+        
+        clothing_fields = ['clothing', 'outfit', 'dress', 'clothing_color', 'clothing_style']
+        for field in clothing_fields:
+            if field in vl_result and field not in character_anchor['clothing']:
+                character_anchor['clothing'][field] = vl_result[field]
+        
+        if not character_anchor['description'] and not character_anchor['appearance'] and not character_anchor['clothing']:
+            return None
+        
+        return character_anchor
     
     def _extract_audio_info(self, slice_info: Dict[str, Any]) -> Dict[str, Any]:
         audio_info = {
@@ -1182,18 +1646,69 @@ class QwenVideoService:
         }
     
     def _build_video_prompt(self, shot_breakdown: Dict, scene_index: int, 
-                            previous_scene_info: Dict[str, Any] = None) -> str:
+                            previous_scene_info: Dict[str, Any] = None,
+                            visual_content: Dict[str, Any] = None,
+                            keyframe_quality: Dict[str, Any] = None) -> str:
+        """
+        构建视频生成提示词，根据关键帧质量动态调整内容
+        
+        Args:
+            shot_breakdown: 分镜信息
+            scene_index: 场景索引
+            previous_scene_info: 上一场景信息
+            visual_content: 视觉内容信息
+            keyframe_quality: 关键帧质量评估结果
+            
+        Returns:
+            构建好的提示词
+        """
         prompt_parts = [
             f"Shot {shot_breakdown['shot_number']}:",
-            f"[Framing] {shot_breakdown['framing']} / {shot_breakdown['angle']}",
-            f"[Movement] {shot_breakdown['movement']}",
-            f"[Description] {shot_breakdown['shot_description']}",
-            f"[Audio] {shot_breakdown['audio']}",
-            f"[Duration] {shot_breakdown['duration']}s"
+            f"[Camera] {shot_breakdown['framing']} / {shot_breakdown['angle']} / {shot_breakdown['movement']}"
         ]
+        
+        needs_character = True
+        if keyframe_quality:
+            needs_character = keyframe_quality.get('needs_character_description', True)
+        
+        if visual_content and needs_character:
+            if visual_content.get('characters'):
+                prompt_parts.append(f"[Character] {visual_content['characters']}")
+            
+            character_anchor = visual_content.get('character_anchor')
+            if character_anchor:
+                appearance = character_anchor.get('appearance', {})
+                clothing = character_anchor.get('clothing', {})
+                
+                anchor_parts = []
+                if appearance.get('hair'):
+                    anchor_parts.append(f"hair: {appearance['hair']}")
+                if appearance.get('skin'):
+                    anchor_parts.append(f"skin: {appearance['skin']}")
+                if clothing.get('color') or clothing.get('type'):
+                    clothing_desc = f"{clothing.get('color', '')} {clothing.get('type', '')}".strip()
+                    if clothing_desc:
+                        anchor_parts.append(f"outfit: {clothing_desc}")
+                
+                if anchor_parts:
+                    prompt_parts.append(f"[Character Anchor] {', '.join(anchor_parts)}")
+        
+        if visual_content:
+            if visual_content.get('action'):
+                prompt_parts.append(f"[Action] {visual_content['action']}")
+            if visual_content.get('emotion'):
+                prompt_parts.append(f"[Emotion] {visual_content['emotion']}")
+            if visual_content.get('atmosphere'):
+                prompt_parts.append(f"[Atmosphere] {visual_content['atmosphere']}")
+        
+        prompt_parts.append(f"[Duration] {shot_breakdown['duration']}s")
         
         if scene_index > 0 and previous_scene_info:
             prompt_parts.append("[Continuity] Maintain visual consistency with previous shot")
+        
+        if keyframe_quality and keyframe_quality.get('has_valid_keyframes'):
+            if keyframe_quality.get('first_frame_constraint'):
+                prompt_parts.append("[Constraint] First frame must match reference keyframe exactly")
         
         return " | ".join(prompt_parts)
     
@@ -1265,3 +1780,136 @@ class QwenVideoService:
                 'success': False,
                 'error': error_msg
             }
+    
+    def build_global_character_profile(self, video_slices: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        从所有视频切片中构建全局人物档案，确保人物一致性
+        
+        Args:
+            video_slices: 所有视频切片信息列表
+            
+        Returns:
+            全局人物档案
+        """
+        try:
+            logger.info("开始构建全局人物档案")
+            
+            character_profiles = {}
+            main_character = None
+            main_character_appearances = 0
+            
+            for i, slice_info in enumerate(video_slices):
+                if 'vl_analysis' in slice_info and slice_info['vl_analysis'].get('success'):
+                    vl_result = slice_info['vl_analysis'].get('analysis_result', {})
+                    
+                    character_info = self._extract_character_anchor(vl_result)
+                    
+                    if character_info and character_info.get('description'):
+                        char_key = self._generate_character_key(character_info)
+                        
+                        if char_key not in character_profiles:
+                            character_profiles[char_key] = {
+                                'description': character_info.get('description', ''),
+                                'appearance': character_info.get('appearance', {}),
+                                'clothing': character_info.get('clothing', {}),
+                                'first_appearance': i,
+                                'appearance_count': 1,
+                                'positions': [character_info.get('position', 'center')]
+                            }
+                        else:
+                            character_profiles[char_key]['appearance_count'] += 1
+                            character_profiles[char_key]['positions'].append(character_info.get('position', 'center'))
+                            
+                            existing_appearance = character_profiles[char_key]['appearance']
+                            new_appearance = character_info.get('appearance', {})
+                            for key, value in new_appearance.items():
+                                if value and not existing_appearance.get(key):
+                                    existing_appearance[key] = value
+                            
+                            existing_clothing = character_profiles[char_key]['clothing']
+                            new_clothing = character_info.get('clothing', {})
+                            for key, value in new_clothing.items():
+                                if value and not existing_clothing.get(key):
+                                    existing_clothing[key] = value
+            
+            for char_key, profile in character_profiles.items():
+                if profile['appearance_count'] > main_character_appearances:
+                    main_character = char_key
+                    main_character_appearances = profile['appearance_count']
+            
+            if main_character and main_character in character_profiles:
+                main_profile = character_profiles[main_character]
+                
+                description_parts = []
+                appearance = main_profile.get('appearance', {})
+                clothing = main_profile.get('clothing', {})
+                
+                if appearance.get('gender'):
+                    description_parts.append(appearance['gender'])
+                if appearance.get('age'):
+                    description_parts.append(f"{appearance['age']} years old")
+                if appearance.get('hair'):
+                    description_parts.append(f"{appearance['hair']} hair")
+                if appearance.get('skin'):
+                    description_parts.append(f"{appearance['skin']} skin")
+                if clothing.get('color') or clothing.get('type'):
+                    clothing_desc = f"{clothing.get('color', '')} {clothing.get('type', '')}".strip()
+                    if clothing_desc:
+                        description_parts.append(f"wearing {clothing_desc}")
+                
+                global_profile = {
+                    'success': True,
+                    'character_id': main_character,
+                    'description': ', '.join(description_parts) if description_parts else main_profile.get('description', ''),
+                    'appearance': appearance,
+                    'clothing': clothing,
+                    'appearance_count': main_profile['appearance_count'],
+                    'first_appearance': main_profile['first_appearance'],
+                    'all_characters': character_profiles
+                }
+                
+                logger.info(f"全局人物档案构建完成，主角色出现 {main_profile['appearance_count']} 次")
+                return global_profile
+            
+            logger.warning("未检测到明确的人物信息")
+            return {
+                'success': True,
+                'character_id': None,
+                'description': '',
+                'appearance': {},
+                'clothing': {},
+                'note': 'No clear character detected in video'
+            }
+            
+        except Exception as e:
+            error_msg = f"构建全局人物档案失败: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            return {
+                'success': False,
+                'error': error_msg
+            }
+    
+    def _generate_character_key(self, character_info: Dict[str, Any]) -> str:
+        """
+        根据人物特征生成唯一标识键
+        
+        Args:
+            character_info: 人物信息
+            
+        Returns:
+            人物标识键
+        """
+        appearance = character_info.get('appearance', {})
+        key_parts = []
+        
+        if appearance.get('gender'):
+            key_parts.append(appearance['gender'])
+        if appearance.get('hair'):
+            key_parts.append(appearance['hair'][:20])
+        if appearance.get('skin'):
+            key_parts.append(appearance['skin'][:10])
+        
+        if key_parts:
+            return '_'.join(key_parts).lower().replace(' ', '_')
+        else:
+            return 'unknown_character'
