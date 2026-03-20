@@ -95,7 +95,68 @@ Only technical terms (like shot types, camera angles) can be in English."""
 - Previous Camera Angle: {previous_scene.get('shot_breakdown', {}).get('camera_angle', 'N/A')}
 - Previous Camera Movement: {previous_scene.get('shot_breakdown', {}).get('camera_movement', 'N/A')}
 - Previous Visual Focus: {previous_scene.get('shot_breakdown', {}).get('visual_focus', 'N/A')}
+- Previous Dialogue: {previous_scene.get('shot_breakdown', {}).get('audio', {}).get('dialogue', 'N/A')}
+- Previous Key Action: {previous_scene.get('shot_breakdown', {}).get('key_action', 'N/A')}
 - Transition from previous: Must maintain visual continuity
+
+⚠️ STORY CONTINUITY CHECK:
+- If previous scene ended with "到家了", "结束了", "下次再玩", "再见", current scene should NOT show "出发", "开始", "上路"
+- If previous scene showed characters arriving/leaving, current scene must logically follow
+- Maintain the story timeline - don't reset or restart the narrative
+"""
+        
+        story_state_context = ""
+        story_state = scene_info.get('story_state', {})
+        if story_state:
+            prohibited = story_state.get('prohibited_actions', [])
+            prohibited_str = ', '.join(prohibited) if prohibited else '出发, 开始, 上路'
+            required = story_state.get('required_transitions', [])
+            required_str = ', '.join(required) if required else '无特定要求'
+            story_state_context = f"""
+[Story State Tracking]
+- Current Location: {story_state.get('location', 'Unknown')}
+- Current Action: {story_state.get('action', 'Unknown')}
+- Time of Day: {story_state.get('time_of_day', 'Unknown')}
+- Character States: {story_state.get('character_states', {})}
+- Story Phase: {story_state.get('story_phase', 'development')}
+- Is Ending Scene: {story_state.get('is_ending_scene', False)}
+- Prohibited Actions (MUST AVOID): {prohibited_str}
+- Required Transitions: {required_str}
+- Logical Next: {story_state.get('logical_next', 'Continue the story')}
+
+⚠️ CRITICAL STORY CONTINUITY RULES:
+
+1. FORBIDDEN Combinations:
+   If previous scene ended with: "到家了", "到了", "结束", "下次再玩", "再见", "拜拜"
+   Then current scene CANNOT start with: "出发", "开始", "上路", "启程", "再出发"
+   
+   If previous scene ended with: "睡觉了", "休息了", "晚安"
+   Then current scene CANNOT start with: "继续工作", "继续活动", "出发", "开始"
+
+2. Time Progression:
+   - Time can progress: 上午→下午→傍晚→夜晚
+   - Time CANNOT regress: 傍晚→上午 (without transition)
+   - Same scene maintains consistent lighting/time
+
+3. Location Rules:
+   - Location changes require transition actions (walking, driving)
+   - NO teleportation without transition
+   - After "到家了", next scene should be indoor or farewell related
+
+4. Character State Continuity:
+   - Clothes, items, emotions must be consistent
+   - State changes require logical transition
+   - If character was sitting, next scene cannot show jumping without transition
+
+5. Dialogue Logic:
+   - Responses must match previous dialogue
+   - "谢谢" should be followed by "不客气"
+   - "再见" cannot be followed by "你好"
+
+6. Physical Realism:
+   - NO floating, flying, or anti-gravity actions (unless in vehicle/supernatural context)
+   - Human actions must be anatomically possible
+   - Objects must have proper support
 """
         
         omni_context = ""
@@ -126,6 +187,7 @@ Generate a professional Shot Breakdown for this video scene.
 {video_understanding[:1500]}
 
 {previous_context}
+{story_state_context}
 {omni_context}
 {vl_context}
 
@@ -780,3 +842,89 @@ Output ONLY the JSON, no explanations.
             logger.error(f"解析优化响应失败: {e}")
         
         return original_prompt
+    
+    def generate_storyboard_with_high_consistency(
+        self, 
+        story_content: str, 
+        scene_count: int = 6
+    ) -> Dict[str, Any]:
+        try:
+            scenes = []
+            
+            for i in range(scene_count):
+                scene_prompt = f"""请基于以下故事内容，生成第{i+1}/{scene_count}个分镜场景：
+
+故事内容：
+{story_content}
+
+要求：
+1. 每个场景要有清晰的描述
+2. 保持场景之间的视觉一致性
+3. 人物形象、环境风格要统一
+4. 每个场景生成一个详细的提示词
+
+请用JSON格式返回，包含：
+- "description": 场景描述
+- "prompt": 视频生成提示词
+- "scene_number": 场景序号
+"""
+                
+                response = dashscope.Generation.call(
+                    model="qwen-plus-latest",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "你是一个专业的分镜设计师，擅长创作一致性极高的分镜图。请确保所有场景的人物形象、环境风格、色彩搭配保持高度一致。"
+                        },
+                        {"role": "user", "content": scene_prompt}
+                    ],
+                    result_format='message',
+                    temperature=0.7,
+                    max_tokens=1000
+                )
+                
+                if response.status_code == 200 and response.output and response.output.choices:
+                    result_text = response.output.choices[0].message.content
+                    
+                    try:
+                        json_start = result_text.find('{')
+                        json_end = result_text.rfind('}')
+                        if json_start != -1 and json_end != -1:
+                            json_str = result_text[json_start:json_end+1]
+                            scene_data = json.loads(json_str)
+                            scenes.append({
+                                'scene_number': i + 1,
+                                'description': scene_data.get('description', f'场景{i+1}'),
+                                'prompt': scene_data.get('prompt', story_content[:200])
+                            })
+                        else:
+                            scenes.append({
+                                'scene_number': i + 1,
+                                'description': f'场景{i+1}',
+                                'prompt': story_content[:200]
+                            })
+                    except:
+                        scenes.append({
+                            'scene_number': i + 1,
+                            'description': f'场景{i+1}',
+                            'prompt': story_content[:200]
+                        })
+                else:
+                    scenes.append({
+                        'scene_number': i + 1,
+                        'description': f'场景{i+1}',
+                        'prompt': story_content[:200]
+                    })
+            
+            return {
+                'success': True,
+                'scenes': scenes,
+                'total_scenes': len(scenes)
+            }
+        except Exception as e:
+            logger.error(f"生成分镜图失败: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'scenes': []
+            }

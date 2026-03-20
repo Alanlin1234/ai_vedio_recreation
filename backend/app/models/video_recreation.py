@@ -96,7 +96,10 @@ class RecreationScene(db.Model):
     start_time = db.Column(db.Float, nullable=False, comment='开始时间(秒)')
     end_time = db.Column(db.Float, nullable=False, comment='结束时间(秒)')
     duration = db.Column(db.Float, nullable=False, comment='场景时长(秒)')
-    description = db.Column(db.Text, comment='场景描述')
+    shot_type = db.Column(db.String(100), comment='镜头类型')
+    description = db.Column(db.Text, comment='画面描述')
+    plot = db.Column(db.Text, comment='情节描述')
+    dialogue = db.Column(db.Text, comment='台词')
     
     # 文生视频提示词
     video_prompt = db.Column(db.Text, comment='视频生成提示词')
@@ -105,6 +108,7 @@ class RecreationScene(db.Model):
     prompt_generation_model = db.Column(db.String(100), comment='提示词生成模型')
     
     # 生成的视频文件
+    generated_image_path = db.Column(db.String(500), comment='生成的分镜图片路径')
     generated_video_path = db.Column(db.String(500), comment='单个场景生成的视频文件路径')
     generation_status = db.Column(db.Enum('pending', 'processing', 'completed', 'failed'), default='pending')
     generation_task_id = db.Column(db.String(255), comment='外部服务任务ID')
@@ -121,10 +125,14 @@ class RecreationScene(db.Model):
             'id': self.id,
             'recreation_id': self.recreation_id,
             'scene_index': self.scene_index,
+            'scene_number': self.scene_index + 1,
             'start_time': self.start_time,
             'end_time': self.end_time,
             'duration': self.duration,
+            'shot_type': self.shot_type,
             'description': self.description,
+            'plot': self.plot,
+            'dialogue': self.dialogue,
             'video_prompt': self.video_prompt,
             'technical_params': self.technical_params,
             'style_elements': self.style_elements,

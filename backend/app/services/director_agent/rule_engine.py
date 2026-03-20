@@ -178,7 +178,7 @@ class DirectorRuleEngine:
         
         for i in range(len(valid_keyframes) - 1):
             try:
-                # 使用numpy读取图像，避免OpenCV中文路径问题
+                # 使用numpy读取图像
                 img1 = cv2.imdecode(np.fromfile(valid_keyframes[i], dtype=np.uint8), cv2.IMREAD_COLOR)
                 img2 = cv2.imdecode(np.fromfile(valid_keyframes[i + 1], dtype=np.uint8), cv2.IMREAD_COLOR)
                 

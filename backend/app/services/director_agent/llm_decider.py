@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from typing import List, Dict, Any
-from .models import NarrativeAnalysis, DirectorDecision
+from .models import NarrativeAnalysis, DirectorDecision, StoryProgress
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class DirectorLLMDecider:
             logger.warning(f"叙事节奏分析失败: {e}")
             return self._default_narrative_analysis(len(slices))
 
-    def _build_narrative_prompt(self, video_script: str, 
+    def _build_narrative_prompt(self, video_script: str,
                                 slices: List[Dict[str, Any]],
                                 rule_suggestion: Dict[str, Any]) -> str:
         """构建叙事分析提示词"""
@@ -56,9 +56,12 @@ class DirectorLLMDecider:
         for i, s in enumerate(slices):
             desc = s.get('description', f'切片{i+1}')
             duration = s.get('duration', 5)
+            audio_content = s.get('audio_content', '')
+            if audio_content:
+                desc += f" [对话/旁白: {audio_content[:100]}]"
             slice_descriptions.append(f"切片{i+1}: {desc} ({duration}秒)")
-        
-        return f"""你是一个专业的视频导演，请分析以下视频内容的叙事节奏，并给出场景调整建议。
+
+        return f"""你是一个专业的视频导演，请分析以下视频内容的叙事节奏和故事逻辑进展，并给出场景调整建议。
 
 ## 视频脚本摘要
 {video_script[:2000]}
@@ -78,8 +81,76 @@ class DirectorLLMDecider:
     "transition_positions": [转场位置索引列表],
     "overall_pace": "整体节奏，如'紧凑'、'舒缓'、'适中'",
     "scene_count_suggestion": 建议的场景数量,
-    "reasoning": "决策理由"
+    "reasoning": "决策理由",
+    "story_progress": {{
+        "current_location": "故事发生的当前地点",
+        "current_action": "当前正在进行的动作",
+        "characters_state": {{"角色名": "当前状态描述"}},
+        "story_phase": "故事阶段：beginning/development/climax/resolution/ending",
+        "key_events": ["关键事件1", "关键事件2"]
+    }},
+    "scene_story_states": [
+        {{
+            "scene_index": 0,
+            "location": "该场景地点",
+            "action": "该场景动作",
+            "time_of_day": "上午/下午/傍晚/夜晚/不确定",
+            "character_states": {{"角色名": "当前状态(如穿着、情绪、持有物品)"}},
+            "story_phase": "该场景的故事阶段",
+            "is_ending_scene": false,
+            "prohibited_actions": ["禁止的下一场景动作列表"],
+            "required_transitions": ["必须的过渡动作"],
+            "logical_next": "下一个场景应该是什么（用于验证逻辑连贯性）"
+        }}
+    ],
+    "logic_conflicts": [
+        {{
+            "type": "冲突类型：ending_restart/time_regression/location_jump/state_inconsistency",
+            "description": "冲突描述",
+            "affected_scenes": [受影响的场景索引列表],
+            "severity": "high/medium/low"
+        }}
+    ]
 }}
+
+## 故事逻辑规则（必须严格遵守）:
+
+### 1. 禁止的结束-开始组合
+如果上一场景包含以下结束关键词，当前场景不能以这些动作开始：
+
+| 上一场景结束关键词 | 禁止的当前场景开始动作 |
+|------------------|---------------------|
+| "到家了"、"到了"、"结束"、"下次再玩"、"再见"、"拜拜" | "出发"、"开始"、"上路"、"启程"、"再出发" |
+| "睡觉了"、"休息了"、"晚安"、"休息一下" | "继续工作"、"继续活动"、"出发"、"开始" |
+| "到达了"、"抵达"、"到了"、"终于到了" | "刚出发"、"刚开始"、"在去的路上"、"准备出发" |
+| "回家了"、"回去休息了" | "继续前进"、"继续上路"、"去下一个地方" |
+
+### 2. 时间逻辑规则
+- 时间可以向前推进：上午→下午→傍晚→夜晚
+- 时间禁止倒退：傍晚→上午（除非有过渡说明）
+- 同一场景内时间必须一致
+- 禁止时间突变而无过渡
+
+### 3. 地点逻辑规则
+- 地点变更必须有过渡动作（走路、开车等）
+- 禁止无过渡的瞬移
+- "到家了"后下一场景只能是室内或告别相关
+
+### 4. 角色状态规则
+- 角色状态必须保持连贯（服装、物品、情绪）
+- 状态变更必须有逻辑过渡
+- 禁止无原因的角色状态突变
+
+### 5. 对话逻辑规则
+- 对话必须回应上一场景
+- "谢谢"后应是"不客气"
+- "再见"后不能是"你好"
+- 对话内容必须与场景状态匹配
+
+### 6. 物理逻辑规则
+- 禁止无重力、飘浮等违反物理规律的动作
+- 禁止违反人体力学的动作
+- 禁止物体无支撑的悬浮
 
 请只返回JSON，不要有其他内容。"""
 
@@ -94,13 +165,26 @@ class DirectorLLMDecider:
             
             data = json.loads(json_str.strip())
             
+            story_progress_data = data.get('story_progress', {})
+            story_progress = None
+            if story_progress_data:
+                story_progress = StoryProgress(
+                    current_location=story_progress_data.get('current_location', ''),
+                    current_action=story_progress_data.get('current_action', ''),
+                    characters_state=story_progress_data.get('characters_state', {}),
+                    story_phase=story_progress_data.get('story_phase', ''),
+                    key_events=story_progress_data.get('key_events', [])
+                )
+            
             return NarrativeAnalysis(
                 rhythm_pattern=data.get('rhythm_pattern', '未知'),
                 climax_positions=data.get('climax_positions', []),
                 transition_positions=data.get('transition_positions', []),
                 overall_pace=data.get('overall_pace', '适中'),
                 scene_count_suggestion=data.get('scene_count_suggestion', 5),
-                reasoning=data.get('reasoning', '')
+                reasoning=data.get('reasoning', ''),
+                story_progress=story_progress,
+                scene_story_states=data.get('scene_story_states', [])
             )
         except Exception as e:
             logger.warning(f"解析叙事分析结果失败: {e}")
@@ -110,7 +194,9 @@ class DirectorLLMDecider:
                 transition_positions=[],
                 overall_pace='适中',
                 scene_count_suggestion=5,
-                reasoning='解析失败'
+                reasoning='解析失败',
+                story_progress=None,
+                scene_story_states=[]
             )
 
     def _default_narrative_analysis(self, slice_count: int) -> NarrativeAnalysis:

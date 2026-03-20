@@ -83,6 +83,7 @@ class DirectorPlan:
     decisions: List[DirectorDecision]
     reasoning: str
     adjustment_ratio: float = 1.0
+    narrative_analysis: Optional['NarrativeAnalysis'] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -91,7 +92,8 @@ class DirectorPlan:
             'scenes': [s.to_dict() for s in self.scenes],
             'decisions': [d.to_dict() for d in self.decisions],
             'reasoning': self.reasoning,
-            'adjustment_ratio': self.adjustment_ratio
+            'adjustment_ratio': self.adjustment_ratio,
+            'narrative_analysis': self.narrative_analysis.to_dict() if self.narrative_analysis else None
         }
 
 
@@ -120,6 +122,24 @@ class SliceAnalysis:
 
 
 @dataclass
+class StoryProgress:
+    current_location: str = ""
+    current_action: str = ""
+    characters_state: Dict[str, str] = field(default_factory=dict)
+    story_phase: str = ""
+    key_events: List[str] = field(default_factory=list)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'current_location': self.current_location,
+            'current_action': self.current_action,
+            'characters_state': self.characters_state,
+            'story_phase': self.story_phase,
+            'key_events': self.key_events
+        }
+
+
+@dataclass
 class NarrativeAnalysis:
     rhythm_pattern: str
     climax_positions: List[int]
@@ -127,6 +147,8 @@ class NarrativeAnalysis:
     overall_pace: str
     scene_count_suggestion: int
     reasoning: str
+    story_progress: Optional[StoryProgress] = None
+    scene_story_states: List[Dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -135,5 +157,7 @@ class NarrativeAnalysis:
             'transition_positions': self.transition_positions,
             'overall_pace': self.overall_pace,
             'scene_count_suggestion': self.scene_count_suggestion,
-            'reasoning': self.reasoning
+            'reasoning': self.reasoning,
+            'story_progress': self.story_progress.to_dict() if self.story_progress else None,
+            'scene_story_states': self.scene_story_states
         }

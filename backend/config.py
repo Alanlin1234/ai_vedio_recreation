@@ -1,7 +1,9 @@
 import os
 
+basedir = os.path.abspath(os.path.dirname(__file__))
+
 class Config:
-    UPLOAD_FOLDER = 'static/uploads'
+    UPLOAD_FOLDER = os.path.join(basedir, 'static/uploads')
     MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 限制100MB
     VIDEO_TO_TEXT_API = "http://127.0.0.1:9977/api"
     DIFY_API_KEY = 'app-YDlvFczyggam1JKATZTjAKww'
@@ -71,6 +73,10 @@ class Config:
     # 日志配置
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
     LOG_FILE = os.getenv('LOG_FILE', 'logs/agent_system.log')
+
+    # Nano Banana API 配置
+    NANO_BANANA_API_KEY = os.getenv('NANO_BANANA_API_KEY', '')
+    NANO_BANANA_API_ENDPOINT = os.getenv('NANO_BANANA_API_ENDPOINT', 'https://api.nanobanana.com')
     
     @classmethod
     def get_agent_config(cls) -> dict:

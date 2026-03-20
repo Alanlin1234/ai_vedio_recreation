@@ -1,8 +1,16 @@
 import sys
 import os
 
-# 添加backend目录到Python路径
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# 获取项目根目录（backend目录）
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# 获取项目根目录的上级目录（ai-agent-comfy目录）
+project_root = os.path.dirname(base_dir)
+print("项目根目录:", project_root)
+
+# 添加项目根目录到Python路径
+sys.path.append(project_root)
+# 打印Python路径以调试
+print("Python路径:", sys.path)
 
 # 只在需要时导入Flask相关模块
 def create_app():
@@ -26,6 +34,7 @@ def create_app():
     from app.routes.author_routes import author_bp
     from app.routes.douyin_routes import douyin_bp
     from app.routes.video_recreation_routes import video_recreation_bp
+    from app.routes.frontend_pipeline_routes import frontend_pipeline_bp
     # 暂时注释掉agent_bp，因为有导入错误
     # from app.routes.agent_routes import agent_bp
     
@@ -33,6 +42,7 @@ def create_app():
     app.register_blueprint(author_bp, url_prefix='/api')
     app.register_blueprint(douyin_bp, url_prefix='/api')
     app.register_blueprint(video_recreation_bp, url_prefix='/api')
+    app.register_blueprint(frontend_pipeline_bp, url_prefix='/api/pipeline')
     # app.register_blueprint(agent_bp)
     
     # 创建数据库表

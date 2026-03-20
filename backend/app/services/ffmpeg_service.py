@@ -410,7 +410,179 @@ class FFmpegService:
         except Exception as e:
             logger.error(f"关键帧提取失败: {str(e)}")
             return []
-    
+
+    async def extract_smart_keyframes(
+        self,
+        video_path: str,
+        max_frames: int = 16,
+        min_interval: float = 2.0
+    ) -> Dict[str, Any]:
+        """
+        智能抽帧：场景切换检测 + 均匀采样
+
+        Args:
+            video_path: 视频文件路径
+            max_frames: 最大抽帧数量（默认16张，控制Qwen-VL成本）
+            min_interval: 最小抽帧间隔（秒），避免同一场景重复抽帧
+
+        Returns:
+            包含关键帧路径、时间戳、场景信息的字典
+        """
+        try:
+            logger.info(f"[智能抽帧] 开始处理: {video_path}, 最大{max_frames}帧")
+
+            video_info = await self._get_video_info(video_path)
+            duration = video_info.get('duration', 10)
+
+            video_dir = os.path.dirname(video_path)
+            base_name = os.path.splitext(os.path.basename(video_path))[0]
+            keyframes_dir = os.path.join(video_dir, f"smart_keyframes_{uuid.uuid4().hex[:8]}")
+            os.makedirs(keyframes_dir, exist_ok=True)
+
+            scene_changes = await self._detect_scene_changes(video_path, duration)
+
+            uniform_samples = self._sample_uniform_frames(duration, max_frames, min_interval)
+
+            combined_timestamps = self._merge_timestamps(scene_changes, uniform_samples, max_frames)
+
+            keyframes = []
+            for i, timestamp in enumerate(combined_timestamps):
+                keyframe_path = os.path.join(keyframes_dir, f"frame_{i+1:02d}_{timestamp:.1f}s.jpg")
+
+                cmd = [
+                    self.ffmpeg_path,
+                    '-i', video_path,
+                    '-ss', str(timestamp),
+                    '-vframes', '1',
+                    '-q:v', '2',
+                    '-vf', 'scale=960:-1',
+                    '-y',
+                    keyframe_path
+                ]
+
+                await self._run_ffmpeg_command(cmd)
+
+                if os.path.exists(keyframe_path) and os.path.getsize(keyframe_path) > 0:
+                    keyframes.append({
+                        'path': keyframe_path,
+                        'timestamp': timestamp,
+                        'scene_change': timestamp in scene_changes
+                    })
+                    logger.info(f"[智能抽帧] 提取帧 {i+1}/{len(combined_timestamps)}: {timestamp:.1f}s")
+                else:
+                    logger.warning(f"[智能抽帧] 提取失败: {timestamp:.1f}s")
+
+            logger.info(f"[智能抽帧] 完成，提取 {len(keyframes)} 帧")
+
+            return {
+                'keyframes': keyframes,
+                'total_frames': len(keyframes),
+                'duration': duration,
+                'scene_changes': scene_changes,
+                'output_dir': keyframes_dir
+            }
+
+        except Exception as e:
+            logger.error(f"[智能抽帧] 失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return {'keyframes': [], 'total_frames': 0, 'error': str(e)}
+
+    async def _detect_scene_changes(self, video_path: str, duration: float) -> List[float]:
+        """
+        场景切换检测：基于帧差异分析
+        使用 FFmpeg scene detection 滤镜
+        """
+        try:
+            temp_scene_file = os.path.join(os.path.dirname(video_path), f"scenes_{uuid.uuid4().hex[:8]}.txt")
+
+            cmd = [
+                self.ffmpeg_path,
+                '-i', video_path,
+                '-filter:v', 'select="gt(scene,0.3)",showinfo',
+                '-f', 'null',
+                '-'
+            ]
+
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await process.communicate()
+
+            output = stderr.decode('utf-8', errors='ignore')
+            scene_timestamps = []
+
+            for line in output.split('\n'):
+                if 'pts_time:' in line:
+                    try:
+                        ts_str = line.split('pts_time:')[1].split()[0]
+                        ts = float(ts_str)
+                        if 0 < ts < duration - 1:
+                            scene_timestamps.append(ts)
+                    except:
+                        continue
+
+            scene_timestamps.sort()
+            logger.info(f"[场景检测] 发现 {len(scene_timestamps)} 个场景切换点")
+
+            return scene_timestamps[:8]
+
+        except Exception as e:
+            logger.warning(f"[场景检测] 失败，使用均匀采样: {str(e)}")
+            return []
+
+    def _sample_uniform_frames(
+        self,
+        duration: float,
+        max_frames: int,
+        min_interval: float
+    ) -> List[float]:
+        """
+        均匀采样：确保覆盖整段视频
+        """
+        max_possible = int(duration / min_interval)
+        num_samples = min(max_frames, max_possible)
+
+        if num_samples <= 0:
+            num_samples = 1
+
+        timestamps = []
+        for i in range(num_samples):
+            ts = (i + 0.5) * duration / num_samples
+            timestamps.append(ts)
+
+        return timestamps
+
+    def _merge_timestamps(
+        self,
+        scene_changes: List[float],
+        uniform_samples: List[float],
+        max_frames: int
+    ) -> List[float]:
+        """
+        合并场景切换点和均匀采样点，去重排序
+        """
+        combined = list(set(scene_changes + uniform_samples))
+        combined.sort()
+
+        if len(combined) > max_frames:
+            uniform_set = set(uniform_samples)
+            prioritized = [ts for ts in combined if ts in scene_changes]
+
+            for ts in uniform_samples:
+                if len(prioritized) >= max_frames:
+                    break
+                if ts not in prioritized:
+                    prioritized.append(ts)
+
+            combined = sorted(prioritized)[:max_frames]
+        elif len(combined) < 4:
+            combined = uniform_samples[:max_frames]
+
+        return combined
+
     async def _extract_keyframe(self, video_path: str) -> str:
         """从视频中提取单个关键帧作为预览图（兼容旧代码）"""
         keyframes = await self._extract_keyframes(video_path, num_keyframes=1)
@@ -993,6 +1165,22 @@ class FFmpegService:
                 'error': error_msg
             }
     
+    async def concatenate_videos(self, video_paths: List[str], output_path: str) -> str:
+        """
+        拼接多个视频片段（兼容旧代码）
+        
+        Args:
+            video_paths: 视频片段路径列表
+            output_path: 输出文件路径
+            
+        Returns:
+            输出视频路径
+        """
+        result = await self.compose_videos(video_paths, output_path)
+        if result.get('success'):
+            return result.get('output_path')
+        return None
+
     async def compose_videos(self, video_paths: List[str], output_path: str) -> Dict[str, Any]:
         """
         合成多个视频片段

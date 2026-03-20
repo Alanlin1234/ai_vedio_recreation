@@ -81,7 +81,8 @@ class DirectorAgent:
             scenes=scenes,
             decisions=decisions,
             reasoning=reasoning,
-            adjustment_ratio=adjustment_ratio
+            adjustment_ratio=adjustment_ratio,
+            narrative_analysis=narrative_analysis
         )
         
         self.logger.info(f"导演规划完成，最终场景数: {final_count}，调整比例: {adjustment_ratio:.2f}")

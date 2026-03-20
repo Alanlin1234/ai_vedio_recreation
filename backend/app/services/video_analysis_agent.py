@@ -410,6 +410,32 @@ class VideoAnalysisAgent:
             slice_audio_content[i] = " ".join(slice_words)
         
         return slice_audio_content
+    
+    def _generate_story_highlights(self, story_content: str) -> Dict[str, str]:
+        try:
+            messages = [
+                SystemMessage(content="你是一个专业的故事分析专家，擅长提炼视频故事的亮点。请用简洁生动的语言总结故事的精彩之处。"),
+                HumanMessage(content=f"请分析以下故事内容，提炼出3-5个故事亮点，每个亮点用一句话描述：\n\n{story_content}")
+            ]
+            result = self.llm.generate([messages])
+            highlights = result.generations[0][0].message.content
+            return {'success': True, 'highlights': highlights}
+        except Exception as e:
+            print(f"生成故事亮点失败: {e}")
+            return {'success': False, 'highlights': '这个故事充满了趣味和教育意义，通过生动的情节展现了深刻的道理。', 'error': str(e)}
+    
+    def _generate_educational_meaning(self, story_content: str) -> Dict[str, str]:
+        try:
+            messages = [
+                SystemMessage(content="你是一个专业的教育专家，擅长挖掘故事中的教育意义。请从品德、知识、生活智慧等角度分析故事的教育价值。"),
+                HumanMessage(content=f"请分析以下故事内容，总结出2-3个教育意义，每个意义用一段话描述：\n\n{story_content}")
+            ]
+            result = self.llm.generate([messages])
+            educational = result.generations[0][0].message.content
+            return {'success': True, 'educational_meaning': educational}
+        except Exception as e:
+            print(f"生成教育意义失败: {e}")
+            return {'success': False, 'educational_meaning': '这个故事教会我们勇敢、善良和坚持的重要性，鼓励我们在面对困难时保持积极向上的心态。', 'error': str(e)}
 
 # 使用示例
 if __name__ == "__main__":

@@ -888,7 +888,8 @@ Do NOT explain what you are doing, just output the prompt text itself.
                 'narrative_role': scene.get('narrative_role', 'development'),
                 'merge_type': scene.get('merge_type', 'original'),
                 'omni_analysis': omni_analysis,
-                'vl_analysis': vl_analysis
+                'vl_analysis': vl_analysis,
+                'story_state': scene.get('story_state', {})
             }
             
             scene_prompt_v2 = camera_generator.generate_shot_breakdown(

@@ -768,6 +768,14 @@ class NoTTSVideoPipeline:
                         if vl_analysis is None and slice_info.get('vl_analysis'):
                             vl_analysis = slice_info['vl_analysis']
                 
+                scene_story_state = {}
+                if hasattr(director_plan, 'narrative_analysis') and director_plan.narrative_analysis:
+                    scene_story_states = getattr(director_plan.narrative_analysis, 'scene_story_states', [])
+                    for state in scene_story_states:
+                        if state.get('scene_index') == scene_id:
+                            scene_story_state = state
+                            break
+                
                 scene = {
                     'scene_id': scene_id,
                     'start_time': scene_plan.start_time,
@@ -779,15 +787,18 @@ class NoTTSVideoPipeline:
                     'narrative_role': scene_plan.narrative_role,
                     'merge_type': scene_plan.merge_type,
                     'omni_analysis': omni_analysis,
-                    'vl_analysis': vl_analysis
+                    'vl_analysis': vl_analysis,
+                    'story_state': scene_story_state
                 }
                 
                 previous_scene_info = None
                 if scene_id > 0 and self.scene_prompts:
+                    prev_scene = self.scene_prompts[-1]
                     previous_scene_info = {
-                        'video_prompt': self.scene_prompts[-1].get('video_prompt', ''),
-                        'style_elements': self.scene_prompts[-1].get('style_elements', {}),
-                        'scene_info': self.scene_prompts[-1].get('scene_info', {})
+                        'video_prompt': prev_scene.get('video_prompt', ''),
+                        'style_elements': prev_scene.get('style_elements', {}),
+                        'scene_info': prev_scene.get('scene_info', {}),
+                        'shot_breakdown': prev_scene.get('shot_breakdown', {})
                     }
                 
                 enhanced_context = self._build_enhanced_prompt_context(
@@ -1001,10 +1012,23 @@ class NoTTSVideoPipeline:
                 reference_keyframes = scene_prompt.get('keyframes', [])
                 
                 enhanced_prompt = video_prompt
+                
+                shot_breakdown = scene_prompt.get('shot_breakdown', {})
+                audio_info = shot_breakdown.get('audio', {})
+                dialogue_content = audio_info.get('dialogue', '')
+                
+                subtitle_suffix = ""
+                if dialogue_content and dialogue_content.strip():
+                    subtitle_suffix = f"""，画面底部居中添加中文字幕：{dialogue_content}"""
+                else:
+                    subtitle_suffix = """，画面底部居中添加清晰的中文字幕（白色黑边），与画面内容匹配"""
+                
+                enhanced_prompt = video_prompt.rstrip('。') + subtitle_suffix
+                
                 if i > 0 and previous_scene_last_frame:
                     self.log("步骤3", f"片段{i+1}", "使用上一场景最后一帧作为首帧")
                     enhanced_prompt = self.frame_continuity_service.build_contextual_prompt(
-                        current_prompt=video_prompt,
+                        current_prompt=enhanced_prompt,
                         previous_scene_info={
                             'prompt_data': {
                                 'original_prompt': self.scene_prompts[i-1].get('video_prompt', '') if i > 0 and self.scene_prompts else '',

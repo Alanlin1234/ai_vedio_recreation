@@ -566,125 +566,105 @@ class QwenVideoService:
             logger.info(f"使用参考图像: {img_url}")
             logger.info(f"该参考图像是{'上一场景的最后一帧' if len(keyframes) > 1 else '当前场景的关键帧'}")
             
-            # 7. 遍历所有API密钥，尝试生成视频
-            for key_index in range(len(self.api_keys)):
-                # 手动切换到当前索引的API密钥
-                self.api_key = self.api_keys[key_index]
-                logger.info(f"使用API密钥 {self.api_key[:10]}... 尝试生成视频")
-                
-                try:
-                    # 调用视频生成API，使用异步调用方式
-                    # 添加free_tier_only=False参数来禁用免费模式，使用付费模式
-                    # 尝试直接作为kwargs传递，同时确保参数名称正确
-                    rsp = VideoSynthesis.async_call(
-                        model='wan2.6-i2v-flash',
-                        prompt=video_prompt,
-                        img_url=img_url,
-                        api_key=self.api_key,
-                        free_tier_only=False
-                    )
-                    
-                    logger.debug(f"异步调用响应: {rsp}")
-                    
-                    if rsp.status_code != HTTPStatus.OK:
-                        error_msg = f"wan2.6-i2v-flash视频生成失败: HTTP {rsp.status_code}, code: {rsp.code}, message: {rsp.message}"
-                        logger.error(error_msg)
-                        
-                        # 检查是否是API密钥错误
-                        if hasattr(rsp, 'code') and 'InvalidApiKey' in str(rsp.code):
-                            logger.error(f"API密钥无效，切换到下一个密钥")
-                            self.rotate_api_key()
-                            continue
-                        else:
-                            # 其他错误，直接返回失败
-                            return {
-                                "success": False,
-                                "error": error_msg
-                            }
-                    
-                    task_id = rsp.output.task_id
-                    logger.info(f"wan2.6-i2v-flash视频生成任务创建成功，task_id: {task_id}")
-                    
-                    # 8. 等待任务完成 - 使用自定义等待逻辑，增加等待时间和轮询次数
-                    logger.info(f"开始等待视频生成任务完成...")
-                    
-                    # 自定义等待逻辑，确保有足够的时间让任务完成
-                    max_wait_time = 600  # 最大等待时间（秒）
-                    poll_interval = 10  # 轮询间隔（秒）
-                    start_time = time.time()
-                    
-                    while time.time() - start_time < max_wait_time:
-                        # 显式传递API密钥给fetch方法
-                        wait_rsp = VideoSynthesis.fetch(rsp, api_key=self.api_key)
-                        logger.debug(f"轮询任务状态: {wait_rsp.output.task_status}, 已等待: {time.time() - start_time:.1f}秒")
-                        
-                        if wait_rsp.status_code != HTTPStatus.OK:
-                            error_msg = f"wan2.6-i2v-flash视频生成失败: HTTP {wait_rsp.status_code}, code: {wait_rsp.code}, message: {wait_rsp.message}"
-                            logger.error(error_msg)
-                            return {
-                                "success": False,
-                                "error": error_msg
-                            }
-                        
-                        # 检查任务状态
-                        task_status = wait_rsp.output.task_status
-                        if task_status == "SUCCEEDED":
-                            # 任务成功完成，获取视频URL
-                            video_url = wait_rsp.output.video_url
-                            if video_url:
-                                logger.info(f"视频生成成功，视频URL: {video_url}")
-                                return {
-                                    "success": True,
-                                    "video_url": video_url,
-                                    "task_id": task_id
-                                }
-                            else:
-                                logger.warning("任务状态为SUCCEEDED，但未返回视频URL，继续等待...")
-                        elif task_status in ["FAILED", "CANCELED"]:
-                            # 任务失败或被取消
-                            error_msg = f"wan2.6-i2v-flash视频生成失败: 任务状态为 {task_status}"
-                            logger.error(error_msg)
-                            return {
-                                "success": False,
-                                "error": error_msg
-                            }
-                        
-                        # 任务还在处理中，继续等待
-                        logger.info(f"任务状态: {task_status}，继续等待...")
-                        time.sleep(poll_interval)
-                    
-                    # 等待超时
-                    error_msg = f"wan2.6-i2v-flash视频生成超时: 超过 {max_wait_time} 秒仍未完成"
+            # 7. 只使用第一个API密钥生成视频
+            self.api_key = self.api_keys[0]
+            logger.info(f"使用API密钥 {self.api_key[:10]}... 生成视频")
+
+            try:
+                # 调用视频生成API，使用异步调用方式
+                rsp = VideoSynthesis.async_call(
+                    model='wan2.6-i2v-flash',
+                    prompt=video_prompt,
+                    img_url=img_url,
+                    api_key=self.api_key,
+                    free_tier_only=False
+                )
+
+                logger.debug(f"异步调用响应: {rsp}")
+
+                if rsp.status_code != HTTPStatus.OK:
+                    error_msg = f"wan2.6-i2v-flash视频生成失败: HTTP {rsp.status_code}, code: {rsp.code}, message: {rsp.message}"
                     logger.error(error_msg)
                     return {
                         "success": False,
                         "error": error_msg
                     }
-                
-                except Exception as e:
-                    error_msg = f"wan2.6-i2v-flash视频生成异常: {str(e)}"
-                    logger.error(error_msg, exc_info=True)
-                    import traceback
-                    traceback.print_exc()
-                    print(f"[ERROR] 视频生成异常: {str(e)}")
-                    print(f"[ERROR] 异常类型: {type(e).__name__}")
-                    
-                    # 检查是否是API密钥错误
-                    if "InvalidApiKey" in str(e) or "api_key" in str(e).lower():
-                        logger.error(f"API密钥无效，切换到下一个密钥")
-                        self.rotate_api_key()
-                        continue
-                    else:
-                        # 其他异常，直接返回失败
-                        break
-            
-            # 如果所有API密钥都尝试过仍失败，返回最终失败结果
-            logger.error("所有API密钥都尝试过，视频生成失败")
+
+                task_id = rsp.output.task_id
+                logger.info(f"wan2.6-i2v-flash视频生成任务创建成功，task_id: {task_id}")
+
+                # 8. 等待任务完成
+                logger.info(f"开始等待视频生成任务完成...")
+
+                # 自定义等待逻辑
+                max_wait_time = 1800  # 最大等待时间（秒）30分钟
+                poll_interval = 15  # 轮询间隔（秒）
+                start_time = time.time()
+
+                while time.time() - start_time < max_wait_time:
+                    wait_rsp = VideoSynthesis.fetch(rsp, api_key=self.api_key)
+                    logger.debug(f"轮询任务状态: {wait_rsp.output.task_status}, 已等待: {time.time() - start_time:.1f}秒")
+
+                    if wait_rsp.status_code != HTTPStatus.OK:
+                        error_msg = f"wan2.6-i2v-flash视频生成失败: HTTP {wait_rsp.status_code}, code: {wait_rsp.code}, message: {wait_rsp.message}"
+                        logger.error(error_msg)
+                        return {
+                            "success": False,
+                            "error": error_msg
+                        }
+
+                    # 检查任务状态
+                    task_status = wait_rsp.output.task_status
+                    if task_status == "SUCCEEDED":
+                        # 任务成功完成，获取视频URL
+                        video_url = wait_rsp.output.video_url
+                        if video_url:
+                            logger.info(f"视频生成成功，视频URL: {video_url}")
+                            return {
+                                "success": True,
+                                "video_url": video_url,
+                                "task_id": task_id
+                            }
+                        else:
+                            logger.warning("任务状态为SUCCEEDED，但未返回视频URL，继续等待...")
+                    elif task_status in ["FAILED", "CANCELED"]:
+                        # 任务失败或被取消
+                        error_msg = f"wan2.6-i2v-flash视频生成失败: 任务状态为 {task_status}"
+                        logger.error(error_msg)
+                        return {
+                            "success": False,
+                            "error": error_msg
+                        }
+
+                    # 任务还在处理中，继续等待
+                    logger.info(f"任务状态: {task_status}，继续等待...")
+                    time.sleep(poll_interval)
+
+                # 等待超时
+                error_msg = f"wan2.6-i2v-flash视频生成超时: 超过 {max_wait_time} 秒仍未完成"
+                logger.error(error_msg)
+                return {
+                    "success": False,
+                    "error": error_msg
+                }
+
+            except Exception as e:
+                error_msg = f"wan2.6-i2v-flash视频生成异常: {str(e)}"
+                logger.error(error_msg, exc_info=True)
+                import traceback
+                traceback.print_exc()
+                print(f"[ERROR] 视频生成异常: {str(e)}")
+                print(f"[ERROR] 异常类型: {type(e).__name__}")
+                return {
+                    "success": False,
+                    "error": error_msg
+                }
+
             return {
                 "success": False,
-                "error": "所有API密钥都尝试过，视频生成失败"
+                "error": "视频生成失败"
             }
-            
+
         except Exception as e:
             error_msg = f"wan2.6-i2v-flash视频生成异常: {str(e)}"
             logger.error(error_msg, exc_info=True)
