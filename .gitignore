@@ -1,91 +1,87 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
+# Dependencies
+node_modules/
+*/node_modules/
 
-# Virtual Environment
-venv/
-env/
+# Environment
 .env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
 
 # IDE
-.idea/
 .vscode/
+.idea/
 *.swp
 *.swo
 *~
 
-# Database
-*.db
-*.sqlite
+# OS
+.DS_Store
+Thumbs.db
 
 # Logs
 *.log
 logs/
 
-# OS
-Thumbs.db
-.DS_Store
+# Uploads (user generated content)
+*.mp4
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+uploads/
+static/uploads/
 
-# Compressed files
-*.zip
-*.tar.gz
-*.tar.bz2
-*.rar
+# Database
+*.db
+*.sqlite
+*.sqlite3
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
+# Virtual environments
+venv/
+env/
+.venv/
 
 # Testing
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
 .pytest_cache/
-# test_*.py
-# *_test.py
-# backend/test_*.py
-!backend/tests/*.py
-compose_videos_script.py
-compress_core_code.py
-simplify_backend_comments.py
-simplify_video_consistency_comments.py
-compose_videos_script.py
-nano_banana_service.py
-
-# Build
-build/
-dist/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Crawler
-crawler_config/
-instance/
-
-# Generated outputs
-downloads/
-last_frames/
-test_compose_output/
-comfyui_test_output/
-backend/data/
-
-# IDE tools
-.kiro/
-.trae/documents/
+.coverage
+htmlcov/
 
 # Temporary files
-*.mp4
-*.mp3
-*.jpg
-*.png
-*.json
-!backend/video_agent.sql
-!backend/app/services/json/
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Archives
+*.rar
+*.zip
+
+# Generated/Diagnosis files
+diagnosis_result_*.json
+prompts_*.json
+
+# Downloads
+downloads/
+
+# Test outputs
+comfyui_test_output/
+test/
+
+# Crawler specific
+crawler_config/
+data/
