@@ -45,11 +45,7 @@ video_consistency_agent/ # 分镜视频一致性检查（被 pipeline 引用）
 
 ```bash
 cd backend
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-# Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
-copy .env.example .env   # 填写 DASHSCOPE_API_KEY 等
 python run.py
 ```
 
