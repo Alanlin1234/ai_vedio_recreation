@@ -1,0 +1,36 @@
+"""
+训练配置文件
+"""
+device: 'cuda'
+output_dir: 'checkpoints/consistency_model'
+
+epochs: 50
+batch_size: 16
+learning_rate: 0.0001
+weight_decay: 0.01
+num_workers: 4
+save_interval: 5
+
+use_clip: true
+use_face: true
+use_vgg: true
+
+clip_model: 'openai/clip-vit-base-patch32'
+clip_dim: 512
+face_dim: 512
+vgg_dim: 8192
+
+mse_weight: 1.0
+confidence_weight: 0.5
+consistency_weight: 0.1
+
+threshold: 0.75
+issue_threshold: 0.7
+
+weights:
+  clip: 0.25
+  face: 0.20
+  perceptual: 0.15
+  ssim: 0.15
+  color: 0.10
+  vlm: 0.15
