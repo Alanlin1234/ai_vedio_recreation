@@ -1,0 +1,43 @@
+# 依赖目录
+node_modules/
+
+# 输出目录
+output/
+build/
+dist/
+
+# 环境变量文件
+.env
+
+# 日志文件
+logs/
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+
+# 编辑器文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 测试文件
+__pycache__/
+*.pyc
+
+# 其他不需要版本控制的文件
+crawler/
+libtv-skills/
+miro_frontend/
+video_consistency_agent/
+docs/
+comfyui/
+*.sql
+*.md
+!README.md
