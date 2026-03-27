@@ -80,12 +80,3 @@ npm run dev
 | 拼接成片 | POST | `/api/pipeline/combine-video/<id>` |
 | 登录等 | - | `/api/auth/*` |
 
-调试时，多数步骤响应体含 **`debug_prompts`**，前端工作台「提示词调试」面板可展示。
-
-## 与旧版说明的差异
-
-此前 README 中的 MySQL、仅列 `content_generation_service` / `json_prompt_parser` 等旧模块名、以及以 `/api/videos` 为主的 API 表，**已与当前「影坊」流水线不一致**。请以本文档与 `backend/app/routes/` 下实际路由为准。
-
-## 许可证
-
-以仓库内 LICENSE 为准（若未添加则由项目维护者补充）。
