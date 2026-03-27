@@ -1,245 +1,91 @@
-# AI视频生成系统说明文档
+# 影坊 · AI 视频二创工作台
 
-## 1. 项目概述
+基于 Flask + React（Vite）的端到端流水线：上传视频 → 解析（教育专家）→ 审核 → 二创新故事（故事编剧）→ 分镜与分镜图（分镜导演）→ 分场景视频（视频生成）→ 拼接与导出（视频合成）。
 
-AI视频生成系统是一个基于AI技术的端到端视频创作平台，能够自动从输入视频生成完整的视频作品。系统整合了视频分析、关键帧提取、内容生成、视频合成等全流程功能，实现了AI辅助的自动化视频创作。
+## 技术栈概览
 
-## 2. 核心功能
+| 层级 | 技术 |
+|------|------|
+| 后端 | Flask、Flask-SQLAlchemy（SQLite）、Flask-CORS、会话登录 |
+| 前端 | React 18、React Router 6、Vite 4、Tailwind CSS、axios、@vitejs/plugin-react-swc |
+| AI | 阿里云 DashScope（qwen-vl-plus、qwen-plus、qwen-image-2.0、视频生成 API 等） |
+| 媒体 | FFmpeg（服务端调用）、可选 MoviePy（部分 Agent） |
+| 一致性模块 | `video_consistency_agent/`（YAML + OpenCV 等） |
 
-### 2.1 端到端视频处理流程
-
-- **视频切片**：将输入视频分割成多个片段，分离音频和视频
-- **视频分析**：使用AI模型分析视频内容和提取关键帧
-- **提示词生成与优化**：基于视频分析结果生成和优化场景提示词
-- **场景视频生成**：根据提示词生成关键帧和视频片段
-- **一致性检查**：确保生成的视频内容与原视频保持一致
-- **音频合成**：为生成的视频添加语音解说
-- **最终视频合成**：将所有场景视频和音频合成完整视频
-
-### 2.2 技术亮点
-
-- 支持多种AI模型：qwen-omni-turbo、qwen3-vl-plus、qwen-image-edit
-- 自动化关键帧传递，保持场景连贯性
-- 实时一致性检查和优化
-- 灵活的视频切片和合成策略
-- 支持多种视频格式和分辨率
-
-## 3. 技术栈
-
-| 类别 | 技术/框架 | 用途 |
-|------|----------|------|
-| 后端框架 | Flask | 应用服务 |
-| AI模型调用 | qwen系列模型 | 视频分析、内容生成 |
-| 视频处理 | FFmpeg | 视频切片、合成、音频处理 |
-| 异步编程 | asyncio | 异步任务处理 |
-| JSON解析 | 自定义JSON解析器 | 提示词解析和处理 |
-| 一致性检查 | 自定义一致性代理 | 生成内容一致性验证 |
-
-## 4. 目录结构
+## 目录说明（核心）
 
 ```
-backend/
-├── app/                     # 主应用目录
-│   ├── __init__.py          # 应用初始化
-│   ├── agents/              # AI代理实现
-│   │   ├── consistency_agent.py # 一致性检查代理
-│   ├── services/            # 业务服务
-│   │   ├── ffmpeg_service.py # FFmpeg视频处理服务
-│   │   ├── qwen_vl_service.py # Qwen-VL视频分析服务
-│   │   ├── qwen_video_service.py # Qwen视频生成服务
-│   │   ├── content_generation_service.py # 内容生成服务
-│   │   ├── scene_segmentation_service.py # 场景分割服务
-│   │   └── json_prompt_parser.py # JSON提示词解析器
-│   ├── routes/              # API路由
-│   └── utils/               # 工具类
-├── config.py                # 配置文件
-├── run.py                   # 应用入口
-└── requirements.txt         # 依赖列表
+backend/                 # Flask 应用
+  app/
+    routes/              # frontend_pipeline、auth、review、agent 等
+    services/            # 解析、编剧、分镜、视频、审核等
+    utils/prompt_trace.py  # 调试：各步骤提示词追踪
+  config.py
+  requirements.txt
+  run.py                 # 本地启动入口
+
+frontend/                # Vite + React 工作台与落地页
+  package.json
+  postcss.config.cjs
+  public/
+
+video_consistency_agent/ # 分镜视频一致性检查（被 pipeline 引用）
 ```
 
-## 5. 安装和依赖
+## 环境要求
 
-### 5.1 环境准备
+- **Python** 3.10+
+- **Node.js** 建议 18+（Vite 与部分依赖对 16 会告警）
+- **FFmpeg** 在系统 PATH 中（拼接、转码等）
+- 阿里云 **DASHSCOPE_API_KEY**（或通过环境变量注入）
 
-1. 安装Python 3.10+
-2. 安装FFmpeg并添加到系统路径
-3. 安装ComfyUI（用于视频生成）
-4. 安装MySQL数据库
+数据库默认为项目内的 **SQLite**（`sqlite:///video_agent.db`），无需单独安装 MySQL。
 
-### 5.2 安装依赖
+## 后端安装与启动
 
 ```bash
 cd backend
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
-```
-```bash
-cd frontend && npm install
-```
-
-### 5.3 配置文件
-
-1. 复制`.env.example`为`.env`
-2. 配置数据库连接
-3. 配置ComfyUI地址
-4. 配置AI模型API密钥
-
-## 6. 使用说明
-
-### 6.1 启动应用
-
-```bash
-后端
-cd backend
+copy .env.example .env   # 填写 DASHSCOPE_API_KEY 等
 python run.py
-前端
+```
+
+服务默认：`http://127.0.0.1:5000`。API 前缀示例：`/api/pipeline`、`/api/auth`、`/api/reviewer`。
+
+## 前端安装与启动
+
+```bash
 cd frontend
+npm install
 npm run dev
 ```
 
-应用将在 http://0.0.0.0:5000 启动
+开发地址：`http://127.0.0.1:3000`（`vite.config.js` 将 `/api` 代理到后端，需与后端同源策略、Cookie 登录一致）。
 
-### 6.2 运行视频处理流程
+生产构建：`npm run build`，静态资源在 `frontend/dist/`。
 
+## 主要 API（影坊流水线）
 
-## 7. 工作流程详细说明
-
-### 7.1 视频处理工作流
-
-1. **初始化**：创建工作流实例，初始化各服务组件
-2. **视频切片**：将输入视频分割成多个片段，分离音频和视频
-3. **视频分析**：
-   - 使用qwen-omni-turbo分析视频内容
-   - 提取关键帧
-   - 使用qwen3-vl-plus分析关键帧
-4. **提示词生成与优化**：
-   - 结合分析结果生成基础提示词
-   - 使用qwen-plus-latest优化提示词
-5. **JSON提示词解析**：解析和验证提示词格式
-6. **场景视频生成**：
-   - 使用qwen-image-edit生成关键帧
-   - 使用wan2.5从关键帧生成视频
-   - 进行一致性检查
-7. **音频合成**：为生成的视频添加语音解说
-8. **最终视频合成**：将所有场景视频和音频合成完整视频
-
-### 7.2 关键帧传递机制
-
-系统采用关键帧传递机制，确保生成的视频场景之间保持连贯：
-
-1. 从每个视频切片提取关键帧
-2. 将当前场景的关键帧传递给下一个场景
-3. 在下一个场景生成时，参考上一个场景的关键帧
-4. 实时进行一致性检查，确保场景过渡自然
-
-## 8. 核心功能模块
-
-### 8.1 FFmpegService
-
-提供视频处理的核心功能：
-- 视频信息获取
-- 视频切片（支持音频分离）
-- 关键帧提取
-- 视频下载
-- 音频-视频同步
-- 视频合成
-
-### 8.2 QwenVLService
-
-使用qwen-omni-turbo模型分析视频内容：
-- 视频内容理解
-- 场景识别
-- 关键信息提取
-
-### 8.3 QwenVideoService
-
-负责视频生成相关功能：
-- 关键帧生成（使用qwen-image-edit）
-- 从关键帧生成视频（使用wan2.5）
-- 视频分析和优化
-
-### 8.4 ContentGenerationService
-
-负责内容生成：
-- 提示词优化
-- 文本转语音
-- 脚本生成
-
-### 8.5 JSONPromptParser
-
-自定义JSON解析器，处理各种可能的JSON格式错误：
-- 严格模式和宽松模式
-- 支持多种JSON格式变体
-- 自动修复常见错误
-
-### 8.6 ConsistencyAgent
-
-确保生成的视频内容与原视频保持一致，采用多阶段一致性检查机制：
-
-**一致性检查方式**：
-1. **感知阶段**：
-   - 获取当前场景的多源关键帧信息
-   - 提取当前场景的详细信息（提示词、生成参数等）
-   - 获取上一场景的关键帧和相关信息
-   - 解析提示词信息（原始提示词、优化后提示词）
-
-2. **分析阶段**：
-   - 视觉一致性：检查关键帧的视觉特征相似度（颜色、构图、物体位置）
-   - 语义一致性：检查场景内容的语义连贯性（物体、动作、场景描述）
-   - 风格一致性：检查生成风格的统一性（绘画风格、滤镜效果）
-   - 时序一致性：检查场景间的时间和动作连贯性
-
-3. **决策阶段**：
-   - 根据一致性分析结果生成优化策略
-   - 计算一致性评分（0-1.0）
-   - 判断是否通过一致性检查
-
-4. **反馈阶段**：
-   - 生成具体的优化建议
-   - 调整提示词和生成参数
-   - 提供风格和内容修正建议
-
-5. **循环检查机制**：
-   - 支持最多3次重试机制
-   - 如果一致性检查失败，根据优化建议重新生成场景
-   - 直到通过检查或达到最大重试次数
-
-**一致性检查结果**：
-- 一致性评分：0-1.0，越高表示一致性越好
-- 优化建议：包含提示词调整和参数修改
-- 检查状态：通过/未通过
-- 详细分析：各维度一致性的具体评分和问题点
-
-**应用场景**：
-- 场景间关键帧一致性检查
-- 生成内容与原视频一致性检查
-- 风格统一性验证
-- 时序连贯性验证
-
-## 9. API参考
-
-### 9.1 主要API端点
-
-| 端点 | 方法 | 功能 |
+| 说明 | 方法 | 路径 |
 |------|------|------|
-| `/api/agent` | POST | 端到端视频创建 |
-| `/api/videos` | GET | 获取视频列表 |
-| `/api/videos/<id>` | GET | 获取视频详情 |
-| `/api/videos` | POST | 创建新视频 |
-| `/api/videos/<id>` | PUT | 更新视频信息 |
-| `/api/videos/<id>` | DELETE | 删除视频 |
+| 上传视频 | POST | `/api/pipeline/upload-video` |
+| 解析视频 | POST | `/api/pipeline/analyze-video/<id>` |
+| 二创审核 | POST | `/api/reviewer/<id>` |
+| 新故事 | POST | `/api/pipeline/generate-new-story/<id>` |
+| 分镜 | POST | `/api/pipeline/generate-storyboard/<id>` |
+| 分场景视频 | POST | `/api/pipeline/generate-scene-videos/<id>` |
+| 拼接成片 | POST | `/api/pipeline/combine-video/<id>` |
+| 登录等 | - | `/api/auth/*` |
 
-### 9.2 请求示例
+调试时，多数步骤响应体含 **`debug_prompts`**，前端工作台「提示词调试」面板可展示。
 
-```json
-{
-  "video_url": "https://example.com/input_video.mp4",
-  "slice_count": 5,
-  "parameters": {
-    "resolution": "1920x1080",
-    "frame_rate": 24,
-    "consistency_threshold": 0.8
-  }
-}
-```
+## 与旧版说明的差异
 
+此前 README 中的 MySQL、仅列 `content_generation_service` / `json_prompt_parser` 等旧模块名、以及以 `/api/videos` 为主的 API 表，**已与当前「影坊」流水线不一致**。请以本文档与 `backend/app/routes/` 下实际路由为准。
 
+## 许可证
+
+以仓库内 LICENSE 为准（若未添加则由项目维护者补充）。
