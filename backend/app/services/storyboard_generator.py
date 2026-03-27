@@ -11,8 +11,9 @@ from typing import Dict, List, Any, Optional
 
 # 每个分镜对应成片时长（秒），与视频生成、剪辑节奏一致
 SHOT_DURATION_SECONDS = 5
-MIN_SCENES = 4
-MAX_SCENES = 24
+# 分镜数量：偏精简，避免镜头过多、每镜只有一句空话
+MIN_SCENES = 3
+MAX_SCENES = 10
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from config import Config
@@ -47,9 +48,10 @@ class StoryboardGenerator:
 【剧本全文】
 {text[:12000]}
 
-任务：根据叙事结构（起承转合、情绪转折、关键信息点）估算需要多少个「分镜镜头」。
+任务：在**尽量少**的前提下，估算需要多少个「分镜镜头」——宁少勿滥，避免拆成大量单薄镜头。
 硬性规则：
-- 每个镜头对应约 {SHOT_DURATION_SECONDS} 秒成片，镜头内只能安排**一个清晰的视觉节拍**（一个动作、一句关键对白、或一个信息点），不要贪多。
+- 每个镜头对应约 {SHOT_DURATION_SECONDS} 秒成片，一个镜头只承载**一个**清晰节拍（一个动作或一句关键对白）。
+- **优先 4～8 个镜头**讲完故事；只有剧本很长、转折极多时才接近上限；短故事用更少。
 - 镜头总数必须在 {MIN_SCENES} 到 {MAX_SCENES} 之间（含边界）。
 - 只输出一个 JSON 对象，不要 Markdown：{{"scene_count": <整数>, "rationale": "<不超过80字的中文说明>"}}"""
 
@@ -89,8 +91,8 @@ class StoryboardGenerator:
         except Exception as e:
             logger.warning(f'[分镜统筹] LLM 失败，使用启发式: {e}')
 
-        # 启发式：按字数粗略估计节拍数
-        n = max(MIN_SCENES, min(MAX_SCENES, len(text) // 220 + 4))
+        # 启发式：字数多也只给适中镜头数，避免动辄十几个
+        n = max(MIN_SCENES, min(MAX_SCENES, len(text) // 420 + 3))
         logger.info(f'[分镜统筹] 启发式镜头数: {n}')
         return n
 
@@ -189,18 +191,19 @@ class StoryboardGenerator:
 
             dashscope.api_key = self.dashscope_api_key
 
-            prompt = f"""根据以下故事内容，生成{scene_count}个分镜场景。本流程中**每个分镜将生成约 {SHOT_DURATION_SECONDS} 秒的视频**，再交给剪辑师按顺序拼接。
+            prompt = f"""根据以下故事内容，生成**正好 {scene_count} 个**分镜场景。每个分镜对应约 {SHOT_DURATION_SECONDS} 秒成片。
 
 故事内容：
 {story_content[:8000]}
 
 硬性要求：
-1. 分镜数量必须正好 {scene_count} 个，覆盖故事起承转合，顺序与叙事一致。
-2. **每个分镜只承载 5 秒内能演完/拍完的一个节拍**：一个主要动作、或一句关键对白、或一个信息点；不要塞进整段 subplot。
-3. 镜头类型、景别要符合该节拍的情绪与信息（避免万金油模板句）。
-4. `description` / `plot` 要具体可拍；`dialogue` 若过长请截断到适合 5 秒口播。
-5. `prompt` 为图生视频用的英文或中英混合提示词，需与分镜图内容一致，强调动作与光影，便于 Wan 类模型执行。
-6. 每个场景的 `duration` 字段**必须填 {SHOT_DURATION_SECONDS}**（表示该镜成片目标时长秒数）。
+1. 分镜数量必须正好 {scene_count} 个，顺序与叙事一致，覆盖起承转合。
+2. **plot（情节）**：每个镜头用 **2～4 句中文**写清本镜内发生的动作、情绪变化、与前后镜的差异；禁止只写一句空泛概括（如「雨停了」单独一行）。
+3. **description（画面）**：写清主体位置、环境细节、光影与构图意图，便于画图；与上一镜在**景别/空间位置**上要有可见变化。
+4. **dialogue（台词）**：**必填**。有角色说话则写对白；无对白则写「旁白：……」或「（此镜无对白，环境声/沉默）」之一，**禁止留空或写「无」**。
+5. **shot_type**：具体景别（如大远景俯角、中景侧拍、特写），避免重复使用同一表述。
+6. `prompt`：图生视频用英文或中英混合，与画面一致，强调动作与光影。
+7. 每个场景 `duration` 必须为 {SHOT_DURATION_SECONDS}。
 
 JSON格式（直接返回 JSON 数组，不要其他文字）：
 [{{"scene_number":1,"shot_type":"景别","description":"画面","plot":"情节节拍","dialogue":"台词","prompt":"图生视频提示词","duration":{SHOT_DURATION_SECONDS}}}]"""
@@ -223,13 +226,13 @@ JSON格式（直接返回 JSON 数组，不要其他文字）：
                 messages=[
                     {
                         "role": "system",
-                        "content": "你是电影分镜师。每个镜头对应约5秒成片，只写一个清晰节拍；提示词用于图生视频，须与画面一致。"
+                        "content": "你是电影分镜师。情节要写足多句、台词必填；每镜约5秒；图生视频提示词须与画面一致。"
                     },
                     {"role": "user", "content": prompt}
                 ],
                 result_format='message',
                 temperature=0.8,
-                max_tokens=3000
+                max_tokens=6000,
             )
 
             if response.status_code == 200 and response.output and response.output.choices:
@@ -338,13 +341,16 @@ JSON格式（直接返回 JSON 数组，不要其他文字）：
             os.makedirs(output_dir, exist_ok=True)
             logger.info(f"[图片生成] 输出目录: {output_dir}")
 
-            reference_image_path = None
+            # 首张分镜图路径：后续所有镜头图均以此为参考，仅统一人物与画风；画面内容以当前分镜为准
+            first_frame_ref_path: Optional[str] = None
 
             for scene in scenes:
                 scene_num = scene['scene_number']
                 logger.info(f"[图片生成] 场景 {scene_num} 开始...")
 
-                prompt = self._build_image_prompt(scene, style_guide)
+                prompt = self._build_image_prompt(
+                    scene, style_guide, use_compact_style=(scene_num > 1)
+                )
                 scene['image_prompt_base'] = prompt
                 logger.info(f"[图片生成] 场景 {scene_num} prompt: {prompt[:100]}...")
 
@@ -370,7 +376,7 @@ JSON格式（直接返回 JSON 数组，不要其他文字）：
                         scene['image'] = image_path
                         scene['image_generation_success'] = image_path is not None
                         if image_path:
-                            reference_image_path = image_path
+                            first_frame_ref_path = image_path
                             logger.info(f"[图片生成] 场景 {scene_num} 成功: {image_path}")
                         else:
                             logger.error(f"[图片生成] 场景 {scene_num} 保存失败")
@@ -379,23 +385,22 @@ JSON格式（直接返回 JSON 数组，不要其他文字）：
                         scene['image_generation_success'] = False
                         logger.error(f"[图片生成] 场景 {scene_num} API失败")
                 else:
-                    if not reference_image_path:
-                        logger.error(f"[图片生成] 场景 {scene_num} 无参考图，跳过")
+                    if not first_frame_ref_path:
+                        logger.error(f"[图片生成] 场景 {scene_num} 无首帧参考图，跳过")
                         scene['image'] = None
                         scene['image_generation_success'] = False
                         continue
 
-                    ref_instructions = """【重要说明】
-这张参考图仅用于：
-1. 保持人物的外貌、服装、表情特征完全一致
-2. 保持整体的艺术风格、色调、光线风格一致
-3. 保持整体的视觉氛围一致
+                    ref_instructions = """【参考图说明】
+下图是**第 1 个分镜**的成图，仅用于：
+1. 锁定主要角色外观、服装与整体画风、色调
+2. 保持系列插画/电影感的一致性
 
-但是，你必须：
-1. 根据【场景情节】和【画面描述】生成完全不同的场景画面
-2. 人物的动作、姿态、位置要根据情节变化
-3. 背景环境要根据情节变化
-4. 不要复制参考图的具体画面，只借用人物和风格！
+【你必须做到】
+1. **本张图的画面内容必须完全依照下方【场景情节】【画面描述】【镜头类型】**，表现当前这一镜的动作、空间与构图
+2. **景别、机位、人物姿态、背景环境应与首帧参考图明显不同**，禁止输出与参考图几乎相同的构图或站位
+3. 禁止把参考图稍作裁剪当成本镜；必须按当前分镜「演」新的一帧
+4. **画面中不得出现任何文字、字幕、标牌、水印、Logo、书法**
 
 请根据以下要求生成图片：
 """
@@ -407,14 +412,16 @@ JSON格式（直接返回 JSON 数组，不要其他文字）：
                         debug_prompts.append(
                             trace(
                                 'storyboard',
-                                f'分镜图 场景{scene_num}（参考图生图）',
+                                f'分镜图 场景{scene_num}（首帧参考图生图）',
                                 user=full_prompt,
                                 model='qwen-image-2.0',
-                                extra={'mode': 'image_to_image', 'reference_previous_scene': True},
+                                extra={'mode': 'image_to_image', 'reference_first_frame': True},
                             )
                         )
 
-                    image_url = self._call_qwen_image_v2_with_ref(prompt, reference_image_path)
+                    image_url = self._call_qwen_image_v2_with_ref(
+                        prompt, first_frame_ref_path, scene_index=scene_num
+                    )
                     logger.info(f"[图片生成] 场景 {scene_num} API返回: {image_url}")
 
                     if image_url:
@@ -480,25 +487,22 @@ JSON格式（直接返回 JSON 数组，不要其他文字）：
             logger.error(f"qwen-image-2.0 首帧异常: {e}")
             return None
 
-    def _call_qwen_image_v2_with_ref(self, prompt: str, reference_image_path: str) -> Optional[str]:
-        """调用 qwen-image-2.0 生成后续帧（参考图生图）"""
+    def _call_qwen_image_v2_with_ref(
+        self,
+        prompt: str,
+        reference_image_path: str,
+        scene_index: int = 0,
+    ) -> Optional[str]:
+        """调用 qwen-image-2.0：参考**首张分镜图**，仅锁人物与画风；画面内容以当前 prompt 为准。"""
         try:
             import dashscope
             from dashscope import MultiModalConversation
 
             ref_url = f"file://{os.path.abspath(reference_image_path)}"
 
-            instructions = """【重要说明】
-这张参考图仅用于：
-1. 保持人物的外貌、服装、表情特征完全一致
-2. 保持整体的艺术风格、色调、光线风格一致
-3. 保持整体的视觉氛围一致
-
-但是，你必须：
-1. 根据【场景情节】和【画面描述】生成完全不同的场景画面
-2. 人物的动作、姿态、位置要根据情节变化
-3. 背景环境要根据情节变化
-4. 不要复制参考图的具体画面，只借用人物和风格！
+            instructions = f"""【参考图】为第 1 镜成图，用于统一角色形象与画风。
+【当前任务】生成第 {scene_index} 镜画面，必须严格按下方情节与画面描述构图，与第 1 镜在景别、动作、背景上明显不同。
+禁止：与参考图同构图、仅微调；禁止画面内出现任何文字、字幕、标牌、水印、Logo。
 
 请根据以下要求生成图片：
 """
@@ -578,51 +582,60 @@ JSON格式（直接返回 JSON 数组，不要其他文字）：
             logger.error(f"保存图片异常: {e}")
             return None
 
-    def _build_image_prompt(self, scene: Dict, style_guide: Dict[str, str]) -> str:
-        """构建分镜图提示词 - 强调场景情节，保持人物风格一致"""
+    def _build_image_prompt(
+        self,
+        scene: Dict,
+        style_guide: Dict[str, str],
+        use_compact_style: bool = False,
+    ) -> str:
+        """构建分镜图提示词：先写当前镜叙事与画面，再补风格；禁止出文字。"""
         scene_description = scene.get('description', '')
         scene_plot = scene.get('plot', '')
         scene_dialogue = scene.get('dialogue', '')
         shot_type = scene.get('shot_type', '')
-        
+
         character = style_guide.get('character_description', '')
         color = style_guide.get('color_scheme', '')
         lighting = style_guide.get('lighting_style', '')
         art_style = style_guide.get('art_style', '')
         scene_setting = style_guide.get('scene_setting', '')
 
-        prompt_parts = []
-        
+        prompt_parts: List[str] = [
+            "【纯画面约束】画面中不得出现任何文字、字幕、对话框、标牌、水印、Logo、书法或印刷字；仅视觉呈现。",
+        ]
+
         if scene_plot:
-            prompt_parts.append(f"【场景情节】{scene_plot}")
-        
+            prompt_parts.append(f"【本镜情节（必须画出来）】{scene_plot}")
         if scene_description:
             prompt_parts.append(f"【画面描述】{scene_description}")
-        
-        if scene_dialogue:
-            prompt_parts.append(f"【人物台词】{scene_dialogue}")
-        
         if shot_type:
-            prompt_parts.append(f"【镜头类型】{shot_type}")
-        
+            prompt_parts.append(f"【镜头/景别】{shot_type}")
+        # 台词用于理解情绪，不画成字
+        if scene_dialogue:
+            prompt_parts.append(f"【表演/情绪参考（勿在图中写字）】{scene_dialogue}")
+
         if character:
-            prompt_parts.append(f"【人物设定】{character}")
-        
-        if scene_setting:
-            prompt_parts.append(f"【环境设定】{scene_setting}")
-        
-        if art_style:
-            prompt_parts.append(f"【艺术风格】{art_style}")
-        
-        if color:
-            prompt_parts.append(f"【色调】{color}")
-        
-        if lighting:
-            prompt_parts.append(f"【光线】{lighting}")
+            prompt_parts.append(
+                f"【人物一致性】{character[:280]}{'…' if len(character) > 280 else ''}"
+            )
+        if use_compact_style:
+            if art_style:
+                prompt_parts.append(f"【画风】{art_style[:120]}")
+            if scene_setting:
+                prompt_parts.append(f"【环境基调】{scene_setting[:120]}")
+        else:
+            if scene_setting:
+                prompt_parts.append(f"【环境设定】{scene_setting}")
+            if art_style:
+                prompt_parts.append(f"【艺术风格】{art_style}")
+            if color:
+                prompt_parts.append(f"【色调】{color}")
+            if lighting:
+                prompt_parts.append(f"【光线】{lighting}")
 
         prompt = "\n".join(prompt_parts)
-        
-        return prompt[:800]
+
+        return prompt[:1400]
 
     def _save_image(self, image_data, output_dir: str, scene_num: int) -> str:
         """保存图片"""
@@ -668,12 +681,15 @@ JSON格式（直接返回 JSON 数组，不要其他文字）：
                     for idx, scene in enumerate(scenes_data[:scene_count]):
                         if not isinstance(scene, dict):
                             continue
+                        d = scene.get('dialogue', '') or ''
+                        if not str(d).strip():
+                            d = '（此镜无对白，环境声）'
                         scenes.append({
                             'scene_number': scene.get('scene_number', idx + 1),
                             'shot_type': scene.get('shot_type', ''),
                             'description': scene.get('description', f'场景{idx+1}'),
                             'plot': scene.get('plot', ''),
-                            'dialogue': scene.get('dialogue', ''),
+                            'dialogue': d,
                             'prompt': scene.get('prompt', ''),
                             'duration': float(scene.get('duration', SHOT_DURATION_SECONDS) or SHOT_DURATION_SECONDS),
                         })
@@ -692,12 +708,15 @@ JSON格式（直接返回 JSON 数组，不要其他文字）：
                     for idx, scene in enumerate(data['scenes'][:scene_count]):
                         if not isinstance(scene, dict):
                             continue
+                        d = scene.get('dialogue', '') or ''
+                        if not str(d).strip():
+                            d = '（此镜无对白，环境声）'
                         scenes.append({
                             'scene_number': scene.get('scene_number', idx + 1),
                             'shot_type': scene.get('shot_type', ''),
                             'description': scene.get('description', f'场景{idx+1}'),
                             'plot': scene.get('plot', ''),
-                            'dialogue': scene.get('dialogue', ''),
+                            'dialogue': d,
                             'prompt': scene.get('prompt', ''),
                             'duration': float(scene.get('duration', SHOT_DURATION_SECONDS) or SHOT_DURATION_SECONDS),
                         })

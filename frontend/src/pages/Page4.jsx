@@ -60,21 +60,21 @@ const Page4 = ({ project, onGenerateSceneVideos, onBack, isLoading, loadingMessa
                           />
                         </div>
                       )}
-                      <p className="text-charcoal-500 text-sm font-serif leading-relaxed">
+                      <p className="text-charcoal-500 text-sm font-serif leading-relaxed whitespace-pre-wrap">
                         {scene.description || '暂无画面描述'}
                       </p>
                     </div>
                   </td>
                   <td className="p-3">
                     <div className="bg-paper-100 rounded-xl p-3">
-                      <p className="text-charcoal-600 text-sm font-serif leading-relaxed">
+                      <p className="text-charcoal-600 text-sm font-serif leading-relaxed whitespace-pre-wrap">
                         {scene.plot || '暂无情节描述'}
                       </p>
                     </div>
                   </td>
                   <td className="p-3">
                     <div className="bg-caramel-50 rounded-xl p-3 border-l-2 border-caramel-300">
-                      <p className="text-charcoal-600 text-sm font-serif leading-relaxed">
+                      <p className="text-charcoal-600 text-sm font-serif leading-relaxed whitespace-pre-wrap">
                         {scene.dialogue || '暂无台词'}
                       </p>
                     </div>
