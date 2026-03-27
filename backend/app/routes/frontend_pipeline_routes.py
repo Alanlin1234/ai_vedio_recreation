@@ -1,6 +1,9 @@
 from flask import Blueprint, request, jsonify, current_app, send_from_directory
 from app.models import db, VideoRecreation, RecreationScene, RecreationLog
-from app.services.efficient_video_analyzer import EfficientVideoAnalyzerWithHighlights
+from app.services.efficient_video_analyzer import (
+    EfficientVideoAnalyzerWithHighlights,
+    normalize_educational_for_api_response,
+)
 from app.services.enhanced_content_generator import EnhancedContentGenerator
 from app.services.video_recreation_service import VideoRecreationService
 from app.services.storyboard_generator import StoryboardGenerator
@@ -114,6 +117,10 @@ def analyze_video(recreation_id):
         story_content = result.get('content', '')
         highlights = result.get('highlights', '')
         educational = result.get('educational_meaning', '')
+        educational_points = result.get('educational_points') or []
+        educational, educational_points = normalize_educational_for_api_response(
+            educational, educational_points
+        )
 
         print(f"[视频分析] 高效分析完成")
         print(f"[视频分析] - 关键帧: {result.get('keyframes_count', 0)}帧")
@@ -124,7 +131,10 @@ def analyze_video(recreation_id):
         recreation.video_understanding = story_content
         recreation.understanding_model = 'EfficientVideoAnalyzer'
         recreation.analysis_highlights = highlights if highlights else None
-        recreation.analysis_educational = educational if educational else None
+        if educational_points:
+            recreation.analysis_educational = '\n'.join(educational_points)
+        else:
+            recreation.analysis_educational = educational if educational else None
         recreation.status = 'completed'
         db.session.commit()
 
@@ -134,6 +144,7 @@ def analyze_video(recreation_id):
             'story_content': story_content,
             'highlights': highlights if highlights else '暂无亮点描述',
             'educational_meaning': educational if educational else '暂无教育意义描述',
+            'educational_points': educational_points,
             'analysis_metadata': {
                 'keyframes_count': result.get('keyframes_count', 0),
                 'time_cost': result.get('time_cost', 0),
@@ -197,6 +208,7 @@ def generate_new_story(recreation_id):
 
             combined_highlights = highlights_data.get('combined_highlights', original_highlights)
             combined_educational = educational_data.get('combined_educational', original_educational)
+            combined_educational, _ = normalize_educational_for_api_response(combined_educational)
 
             print(f"[新故事生成] 新故事生成成功")
             print(f"[新故事生成] - 亮点: {combined_highlights[:100]}...")

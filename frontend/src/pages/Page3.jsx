@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ArrowLeft, ArrowRight, BookOpen, Sparkle, Lightbulb } from '@phosphor-icons/react'
+import { pickEducationalSummary } from '../utils/educationalDisplay'
 
 const Page3 = ({ project, onGenerateStoryboard, onBack, isLoading, loadingMessage }) => {
   const [error, setError] = useState('')
@@ -14,6 +15,7 @@ const Page3 = ({ project, onGenerateStoryboard, onBack, isLoading, loadingMessag
   }
 
   const newStory = project.new_story || {}
+  const eduSummary = pickEducationalSummary(newStory.educational_meaning)
 
   const stripMarkdown = (text) => {
     if (!text) return ''
@@ -74,7 +76,7 @@ const Page3 = ({ project, onGenerateStoryboard, onBack, isLoading, loadingMessag
           </div>
           <div className="bg-paper-100 rounded-xl p-5">
             <p className="text-charcoal-600 font-serif whitespace-pre-wrap leading-relaxed text-[15px]">
-              {newStory.educational_meaning ? stripMarkdown(newStory.educational_meaning) : <span className="animate-pulse-soft text-charcoal-400">生成中...</span>}
+              {eduSummary ? stripMarkdown(eduSummary) : <span className="animate-pulse-soft text-charcoal-400">生成中...</span>}
             </p>
           </div>
         </div>

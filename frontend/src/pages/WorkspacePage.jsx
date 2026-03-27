@@ -24,6 +24,7 @@ function WorkspacePage() {
     video_file: null,
     video_url: null,
     analysis: null,
+    review: null,
     new_story: null,
     storyboard: null,
     scene_videos: null,
@@ -44,11 +45,13 @@ function WorkspacePage() {
       video_file: null,
       video_url: null,
       analysis: null,
+      review: null,
       new_story: null,
       storyboard: null,
       scene_videos: null,
       final_video: null,
       creatorNotes: '',
+      debugPrompts: [],
     })
     setCompletedSteps([])
     setCurrentStep(1)
@@ -109,6 +112,7 @@ function WorkspacePage() {
           story_content: response.story_content,
           highlights: response.highlights,
           educational_meaning: response.educational_meaning,
+          educational_points: response.educational_points || [],
         },
         debugPrompts: [
           ...(prev.debugPrompts || []),
@@ -128,6 +132,15 @@ function WorkspacePage() {
             ...(prev.debugPrompts || []),
             ...(reviewResponse.debug_prompts || []),
           ],
+          review: {
+            score: reviewResponse.score,
+            passed: reviewResponse.passed,
+            scores: reviewResponse.scores,
+            summary: reviewResponse.summary,
+            pass_threshold: reviewResponse.pass_threshold,
+            message: reviewResponse.message,
+            suggestions: reviewResponse.suggestions,
+          },
         }))
         updateAgentStatus('reviewer', 'completed')
 
@@ -188,7 +201,12 @@ function WorkspacePage() {
       const { generateNewStory } = await import('../utils/api')
       const response = await generateNewStory(project.id, {
         original_highlights: serializeStoryField(project.analysis?.highlights),
-        original_educational: serializeStoryField(project.analysis?.educational_meaning),
+        original_educational: serializeStoryField(
+          Array.isArray(project.analysis?.educational_points) &&
+            project.analysis.educational_points.length > 0
+            ? project.analysis.educational_points.join('\n')
+            : project.analysis?.educational_meaning
+        ),
       })
       setProject((prev) => ({
         ...prev,
