@@ -73,6 +73,7 @@ class StoryboardToVideoService:
             generated_videos = []
             failed_scenes = []
             previous_last_frame = None
+            debug_prompts = []
 
             for scene in scenes:
                 try:
@@ -85,7 +86,8 @@ class StoryboardToVideoService:
                         'description': scene.description,
                         'plot': scene.plot,
                         'dialogue': scene.dialogue,
-                        'duration': scene.duration
+                        'duration': float(scene.duration or 5),
+                        'video_prompt': scene.video_prompt,
                     }
 
                     scene_image_path = os.path.join(
@@ -109,7 +111,8 @@ class StoryboardToVideoService:
                         scene_image_url=scene_image_url,
                         previous_last_frame=previous_last_frame,
                         task_dir=task_dir,
-                        scene_index=scene_index
+                        scene_index=scene_index,
+                        debug_prompts=debug_prompts,
                     )
 
                     if result.get('success'):
@@ -154,7 +157,8 @@ class StoryboardToVideoService:
                 'generated_videos': generated_videos,
                 'failed_scenes': failed_scenes,
                 'total_scenes': len(scenes),
-                'successful_count': len(generated_videos)
+                'successful_count': len(generated_videos),
+                'debug_prompts': debug_prompts,
             }
 
         except Exception as e:
@@ -163,7 +167,8 @@ class StoryboardToVideoService:
             traceback.print_exc()
             return {
                 'success': False,
-                'error': str(e)
+                'error': str(e),
+                'debug_prompts': [],
             }
 
     def _generate_single_scene_video(
@@ -172,7 +177,8 @@ class StoryboardToVideoService:
         scene_image_url: str,
         previous_last_frame: Optional[str],
         task_dir: str,
-        scene_index: int
+        scene_index: int,
+        debug_prompts: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         生成单个场景视频（不重试）
@@ -195,13 +201,45 @@ class StoryboardToVideoService:
             )
             video_prompt = self.shot_breakdown_generator.format_for_video_generation(shot_breakdown)
 
-            logger.info(f"场景 {scene_index + 1} Shot Breakdown: {video_prompt[:200]}...")
+            storyboard_prompt = (scene_data.get('video_prompt') or '').strip()
+            if storyboard_prompt:
+                video_prompt = (
+                    f"[Storyboard I2V] 严格参考当前分镜关键帧的画面内容与风格，按以下提示生成约 {int(scene_data.get('duration', 5))} 秒镜头：\n"
+                    f"{storyboard_prompt}\n\n--- Shot breakdown ---\n{video_prompt}"
+                )
+            if previous_last_frame and scene_image_url:
+                video_prompt = (
+                    video_prompt
+                    + "\n[Continuity] 与上一镜头衔接自然，人物与环境如有延续需保持一致。"
+                )
 
+            logger.info(f"场景 {scene_index + 1} 视频提示词: {video_prompt[:200]}...")
+
+            # 图生视频：优先使用当前分镜图作为 img_url（与分镜 prompt 对齐）
             keyframes = []
-            if previous_last_frame:
-                keyframes.append(previous_last_frame)
             if scene_image_url:
                 keyframes.append(scene_image_url)
+            if previous_last_frame and previous_last_frame != scene_image_url:
+                keyframes.append(previous_last_frame)
+
+            if debug_prompts is not None:
+                from app.utils.prompt_trace import trace
+
+                kf_short = [
+                    (u[:160] + '…') if isinstance(u, str) and len(u) > 160 else u for u in keyframes
+                ]
+                debug_prompts.append(
+                    trace(
+                        'video_generator',
+                        f'场景 {scene_index + 1} 图生视频',
+                        body=video_prompt,
+                        extra={
+                            'shot_breakdown': shot_breakdown,
+                            'storyboard_video_prompt': storyboard_prompt or None,
+                            'keyframes': kf_short,
+                        },
+                    )
+                )
 
             if not keyframes:
                 return {

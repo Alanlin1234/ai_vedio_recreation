@@ -4,18 +4,42 @@ const API_BASE_URL = '/api/pipeline'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 1800000
+  timeout: 1800000,
+  withCredentials: true,
 })
 
 const reviewApi = axios.create({
   baseURL: '/api',
-  timeout: 60000
+  timeout: 60000,
+  withCredentials: true,
 })
 
 const agentApi = axios.create({
   baseURL: '/api/agent',
-  timeout: 1800000
+  timeout: 1800000,
+  withCredentials: true,
 })
+
+const authApi = axios.create({
+  baseURL: '/api/auth',
+  timeout: 30000,
+  withCredentials: true,
+})
+
+export const login = async (username, password) => {
+  const response = await authApi.post('/login', { username, password })
+  return response.data
+}
+
+export const logout = async () => {
+  const response = await authApi.post('/logout')
+  return response.data
+}
+
+export const fetchMe = async () => {
+  const response = await authApi.get('/me')
+  return response.data
+}
 
 export const uploadVideo = async (file) => {
   const formData = new FormData()
@@ -23,19 +47,19 @@ export const uploadVideo = async (file) => {
 
   const response = await api.post('/upload-video', formData, {
     headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+      'Content-Type': 'multipart/form-data',
+    },
   })
   return response.data
 }
 
-export const analyzeVideo = async (recreationId) => {
-  const response = await api.post(`/analyze-video/${recreationId}`)
+export const analyzeVideo = async (recreationId, data = {}) => {
+  const response = await api.post(`/analyze-video/${recreationId}`, data)
   return response.data
 }
 
-export const reviewVideo = async (recreationId) => {
-  const response = await reviewApi.post(`/reviewer/${recreationId}`)
+export const reviewVideo = async (recreationId, data = {}) => {
+  const response = await reviewApi.post(`/reviewer/${recreationId}`, data)
   return response.data
 }
 
@@ -76,6 +100,16 @@ export const getProject = async (recreationId) => {
 
 export const exportVideo = async (recreationId) => {
   window.open(`${API_BASE_URL}/export-video/${recreationId}`, '_blank')
+}
+
+/** 成片预览 URL（Cookie 会话下与 <video src> 同域可用） */
+export const getFinalPreviewUrl = (recreationId) =>
+  `${API_BASE_URL}/final-preview/${recreationId}`
+
+/** 影坊多 Agent 元数据（与前端 constants/yingfangAgents 同源） */
+export const fetchYingfangAgents = async () => {
+  const response = await api.get('/yingfang-agents')
+  return response.data
 }
 
 export default api

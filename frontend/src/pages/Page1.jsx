@@ -1,7 +1,16 @@
 import { useState, useRef } from 'react'
 import { VideoCamera, Check, ArrowRight, ArrowCounterClockwise } from '@phosphor-icons/react'
 
-const Page1 = ({ project, onUpload, onAnalyze, onReset, isLoading, loadingMessage }) => {
+const Page1 = ({
+  project,
+  creatorNotes,
+  onCreatorNotesChange,
+  onUpload,
+  onAnalyze,
+  onReset,
+  isLoading,
+  loadingMessage,
+}) => {
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState('')
   const fileInputRef = useRef(null)
@@ -20,7 +29,7 @@ const Page1 = ({ project, onUpload, onAnalyze, onReset, isLoading, loadingMessag
     setIsDragging(false)
 
     const files = Array.from(e.dataTransfer.files)
-    const videoFile = files.find(f => f.type.startsWith('video/'))
+    const videoFile = files.find((f) => f.type.startsWith('video/'))
 
     if (videoFile) {
       handleFileSelect(videoFile)
@@ -96,6 +105,27 @@ const Page1 = ({ project, onUpload, onAnalyze, onReset, isLoading, loadingMessag
             >
               <ArrowCounterClockwise size={20} />
             </button>
+          </div>
+
+          <div className="content-card border border-charcoal-100/80">
+            <label
+              htmlFor="piece-notes"
+              className="block text-sm font-serif font-semibold text-charcoal-700 mb-2"
+            >
+              片子说明
+            </label>
+            <p className="text-xs text-charcoal-500 font-sans mb-3 leading-relaxed">
+              简要介绍这部素材的内容、风格，以及你希望做的二创方向。审核员会结合解析结果与你的说明，从内容、画风、叙事与二创潜力等维度打分，并判断是否适合进入二创流程。
+            </p>
+            <textarea
+              id="piece-notes"
+              value={creatorNotes}
+              onChange={(e) => onCreatorNotesChange(e.target.value)}
+              rows={5}
+              disabled={isLoading}
+              placeholder="例如：原片是科普类短视频，希望改成悬疑叙事风；或说明画面偏纪实、希望统一成某种画风……"
+              className="w-full rounded-xl border border-charcoal-200 bg-paper px-4 py-3 text-sm text-charcoal-700 font-sans placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-moss/30 focus:border-moss/40 resize-y min-h-[120px]"
+            />
           </div>
 
           <div className="flex justify-start">

@@ -6,7 +6,7 @@
 import os
 import json
 import logging
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,8 @@ class EnhancedVideoAnalyzer:
     def analyze_video_complete(
         self,
         video_path: str,
-        video_analysis_result: Dict[str, Any]
+        video_analysis_result: Dict[str, Any],
+        debug_prompts: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         完整的视频分析流程
@@ -51,13 +52,15 @@ class EnhancedVideoAnalyzer:
                 }
 
             # 第一阶段：深度内容理解
-            content_analysis = self._deep_content_analysis(story_content)
+            content_analysis = self._deep_content_analysis(story_content, debug_prompts)
 
             # 第二阶段：亮点提炼
-            highlights = self._extract_highlights(story_content, content_analysis)
+            highlights = self._extract_highlights(story_content, content_analysis, debug_prompts)
 
             # 第三阶段：教育意义提取
-            educational = self._extract_educational_meaning(story_content, content_analysis)
+            educational = self._extract_educational_meaning(
+                story_content, content_analysis, debug_prompts
+            )
 
             # 第四阶段：结构化总结
             structured_summary = self._create_structured_summary(
@@ -85,7 +88,11 @@ class EnhancedVideoAnalyzer:
                 'error': str(e)
             }
 
-    def _deep_content_analysis(self, story_content: str) -> Dict[str, Any]:
+    def _deep_content_analysis(
+        self,
+        story_content: str,
+        debug_prompts: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
         """
         深度内容分析 - 理解故事的叙事结构
         """
@@ -118,6 +125,19 @@ class EnhancedVideoAnalyzer:
 3. 理解人物的动机和成长
 4. 识别叙事结构（起承转合）"""
 
+            if debug_prompts is not None:
+                from app.utils.prompt_trace import trace
+
+                debug_prompts.append(
+                    trace(
+                        'education_expert',
+                        '深度内容分析',
+                        system='你是一个专业的故事分析师，擅长深度解读叙事内容。',
+                        user=analysis_prompt,
+                        model='qwen-plus-latest',
+                    )
+                )
+
             response = Generation.call(
                 model="qwen-plus-latest",
                 messages=[
@@ -146,7 +166,12 @@ class EnhancedVideoAnalyzer:
             logger.error(f"深度内容分析失败: {e}")
             return self._get_default_content_analysis()
 
-    def _extract_highlights(self, story_content: str, content_analysis: Dict) -> Dict[str, Any]:
+    def _extract_highlights(
+        self,
+        story_content: str,
+        content_analysis: Dict,
+        debug_prompts: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
         """
         亮点提炼 - 识别故事的高光时刻
         采用多维度分析策略：
@@ -189,6 +214,19 @@ class EnhancedVideoAnalyzer:
 3. 指出对观众的影响
 4. 结合故事的具体内容，不要脱离文本"""
 
+            if debug_prompts is not None:
+                from app.utils.prompt_trace import trace
+
+                debug_prompts.append(
+                    trace(
+                        'education_expert',
+                        '亮点提炼',
+                        system='你是一个专业的影视评论家，擅长发现和解读故事的精彩之处。',
+                        user=highlights_prompt,
+                        model='qwen-plus-latest',
+                    )
+                )
+
             response = Generation.call(
                 model="qwen-plus-latest",
                 messages=[
@@ -225,7 +263,8 @@ class EnhancedVideoAnalyzer:
     def _extract_educational_meaning(
         self,
         story_content: str,
-        content_analysis: Dict
+        content_analysis: Dict,
+        debug_prompts: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         教育意义提取 - 多维度价值分析
@@ -286,6 +325,19 @@ class EnhancedVideoAnalyzer:
 2. 结合故事中的具体情节和人物
 3. 指出对不同年龄段观众的启发
 4. 提供可操作的建议"""
+
+            if debug_prompts is not None:
+                from app.utils.prompt_trace import trace
+
+                debug_prompts.append(
+                    trace(
+                        'education_expert',
+                        '教育意义提取',
+                        system='你是一个专业的教育专家，擅长挖掘故事的教育价值和启发意义。',
+                        user=educational_prompt,
+                        model='qwen-plus-latest',
+                    )
+                )
 
             response = Generation.call(
                 model="qwen-plus-latest",

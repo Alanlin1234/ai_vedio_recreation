@@ -2,9 +2,6 @@ from flask import Blueprint, request, jsonify, current_app, send_from_directory
 from app.models import db, VideoRecreation, RecreationScene, RecreationLog
 from app.services.efficient_video_analyzer import EfficientVideoAnalyzerWithHighlights
 from app.services.enhanced_content_generator import EnhancedContentGenerator
-from app.services.content_generation_service import ContentGenerationService
-from app.services.scene_segmentation_service import SceneSegmentationService
-from app.services.camera_script_generator import CameraScriptGenerator
 from app.services.video_recreation_service import VideoRecreationService
 from app.services.storyboard_generator import StoryboardGenerator
 from datetime import datetime
@@ -17,6 +14,29 @@ import logging
 logger = logging.getLogger(__name__)
 
 frontend_pipeline_bp = Blueprint('frontend_pipeline', __name__)
+
+
+@frontend_pipeline_bp.before_request
+def _require_login_for_pipeline():
+    from flask import session, jsonify
+
+    if request.method == 'OPTIONS':
+        return None
+    if not session.get('user_id'):
+        return jsonify({'success': False, 'error': '请先登录', 'code': 'UNAUTHORIZED'}), 401
+    return None
+
+
+@frontend_pipeline_bp.route('/yingfang-agents', methods=['GET'])
+def yingfang_agents():
+    """影坊多 Agent 系统元数据（与前端侧栏六个 Agent 名称一致）。"""
+    from app.yingfang_system import STEP_KEY_TO_AGENT_ID, YingfangMultiAgentSystem
+
+    return jsonify({
+        'success': True,
+        'agents': YingfangMultiAgentSystem.list_agents(),
+        'step_to_agent': {k: v for k, v in STEP_KEY_TO_AGENT_ID.items()},
+    })
 
 
 @frontend_pipeline_bp.route('/upload-video', methods=['POST'])
@@ -71,6 +91,10 @@ def analyze_video(recreation_id):
         if not recreation:
             return jsonify({'success': False, 'error': '项目不存在'}), 404
 
+        data = request.get_json(silent=True) or {}
+        if isinstance(data, dict) and 'creator_notes' in data:
+            recreation.creator_notes = (data.get('creator_notes') or '')[:12000]
+
         video_path = recreation.original_video_path
         if not os.path.exists(video_path):
             return jsonify({'success': False, 'error': '视频文件不存在'}), 400
@@ -83,7 +107,8 @@ def analyze_video(recreation_id):
         if not result.get('success'):
             return jsonify({
                 'success': False,
-                'error': result.get('error', '视频分析失败')
+                'error': result.get('error', '视频分析失败'),
+                'debug_prompts': result.get('debug_prompts') or [],
             }), 500
 
         story_content = result.get('content', '')
@@ -98,6 +123,8 @@ def analyze_video(recreation_id):
 
         recreation.video_understanding = story_content
         recreation.understanding_model = 'EfficientVideoAnalyzer'
+        recreation.analysis_highlights = highlights if highlights else None
+        recreation.analysis_educational = educational if educational else None
         recreation.status = 'completed'
         db.session.commit()
 
@@ -111,7 +138,8 @@ def analyze_video(recreation_id):
                 'keyframes_count': result.get('keyframes_count', 0),
                 'time_cost': result.get('time_cost', 0),
                 'transcription_length': len(result.get('transcription', '') or '')
-            }
+            },
+            'debug_prompts': result.get('debug_prompts') or [],
         })
 
     except Exception as e:
@@ -185,7 +213,8 @@ def generate_new_story(recreation_id):
                 'highlights': combined_highlights,
                 'highlights_details': highlights_data,
                 'educational_meaning': combined_educational,
-                'educational_details': educational_data
+                'educational_details': educational_data,
+                'debug_prompts': enhanced_result.get('debug_prompts') or [],
             })
         else:
             return jsonify({
@@ -215,8 +244,18 @@ def generate_storyboard(recreation_id):
         if not story_content:
             return jsonify({'success': False, 'error': '没有故事内容'}), 400
 
-        request_data = request.get_json() or {}
-        scene_count = request_data.get('scene_count', 6)
+        request_data = request.get_json(silent=True) or {}
+        raw_sc = request_data.get('scene_count')
+        if raw_sc in (None, '', 'auto'):
+            scene_count = None
+        else:
+            try:
+                from app.services.storyboard_generator import MAX_SCENES, MIN_SCENES
+
+                scene_count = int(raw_sc)
+                scene_count = max(MIN_SCENES, min(MAX_SCENES, scene_count))
+            except (TypeError, ValueError):
+                scene_count = None
 
         output_dir = os.path.join(
             current_app.config['UPLOAD_FOLDER'],
@@ -227,7 +266,7 @@ def generate_storyboard(recreation_id):
         from app.services.storyboard_generator import StoryboardGenerator
         storyboard_generator = StoryboardGenerator()
 
-        print(f"[分镜图生成] 开始生成{scene_count}个分镜...")
+        print(f"[分镜图生成] 开始生成分镜（scene_count={scene_count!r}，None 表示智能规划）...")
         storyboard_result = storyboard_generator.generate_storyboard(
             story_content=story_content,
             scene_count=scene_count,
@@ -243,6 +282,8 @@ def generate_storyboard(recreation_id):
 
         scenes = storyboard_result.get('scenes', [])
 
+        RecreationScene.query.filter_by(recreation_id=recreation_id).delete()
+
         for idx, scene in enumerate(scenes):
             image_path = scene.get('image')
             
@@ -251,7 +292,7 @@ def generate_storyboard(recreation_id):
                 scene_index=idx,
                 start_time=idx * 5,
                 end_time=(idx + 1) * 5,
-                duration=scene.get('duration', 5),
+                duration=float(scene.get('duration', 5) or 5),
                 shot_type=scene.get('shot_type', ''),
                 description=scene.get('description', ''),
                 plot=scene.get('plot', ''),
@@ -280,7 +321,10 @@ def generate_storyboard(recreation_id):
             'recreation_id': recreation_id,
             'storyboard': scenes,
             'style_guide': storyboard_result.get('style_guide', {}),
-            'has_images': storyboard_result.get('has_images', False)
+            'planned_scene_count': storyboard_result.get('planned_scene_count'),
+            'shot_duration_seconds': storyboard_result.get('shot_duration_seconds', 5),
+            'has_images': storyboard_result.get('has_images', False),
+            'debug_prompts': storyboard_result.get('debug_prompts') or [],
         })
 
     except Exception as e:
@@ -301,10 +345,9 @@ def generate_scene_videos(recreation_id):
         if not recreation:
             return jsonify({'success': False, 'error': '项目不存在'}), 404
 
-        from app.services.storyboard_to_video_service import StoryboardToVideoService
-        video_service = StoryboardToVideoService()
+        from app.services.pipeline_workflow import run_generate_scene_videos
 
-        result = video_service.generate_scene_videos(recreation_id)
+        result = run_generate_scene_videos(recreation_id)
 
         if result.get('success'):
             recreation.status = 'completed'
@@ -398,6 +441,34 @@ def export_video(recreation_id):
             video_filename,
             as_attachment=True,
             download_name=f'generated_video_{recreation_id}.mp4'
+        )
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@frontend_pipeline_bp.route('/final-preview/<int:recreation_id>', methods=['GET'])
+def final_preview(recreation_id):
+    """成片在线预览（inline，供 <video src> 使用；下载仍用 export-video）"""
+    try:
+        recreation = VideoRecreation.query.get(recreation_id)
+        if not recreation or not recreation.final_video_path:
+            return jsonify({'success': False, 'error': '视频不存在'}), 404
+
+        if not os.path.exists(recreation.final_video_path):
+            return jsonify({'success': False, 'error': '文件不存在'}), 404
+
+        video_dir = os.path.dirname(recreation.final_video_path)
+        video_filename = os.path.basename(recreation.final_video_path)
+
+        return send_from_directory(
+            video_dir,
+            video_filename,
+            as_attachment=False,
+            mimetype='video/mp4',
         )
 
     except Exception as e:

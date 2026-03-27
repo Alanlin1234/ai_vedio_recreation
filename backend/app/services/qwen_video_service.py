@@ -560,11 +560,11 @@ class QwenVideoService:
                     "error": error_msg
                 }
             
-            # 6. 使用第一个关键帧作为参考图像（这是上一场景的最后一帧）
+            # 6. 第一个关键帧作为图生视频参考：调用方约定为「当前分镜图」优先，其次可为上一镜尾帧
             img_url = keyframes[0]
             
             logger.info(f"使用参考图像: {img_url}")
-            logger.info(f"该参考图像是{'上一场景的最后一帧' if len(keyframes) > 1 else '当前场景的关键帧'}")
+            logger.info(f"关键帧数量: {len(keyframes)}（首帧为 wan i2v 主参考图）")
             
             # 7. 只使用第一个API密钥生成视频
             self.api_key = self.api_keys[0]

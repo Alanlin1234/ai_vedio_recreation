@@ -80,6 +80,10 @@ const Page3 = ({ project, onGenerateStoryboard, onBack, isLoading, loadingMessag
         </div>
       </div>
 
+      <p className="text-xs text-charcoal-500 font-sans mb-6 max-w-2xl leading-relaxed">
+        下一步将依据上述剧本智能规划分镜数量；每个分镜约 5 秒成片，并生成分镜图与图生视频提示词，随后按镜生成场景视频，最后由剪辑师顺序拼接成片。
+      </p>
+
       <div className="flex gap-3">
         <button
           className="btn-secondary flex items-center gap-2"

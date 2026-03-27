@@ -44,7 +44,7 @@ class ShotBreakdownGenerator:
 
         shot_description = self._build_shot_description(scene_data)
         audio = self._build_audio_info(scene_data)
-        duration = scene_data.get('duration', 4)
+        duration = float(scene_data.get('duration', 5) or 5)
 
         return {
             "shot_number": shot_number,

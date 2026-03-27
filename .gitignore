@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Flask / local data
+instance/
+backend/instance/
+backend/static/uploads/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/node_modules/
+*.local
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs & temp
+*.log
+temp_backup/
+test_compose_output/
+last_frames/
+
+# Archives & large binaries (do not commit)
+*.rar
+*.zip
+vedio_recreation.rar
+video_agent_core.zip
+
+# Misc generated
+prompts_*.json
+vite.config.js.timestamp-*.mjs

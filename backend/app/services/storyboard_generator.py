@@ -9,6 +9,11 @@ import json
 import logging
 from typing import Dict, List, Any, Optional
 
+# 每个分镜对应成片时长（秒），与视频生成、剪辑节奏一致
+SHOT_DURATION_SECONDS = 5
+MIN_SCENES = 4
+MAX_SCENES = 24
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from config import Config
 
@@ -21,10 +26,78 @@ class StoryboardGenerator:
     def __init__(self):
         self.dashscope_api_key = Config.DASHSCOPE_API_KEY
 
+    def plan_scene_count(
+        self, story_content: str, debug_prompts: Optional[List[Dict[str, Any]]] = None
+    ) -> int:
+        """
+        根据故事编剧产出的剧本，智能规划分镜数量。
+        约定：每个分镜对应约 SHOT_DURATION_SECONDS 秒成片，仅承载一个叙事节拍/视觉动作。
+        """
+        text = (story_content or '').strip()
+        if len(text) < 80:
+            return MIN_SCENES
+
+        try:
+            import dashscope
+            from dashscope import Generation
+
+            dashscope.api_key = self.dashscope_api_key
+            prompt = f"""你是分镜统筹。下面是一部用于二创视频的剧本（已由故事编剧写好）。
+
+【剧本全文】
+{text[:12000]}
+
+任务：根据叙事结构（起承转合、情绪转折、关键信息点）估算需要多少个「分镜镜头」。
+硬性规则：
+- 每个镜头对应约 {SHOT_DURATION_SECONDS} 秒成片，镜头内只能安排**一个清晰的视觉节拍**（一个动作、一句关键对白、或一个信息点），不要贪多。
+- 镜头总数必须在 {MIN_SCENES} 到 {MAX_SCENES} 之间（含边界）。
+- 只输出一个 JSON 对象，不要 Markdown：{{"scene_count": <整数>, "rationale": "<不超过80字的中文说明>"}}"""
+
+            if debug_prompts is not None:
+                from app.utils.prompt_trace import trace
+
+                debug_prompts.append(
+                    trace(
+                        'storyboard',
+                        '智能规划镜头数',
+                        system='你只输出合法 JSON，键名与要求一致。',
+                        user=prompt,
+                        model='qwen-plus-latest',
+                    )
+                )
+
+            response = Generation.call(
+                model='qwen-plus-latest',
+                messages=[
+                    {'role': 'system', 'content': '你只输出合法 JSON，键名与要求一致。'},
+                    {'role': 'user', 'content': prompt},
+                ],
+                result_format='message',
+                temperature=0.2,
+                max_tokens=400,
+            )
+            if response.status_code == 200 and response.output and response.output.choices:
+                raw = response.output.choices[0].message.content.strip()
+                j_start, j_end = raw.find('{'), raw.rfind('}')
+                if j_start != -1 and j_end != -1:
+                    import json as _json
+                    data = _json.loads(raw[j_start : j_end + 1])
+                    n = int(data.get('scene_count', MIN_SCENES))
+                    n = max(MIN_SCENES, min(MAX_SCENES, n))
+                    logger.info(f'[分镜统筹] LLM 规划镜头数: {n}, 说明: {data.get("rationale", "")[:120]}')
+                    return n
+        except Exception as e:
+            logger.warning(f'[分镜统筹] LLM 失败，使用启发式: {e}')
+
+        # 启发式：按字数粗略估计节拍数
+        n = max(MIN_SCENES, min(MAX_SCENES, len(text) // 220 + 4))
+        logger.info(f'[分镜统筹] 启发式镜头数: {n}')
+        return n
+
     def generate_storyboard(
         self,
         story_content: str,
-        scene_count: int = 6,
+        scene_count: Optional[int] = None,
         output_dir: str = None,
         generate_images: bool = True
     ) -> Dict[str, Any]:
@@ -32,33 +105,43 @@ class StoryboardGenerator:
         生成分镜图（脚本+可选图片）
 
         Args:
-            story_content: 故事内容
-            scene_count: 场景数量
+            story_content: 故事内容（优先使用故事编剧写出的 new_script_content）
+            scene_count: 场景数量；为 None 时根据剧本智能规划
             output_dir: 图片输出目录
             generate_images: 是否生成图片
 
         Returns:
-            包含成功状态、场景列表、风格指南等
+            包含成功状态、场景列表、风格指南、planned_scene_count 等
         """
+        debug_prompts: List[Dict[str, Any]] = []
         try:
+            if scene_count is None:
+                scene_count = self.plan_scene_count(story_content, debug_prompts)
+
             logger.info("="*60)
-            logger.info(f"开始生成分镜图，场景数量: {scene_count}")
+            logger.info(f"开始生成分镜图，场景数量: {scene_count}（每镜约 {SHOT_DURATION_SECONDS}s 成片）")
             logger.info("="*60)
 
             # 第一步：生成分镜脚本（确保一致性）
-            scenes = self._generate_storyboard_scripts(story_content, scene_count)
+            scenes = self._generate_storyboard_scripts(
+                story_content, scene_count, debug_prompts
+            )
 
             if not scenes:
                 return {
                     'success': False,
                     'error': '分镜脚本生成失败',
-                    'scenes': []
+                    'scenes': [],
+                    'debug_prompts': debug_prompts,
                 }
 
             logger.info(f"分镜脚本生成成功，共{len(scenes)}个场景")
 
+            for s in scenes:
+                s['duration'] = float(SHOT_DURATION_SECONDS)
+
             # 第二步：生成视觉风格指南
-            style_guide = self._generate_style_guide(story_content)
+            style_guide = self._generate_style_guide(story_content, debug_prompts)
             logger.info(f"视觉风格指南: {json.dumps(style_guide, ensure_ascii=False)}")
 
             # 第三步：生成图片（如果需要）
@@ -66,7 +149,8 @@ class StoryboardGenerator:
                 scenes_with_images = self._generate_storyboard_images(
                     scenes=scenes,
                     style_guide=style_guide,
-                    output_dir=output_dir
+                    output_dir=output_dir,
+                    debug_prompts=debug_prompts,
                 )
                 scenes = scenes_with_images
 
@@ -75,7 +159,10 @@ class StoryboardGenerator:
                 'scenes': scenes,
                 'style_guide': style_guide,
                 'total_scenes': len(scenes),
-                'has_images': generate_images
+                'planned_scene_count': scene_count,
+                'shot_duration_seconds': SHOT_DURATION_SECONDS,
+                'has_images': generate_images,
+                'debug_prompts': debug_prompts,
             }
 
         except Exception as e:
@@ -85,10 +172,16 @@ class StoryboardGenerator:
             return {
                 'success': False,
                 'error': str(e),
-                'scenes': []
+                'scenes': [],
+                'debug_prompts': debug_prompts,
             }
 
-    def _generate_storyboard_scripts(self, story_content: str, scene_count: int) -> List[Dict]:
+    def _generate_storyboard_scripts(
+        self,
+        story_content: str,
+        scene_count: int,
+        debug_prompts: Optional[List[Dict[str, Any]]] = None,
+    ) -> List[Dict]:
         """生成分镜脚本"""
         try:
             import dashscope
@@ -96,28 +189,41 @@ class StoryboardGenerator:
 
             dashscope.api_key = self.dashscope_api_key
 
-            prompt = f"""根据以下故事内容，生成{scene_count}个真实分镜场景。
+            prompt = f"""根据以下故事内容，生成{scene_count}个分镜场景。本流程中**每个分镜将生成约 {SHOT_DURATION_SECONDS} 秒的视频**，再交给剪辑师按顺序拼接。
 
 故事内容：
-{story_content[:1500]}
+{story_content[:8000]}
 
-请生成真实的分镜内容，不要用模板。每个场景必须是真实的故事内容：
+硬性要求：
+1. 分镜数量必须正好 {scene_count} 个，覆盖故事起承转合，顺序与叙事一致。
+2. **每个分镜只承载 5 秒内能演完/拍完的一个节拍**：一个主要动作、或一句关键对白、或一个信息点；不要塞进整段 subplot。
+3. 镜头类型、景别要符合该节拍的情绪与信息（避免万金油模板句）。
+4. `description` / `plot` 要具体可拍；`dialogue` 若过长请截断到适合 5 秒口播。
+5. `prompt` 为图生视频用的英文或中英混合提示词，需与分镜图内容一致，强调动作与光影，便于 Wan 类模型执行。
+6. 每个场景的 `duration` 字段**必须填 {SHOT_DURATION_SECONDS}**（表示该镜成片目标时长秒数）。
 
-1. 根据故事的开端、发展、高潮、结局分配到{scene_count}个场景
-2. 镜头类型要符合叙事需求（不是固定模板）
-3. 画面描述要基于故事的真实情节
-4. 台词要符合人物性格和情境
-5. 视频提示词要具体、可执行
+JSON格式（直接返回 JSON 数组，不要其他文字）：
+[{{"scene_number":1,"shot_type":"景别","description":"画面","plot":"情节节拍","dialogue":"台词","prompt":"图生视频提示词","duration":{SHOT_DURATION_SECONDS}}}]"""
 
-JSON格式（直接返回JSON，不要其他文字）：
-[{{"scene_number":1,"shot_type":"根据情节选择合适的镜头","description":"真实的画面描述","plot":"真实的情节","dialogue":"真实的台词","prompt":"可执行的视频生成提示词","duration":4}}]"""
+            if debug_prompts is not None:
+                from app.utils.prompt_trace import trace
+
+                debug_prompts.append(
+                    trace(
+                        'storyboard',
+                        '分镜脚本（JSON）',
+                        system='你是电影分镜师。每个镜头对应约5秒成片，只写一个清晰节拍；提示词用于图生视频，须与画面一致。',
+                        user=prompt,
+                        model='qwen-plus-latest',
+                    )
+                )
 
             response = Generation.call(
                 model="qwen-plus-latest",
                 messages=[
                     {
                         "role": "system",
-                        "content": "你是一个专业的分镜设计师。必须生成真实、具体的内容，不能用'场景1：基于故事内容生成的场景画面描述'这样的模板。每个场景的描述都必须基于故事真实内容。"
+                        "content": "你是电影分镜师。每个镜头对应约5秒成片，只写一个清晰节拍；提示词用于图生视频，须与画面一致。"
                     },
                     {"role": "user", "content": prompt}
                 ],
@@ -146,7 +252,11 @@ JSON格式（直接返回JSON，不要其他文字）：
             traceback.print_exc()
             return self._generate_fallback_scenes(story_content, scene_count)
 
-    def _generate_style_guide(self, story_content: str) -> Dict[str, str]:
+    def _generate_style_guide(
+        self,
+        story_content: str,
+        debug_prompts: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, str]:
         """生成视觉风格指南"""
         try:
             import dashscope
@@ -168,6 +278,19 @@ JSON格式（直接返回JSON，不要其他文字）：
     "art_style": "艺术风格 - 如电影感、写实、插画等",
     "visual_mood": "视觉氛围 - 描述整体的情绪和氛围"
 }}"""
+
+            if debug_prompts is not None:
+                from app.utils.prompt_trace import trace
+
+                debug_prompts.append(
+                    trace(
+                        'storyboard',
+                        '视觉风格指南',
+                        system='你是一个专业的视觉风格设计师。',
+                        user=prompt,
+                        model='qwen-plus-latest',
+                    )
+                )
 
             response = Generation.call(
                 model="qwen-plus-latest",
@@ -201,7 +324,8 @@ JSON格式（直接返回JSON，不要其他文字）：
         self,
         scenes: List[Dict],
         style_guide: Dict[str, str],
-        output_dir: str
+        output_dir: str,
+        debug_prompts: Optional[List[Dict[str, Any]]] = None,
     ) -> List[Dict]:
         """生成分镜图图片 - 使用 qwen-image-2.0 模型"""
         try:
@@ -221,9 +345,23 @@ JSON格式（直接返回JSON，不要其他文字）：
                 logger.info(f"[图片生成] 场景 {scene_num} 开始...")
 
                 prompt = self._build_image_prompt(scene, style_guide)
+                scene['image_prompt_base'] = prompt
                 logger.info(f"[图片生成] 场景 {scene_num} prompt: {prompt[:100]}...")
 
                 if scene_num == 1:
+                    if debug_prompts is not None:
+                        from app.utils.prompt_trace import trace
+
+                        debug_prompts.append(
+                            trace(
+                                'storyboard',
+                                f'分镜图 场景{scene_num}（文生图）',
+                                user=prompt,
+                                model='qwen-image-2.0',
+                                extra={'mode': 'text_to_image'},
+                            )
+                        )
+
                     image_url = self._call_qwen_image_v2_first_frame(prompt)
                     logger.info(f"[图片生成] 场景 {scene_num} API返回: {image_url}")
 
@@ -246,6 +384,35 @@ JSON格式（直接返回JSON，不要其他文字）：
                         scene['image'] = None
                         scene['image_generation_success'] = False
                         continue
+
+                    ref_instructions = """【重要说明】
+这张参考图仅用于：
+1. 保持人物的外貌、服装、表情特征完全一致
+2. 保持整体的艺术风格、色调、光线风格一致
+3. 保持整体的视觉氛围一致
+
+但是，你必须：
+1. 根据【场景情节】和【画面描述】生成完全不同的场景画面
+2. 人物的动作、姿态、位置要根据情节变化
+3. 背景环境要根据情节变化
+4. 不要复制参考图的具体画面，只借用人物和风格！
+
+请根据以下要求生成图片：
+"""
+                    full_prompt = ref_instructions + "\n\n" + prompt
+                    scene['image_prompt_full'] = full_prompt
+                    if debug_prompts is not None:
+                        from app.utils.prompt_trace import trace
+
+                        debug_prompts.append(
+                            trace(
+                                'storyboard',
+                                f'分镜图 场景{scene_num}（参考图生图）',
+                                user=full_prompt,
+                                model='qwen-image-2.0',
+                                extra={'mode': 'image_to_image', 'reference_previous_scene': True},
+                            )
+                        )
 
                     image_url = self._call_qwen_image_v2_with_ref(prompt, reference_image_path)
                     logger.info(f"[图片生成] 场景 {scene_num} API返回: {image_url}")
@@ -508,7 +675,7 @@ JSON格式（直接返回JSON，不要其他文字）：
                             'plot': scene.get('plot', ''),
                             'dialogue': scene.get('dialogue', ''),
                             'prompt': scene.get('prompt', ''),
-                            'duration': scene.get('duration', 4)
+                            'duration': float(scene.get('duration', SHOT_DURATION_SECONDS) or SHOT_DURATION_SECONDS),
                         })
                     return scenes
 
@@ -532,7 +699,7 @@ JSON格式（直接返回JSON，不要其他文字）：
                             'plot': scene.get('plot', ''),
                             'dialogue': scene.get('dialogue', ''),
                             'prompt': scene.get('prompt', ''),
-                            'duration': scene.get('duration', 4)
+                            'duration': float(scene.get('duration', SHOT_DURATION_SECONDS) or SHOT_DURATION_SECONDS),
                         })
                     return scenes
 
@@ -584,7 +751,7 @@ JSON格式（直接返回JSON，不要其他文字）：
                     'plot': f'这是故事的第{i+1}个情节段落',
                     'dialogue': f'第{i+1}个场景的人物对话',
                     'prompt': story_content[:300] if len(story_content) > 300 else story_content,
-                    'duration': 4
+                    'duration': float(SHOT_DURATION_SECONDS),
                 })
             return scenes
 
@@ -599,7 +766,7 @@ JSON格式（直接返回JSON，不要其他文字）：
                     'plot': f'情节{i+1}描述',
                     'dialogue': f'台词{i+1}',
                     'prompt': story_content[:200],
-                    'duration': 4
+                    'duration': float(SHOT_DURATION_SECONDS),
                 })
             return scenes
 

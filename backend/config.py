@@ -74,6 +74,9 @@ class Config:
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
     LOG_FILE = os.getenv('LOG_FILE', 'logs/agent_system.log')
 
+    # 二创审核：总分达到该分数才允许进入后续流程
+    RECREATION_REVIEW_PASS_SCORE = float(os.getenv('RECREATION_REVIEW_PASS_SCORE', '60'))
+
     # Nano Banana API 配置
     NANO_BANANA_API_KEY = os.getenv('NANO_BANANA_API_KEY', '')
     NANO_BANANA_API_ENDPOINT = os.getenv('NANO_BANANA_API_ENDPOINT', 'https://api.nanobanana.com')
