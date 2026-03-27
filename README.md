@@ -72,6 +72,9 @@ backend/
 cd backend
 pip install -r requirements.txt
 ```
+```bash
+cd frontend && npm install
+```
 
 ### 5.3 配置文件
 
@@ -85,24 +88,18 @@ pip install -r requirements.txt
 ### 6.1 启动应用
 
 ```bash
+后端
 cd backend
 python run.py
+前端
+cd frontend
+npm run dev
 ```
 
 应用将在 http://0.0.0.0:5000 启动
 
 ### 6.2 运行视频处理流程
 
-使用`test_simple_video_process.py`脚本可以运行完整的视频处理流程：
-
-```bash
-python test_simple_video_process.py <视频文件路径>
-```
-
-例如：
-```bash
-python test_simple_video_process.py downloads/抖音20251216-605430.mp4
-```
 
 ## 7. 工作流程详细说明
 
@@ -245,88 +242,4 @@ python test_simple_video_process.py downloads/抖音20251216-605430.mp4
 }
 ```
 
-## 10. 配置说明
 
-### 10.1 主要配置项
-
-| 配置项 | 描述 | 默认值 |
-|--------|------|--------|
-| `FFMPEG_PATH` | FFmpeg可执行文件路径 | `ffmpeg` |
-| `COMFYUI_URL` | ComfyUI服务地址 | `http://127.0.0.1:8188` |
-| `QWEN_API_KEY` | Qwen模型API密钥 | - |
-| `DEFAULT_FRAME_RATE` | 默认帧率 | 24 |
-| `DEFAULT_RESOLUTION` | 默认分辨率 | `1920x1080` |
-| `CONSISTENCY_THRESHOLD` | 一致性阈值 | 0.8 |
-
-### 10.2 环境变量配置
-
-```
-# 数据库配置
-DATABASE_URL=mysql://user:password@localhost:3306/video_agent
-
-# ComfyUI配置
-COMFYUI_URL=http://127.0.0.1:8188
-
-# AI模型配置
-QWEN_API_KEY=your_api_key
-```
-
-## 11. 常见问题和解决方案
-
-### 11.1 视频生成失败
-
-**问题**：场景视频生成失败
-**解决方案**：
-- 检查AI模型API密钥是否正确
-- 确保ComfyUI服务正常运行
-- 检查提示词格式是否正确
-- 调整视频生成参数（分辨率、帧率等）
-
-### 11.2 一致性检查失败
-
-**问题**：生成的视频一致性检查失败
-**解决方案**：
-- 降低一致性阈值
-- 调整提示词，增加更多细节描述
-- 增加参考关键帧数量
-- 调整视频生成参数
-
-### 11.3 视频合成失败
-
-**问题**：最终视频合成失败
-**解决方案**：
-- 检查FFmpeg是否正确安装
-- 确保所有场景视频都成功生成
-- 检查视频格式是否支持
-- 调整合成参数
-
-## 12. 贡献指南
-
-1. Fork仓库
-2. 创建功能分支
-3. 提交代码
-4. 运行测试
-5. 提交Pull Request
-
-## 13. 许可证
-
-MIT License
-
-## 14. 联系方式
-
-- 项目地址：https://github.com/Alanlin1234/ai-agent-comfy
-- 问题反馈：GitHub Issues
-
-## 15. 更新日志
-
-### v1.0.0 (2025-12-23)
-
-- 初始版本
-- 实现完整的视频处理工作流
-- 支持多种AI模型
-- 实现关键帧传递机制
-- 支持一致性检查和优化
-
----
-
-**注**：本系统需要配置AI模型API密钥才能正常运行。请确保在使用前完成所有配置。
