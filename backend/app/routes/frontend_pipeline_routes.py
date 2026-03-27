@@ -25,6 +25,9 @@ def _require_login_for_pipeline():
 
     if request.method == 'OPTIONS':
         return None
+    # 公开：便于未登录时确认当前分镜上限等是否为新部署
+    if (request.path or '').rstrip('/').endswith('/config'):
+        return None
     if not session.get('user_id'):
         return jsonify({'success': False, 'error': '请先登录', 'code': 'UNAUTHORIZED'}), 401
     return None
@@ -189,16 +192,18 @@ def generate_new_story(recreation_id):
         content_generator = EnhancedContentGenerator()
 
         original_analysis = {
-            'main_plot': original_story[:500],
+            'main_plot': original_story[:3500],
             'characters': [],
             'emotional_arc': '',
-            'thematic_elements': []
+            'thematic_elements': [],
         }
 
         enhanced_result = content_generator.generate_enhanced_story(
             original_analysis=original_analysis,
             highlights=original_highlights,
-            educational=original_educational
+            educational=original_educational,
+            creator_notes=(recreation.creator_notes or '')[:12000],
+            full_story_text=original_story,
         )
 
         if enhanced_result.get('success'):
@@ -275,7 +280,8 @@ def generate_storyboard(recreation_id):
             f'recreation_{recreation_id}'
         )
 
-        from app.services.storyboard_generator import StoryboardGenerator
+        from app.services.storyboard_generator import MAX_SCENES, StoryboardGenerator
+
         storyboard_generator = StoryboardGenerator()
 
         print(f"[分镜图生成] 开始生成分镜（scene_count={scene_count!r}，None 表示智能规划）...")
@@ -292,7 +298,11 @@ def generate_storyboard(recreation_id):
                 'error': storyboard_result.get('error', '分镜图生成失败')
             }), 500
 
-        scenes = storyboard_result.get('scenes', [])
+        scenes = storyboard_result.get('scenes', [])[:MAX_SCENES]
+        for sc in scenes:
+            d = (sc.get('dialogue') or '').strip()
+            if not d or d in ('暂无台词', '暂无'):
+                sc['dialogue'] = '（本镜以动作为主；环境音）'
 
         RecreationScene.query.filter_by(recreation_id=recreation_id).delete()
 
@@ -334,6 +344,7 @@ def generate_storyboard(recreation_id):
             'storyboard': scenes,
             'style_guide': storyboard_result.get('style_guide', {}),
             'planned_scene_count': storyboard_result.get('planned_scene_count'),
+            'max_storyboard_scenes_cap': MAX_SCENES,
             'shot_duration_seconds': storyboard_result.get('shot_duration_seconds', 5),
             'has_images': storyboard_result.get('has_images', False),
             'debug_prompts': storyboard_result.get('debug_prompts') or [],
@@ -517,16 +528,36 @@ def get_storyboard_image(recreation_id, scene_number):
         }), 500
 
 
+@frontend_pipeline_bp.route('/config', methods=['GET'])
+def pipeline_config():
+    """供前端/排查确认当前后端分镜上限等（验证是否已部署新代码）。"""
+    from app.services.storyboard_generator import MAX_SCENES, MIN_SCENES, SHOT_DURATION_SECONDS
+
+    return jsonify(
+        {
+            'success': True,
+            'max_storyboard_scenes': MAX_SCENES,
+            'min_storyboard_scenes': MIN_SCENES,
+            'shot_duration_seconds': SHOT_DURATION_SECONDS,
+        }
+    )
+
+
 @frontend_pipeline_bp.route('/project/<int:recreation_id>', methods=['GET'])
 def get_project(recreation_id):
     try:
+        from app.services.storyboard_generator import MAX_SCENES
+
         recreation = VideoRecreation.query.get(recreation_id)
         if not recreation:
             return jsonify({'success': False, 'error': '项目不存在'}), 404
 
-        scenes = RecreationScene.query.filter_by(recreation_id=recreation_id).order_by(
-            RecreationScene.scene_index
-        ).all()
+        scenes = (
+            RecreationScene.query.filter_by(recreation_id=recreation_id)
+            .order_by(RecreationScene.scene_index)
+            .limit(MAX_SCENES)
+            .all()
+        )
 
         scene_dicts = []
         for scene in scenes:

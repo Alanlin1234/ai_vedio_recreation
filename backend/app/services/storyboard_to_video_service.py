@@ -22,6 +22,13 @@ from video_consistency_agent.agent.consistency_agent import ConsistencyAgent
 logger = logging.getLogger(__name__)
 
 
+def _clip_prompt(text: str, max_len: int = 320) -> str:
+    if not text:
+        return ''
+    t = text.strip()
+    return t if len(t) <= max_len else t[: max_len - 1] + '…'
+
+
 class StoryboardToVideoService:
     """分镜到视频生成服务"""
 
@@ -38,6 +45,140 @@ class StoryboardToVideoService:
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
         config_path = os.path.join(project_root, 'video_consistency_agent', 'config', 'config.yaml')
         self.consistency_agent = ConsistencyAgent(config_path)
+
+    def _generate_visual_lock_prompt(self, story_full: str) -> str:
+        """
+        一次性生成全片共用的画面风格锁定句（中英文均可），须逐镜原样复用。
+        """
+        text = (story_full or '').strip()
+        if len(text) < 30:
+            return (
+                "Consistent 3D animated film look, Pixar-like soft global illumination, "
+                "warm saturated palette, same character proportions and costume colors across all shots, "
+                "cinematic depth of field."
+            )
+        try:
+            import dashscope
+            from dashscope import Generation
+
+            dashscope.api_key = Config.DASHSCOPE_API_KEY
+            prompt = f"""你是视频美术指导。根据下列短片/故事梗概，写出**唯一一段**将用于**每一个分镜视频**的「画面风格锁定」说明（中英文混合，80～220 字）。
+要求：
+1. **具体可执行**：写明整体美术方向（如迪士尼手绘 2D / 皮克斯 3D / 写实纪录片 / 水彩插画等）、主色调、典型光影。
+2. **跨镜一致**：写明角色**服装主色与款式**、体型年龄段；环境与材质基调；这些要求在每一镜提示词里都会**原样复制**。
+3. 单段输出，不要编号、不要多条。
+
+故事梗概：
+{text[:4500]}
+"""
+            response = Generation.call(
+                model='qwen-plus-latest',
+                messages=[
+                    {'role': 'system', 'content': '你只输出一段美术与角色外观锁定说明，无标题。'},
+                    {'role': 'user', 'content': prompt},
+                ],
+                result_format='message',
+                temperature=0.35,
+                max_tokens=400,
+            )
+            if response.status_code == 200 and response.output and response.output.choices:
+                out = (response.output.choices[0].message.content or '').strip()
+                if len(out) > 40:
+                    return out
+        except Exception as e:
+            logger.warning(f'[visual_lock] LLM 失败，使用默认: {e}')
+        return (
+            "Consistent stylized 3D animation, soft cinematic lighting, harmonious warm palette, "
+            "same character silhouette and outfit colors in every shot, film grain optional."
+        )
+
+    def _validate_prompts_form_complete_story(
+        self,
+        story_full: str,
+        shot_summaries: List[str],
+        prompt_excerpts: List[str],
+    ) -> Dict[str, Any]:
+        """检查各镜视频提示词合起来是否足以构成连贯完整故事。"""
+        if not story_full or len(story_full.strip()) < 40:
+            return {'passed': True, 'reason': '梗概过短，跳过叙事完整性校验'}
+
+        try:
+            import dashscope
+            from dashscope import Generation
+            import json as _json
+            import re
+
+            dashscope.api_key = Config.DASHSCOPE_API_KEY
+            lines = []
+            for i, (sm, pe) in enumerate(zip(shot_summaries, prompt_excerpts), start=1):
+                lines.append(f"--- 镜头{i} 情节摘要 ---\n{sm}\n--- 镜头{i} 提示词节选 ---\n{pe}\n")
+            blob = '\n'.join(lines)[:12000]
+
+            user = f"""【全文梗概】
+{story_full[:3500]}
+
+【按顺序排列的各镜材料】
+{blob}
+
+任务：判断上述各镜的提示词与情节，**串联后**是否能讲出一个**完整、连贯**的小故事（有清晰起因—展开—收束，或明确情感弧线），而不是互不相关的碎片拼贴。
+
+只输出一个 JSON 对象，不要 Markdown：{{"complete_story": true 或 false, "reason": "不超过100字的中文说明"}}"""
+
+            response = Generation.call(
+                model='qwen-plus-latest',
+                messages=[
+                    {'role': 'system', 'content': '你只输出合法 JSON。'},
+                    {'role': 'user', 'content': user},
+                ],
+                result_format='message',
+                temperature=0.1,
+                max_tokens=300,
+            )
+            if response.status_code == 200 and response.output and response.output.choices:
+                raw = (response.output.choices[0].message.content or '').strip()
+                m = re.search(r'\{[\s\S]*\}', raw)
+                if m:
+                    data = _json.loads(m.group(0))
+                    passed = bool(data.get('complete_story', False))
+                    reason = (data.get('reason') or '').strip() or (
+                        '通过' if passed else '未通过'
+                    )
+                    return {'passed': passed, 'reason': reason}
+        except Exception as e:
+            logger.warning(f'[故事校验] 失败，放行: {e}')
+            return {'passed': True, 'reason': f'校验异常已放行: {e}'}
+
+        return {'passed': True, 'reason': '无法解析校验结果，已放行'}
+
+    def _build_full_video_prompt(
+        self,
+        scene_data: Dict[str, Any],
+        scene_index: int,
+        narrative_context: Optional[Dict[str, Any]],
+        visual_lock: str,
+    ) -> str:
+        """组装单镜完整视频提示词（与生成视频时一致）。"""
+        shot_breakdown = self.shot_breakdown_generator.generate_shot_breakdown(
+            scene_data, scene_index
+        )
+        video_prompt = self.shot_breakdown_generator.format_for_video_generation(
+            shot_breakdown,
+            narrative_context=narrative_context,
+            visual_lock=visual_lock,
+        )
+        storyboard_prompt = (scene_data.get('video_prompt') or '').strip()
+        if storyboard_prompt:
+            video_prompt = (
+                f"[Storyboard I2V] 严格参考当前分镜关键帧的画面内容与风格，按以下提示生成约 "
+                f"{int(scene_data.get('duration', 5))} 秒镜头；叙事与画面风格须与全片 VISUAL_LOCK 及相邻分镜一致：\n"
+                f"{storyboard_prompt}\n\n--- Shot breakdown ---\n{video_prompt}"
+            )
+        elif scene_index > 0 and scene_data.get('description'):
+            video_prompt = (
+                video_prompt
+                + "\n[Visual continuity] Match lighting, character look, and VISUAL_LOCK with previous shot."
+            )
+        return video_prompt
 
     def generate_scene_videos(self, recreation_id: int) -> Dict[str, Any]:
         """
@@ -75,7 +216,62 @@ class StoryboardToVideoService:
             previous_last_frame = None
             debug_prompts = []
 
+            story_full = (recreation.new_script_content or recreation.video_understanding or '').strip()
+            total_n = len(scenes)
+
+            visual_lock = self._generate_visual_lock_prompt(story_full)
+            logger.info(f'[视频] 已生成全片 VISUAL_LOCK（{len(visual_lock)} 字）')
+
+            built_prompts: List[str] = []
+            shot_summaries: List[str] = []
+            prompt_excerpts: List[str] = []
+
             for scene in scenes:
+                scene_index = scene.scene_index
+                scene_data = {
+                    'scene_number': scene_index + 1,
+                    'shot_type': scene.shot_type,
+                    'description': scene.description,
+                    'plot': scene.plot,
+                    'dialogue': scene.dialogue,
+                    'duration': float(scene.duration or 5),
+                    'video_prompt': scene.video_prompt,
+                }
+                prev_sc = scenes[scene_index - 1] if scene_index > 0 else None
+                next_sc = scenes[scene_index + 1] if scene_index < total_n - 1 else None
+                narrative_context = {
+                    'story_summary': story_full,
+                    'shot_index': scene_index + 1,
+                    'total_shots': total_n,
+                    'previous_plot': (prev_sc.plot or '') if prev_sc else '',
+                    'previous_dialogue': (prev_sc.dialogue or '') if prev_sc else '',
+                    'next_plot': (next_sc.plot or '') if next_sc else '',
+                }
+                full_p = self._build_full_video_prompt(
+                    scene_data, scene_index, narrative_context, visual_lock
+                )
+                built_prompts.append(full_p)
+                shot_summaries.append(
+                    f"{(scene.plot or '')}\n{(scene.description or '')}".strip()[:900]
+                )
+                prompt_excerpts.append(_clip_prompt(full_p, 420))
+
+            story_val = self._validate_prompts_form_complete_story(
+                story_full, shot_summaries, prompt_excerpts
+            )
+            if not story_val.get('passed'):
+                logger.warning(f'[视频] 叙事校验未通过: {story_val.get("reason")}')
+                return {
+                    'success': False,
+                    'error': '各镜视频提示词未通过「完整故事」校验：' + (story_val.get('reason') or ''),
+                    'story_prompt_validation': story_val,
+                    'visual_lock_preview': visual_lock[:500],
+                    'debug_prompts': debug_prompts,
+                }
+
+            logger.info('[视频] 叙事校验通过，开始逐镜生成视频')
+
+            for idx, scene in enumerate(scenes):
                 try:
                     scene_index = scene.scene_index
                     logger.info(f"正在生成场景 {scene_index + 1} / {len(scenes)}")
@@ -88,6 +284,17 @@ class StoryboardToVideoService:
                         'dialogue': scene.dialogue,
                         'duration': float(scene.duration or 5),
                         'video_prompt': scene.video_prompt,
+                    }
+
+                    prev_sc = scenes[scene_index - 1] if scene_index > 0 else None
+                    next_sc = scenes[scene_index + 1] if scene_index < total_n - 1 else None
+                    narrative_context = {
+                        'story_summary': story_full,
+                        'shot_index': scene_index + 1,
+                        'total_shots': total_n,
+                        'previous_plot': (prev_sc.plot or '') if prev_sc else '',
+                        'previous_dialogue': (prev_sc.dialogue or '') if prev_sc else '',
+                        'next_plot': (next_sc.plot or '') if next_sc else '',
                     }
 
                     scene_image_path = os.path.join(
@@ -104,8 +311,7 @@ class StoryboardToVideoService:
                         scene_image_url = f"file://{scene_image_path}"
                         logger.info(f"场景 {scene_index + 1} 分镜图URL: {scene_image_url}")
 
-                    logger.info(f"场景 {scene_index + 1} 分镜图路径: {scene_image_path}")
-
+                    prebuilt = built_prompts[idx]
                     result = self._generate_single_scene_video(
                         scene_data=scene_data,
                         scene_image_url=scene_image_url,
@@ -113,6 +319,9 @@ class StoryboardToVideoService:
                         task_dir=task_dir,
                         scene_index=scene_index,
                         debug_prompts=debug_prompts,
+                        narrative_context=narrative_context,
+                        prebuilt_video_prompt=prebuilt,
+                        visual_lock=visual_lock,
                     )
 
                     if result.get('success'):
@@ -159,6 +368,8 @@ class StoryboardToVideoService:
                 'total_scenes': len(scenes),
                 'successful_count': len(generated_videos),
                 'debug_prompts': debug_prompts,
+                'story_prompt_validation': story_val,
+                'visual_lock_preview': visual_lock[:500],
             }
 
         except Exception as e:
@@ -179,19 +390,12 @@ class StoryboardToVideoService:
         task_dir: str,
         scene_index: int,
         debug_prompts: Optional[List[Dict[str, Any]]] = None,
+        narrative_context: Optional[Dict[str, Any]] = None,
+        prebuilt_video_prompt: Optional[str] = None,
+        visual_lock: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        生成单个场景视频（不重试）
-
-        Args:
-            scene_data: 分镜数据
-            scene_image_url: 分镜图URL
-            previous_last_frame: 上一场景的最后一帧
-            task_dir: 任务目录
-            scene_index: 场景索引
-
-        Returns:
-            包含生成结果的字典
+        生成单个场景视频。若传入 prebuilt_video_prompt（与先生成、校验后的提示一致），则不再重复拼装。
         """
         try:
             logger.info(f"场景 {scene_index + 1} 开始生成")
@@ -199,21 +403,21 @@ class StoryboardToVideoService:
             shot_breakdown = self.shot_breakdown_generator.generate_shot_breakdown(
                 scene_data, scene_index
             )
-            video_prompt = self.shot_breakdown_generator.format_for_video_generation(shot_breakdown)
 
-            storyboard_prompt = (scene_data.get('video_prompt') or '').strip()
-            if storyboard_prompt:
-                video_prompt = (
-                    f"[Storyboard I2V] 严格参考当前分镜关键帧的画面内容与风格，按以下提示生成约 {int(scene_data.get('duration', 5))} 秒镜头：\n"
-                    f"{storyboard_prompt}\n\n--- Shot breakdown ---\n{video_prompt}"
-                )
-            if previous_last_frame and scene_image_url:
-                video_prompt = (
-                    video_prompt
-                    + "\n[Continuity] 与上一镜头衔接自然，人物与环境如有延续需保持一致。"
+            if prebuilt_video_prompt and str(prebuilt_video_prompt).strip():
+                video_prompt = prebuilt_video_prompt.strip()
+            else:
+                vl = visual_lock or ''
+                video_prompt = self._build_full_video_prompt(
+                    scene_data,
+                    scene_index,
+                    narrative_context,
+                    vl,
                 )
 
             logger.info(f"场景 {scene_index + 1} 视频提示词: {video_prompt[:200]}...")
+
+            storyboard_prompt = (scene_data.get('video_prompt') or '').strip()
 
             # 图生视频：优先使用当前分镜图作为 img_url（与分镜 prompt 对齐）
             keyframes = []

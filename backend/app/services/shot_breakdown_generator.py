@@ -3,11 +3,19 @@
 将分镜数据转换为专业的 Shot Breakdown 格式
 """
 
-import os
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 logger = logging.getLogger(__name__)
+
+
+def _clip(text: str, max_len: int = 500) -> str:
+    if not text:
+        return ''
+    t = text.strip()
+    if len(t) <= max_len:
+        return t
+    return t[: max_len - 1] + '…'
 
 
 class ShotBreakdownGenerator:
@@ -56,19 +64,59 @@ class ShotBreakdownGenerator:
             "duration": duration
         }
 
-    def format_for_video_generation(self, shot_breakdown: Dict[str, Any]) -> str:
+    def format_for_video_generation(
+        self,
+        shot_breakdown: Dict[str, Any],
+        narrative_context: Optional[Dict[str, Any]] = None,
+        visual_lock: Optional[str] = None,
+    ) -> str:
         """
-        将 Shot Breakdown 格式化为 Wan2.6 视频生成提示词
-
-        Args:
-            shot_breakdown: Shot Breakdown 数据
-
-        Returns:
-            格式化的提示词字符串
+        将 Shot Breakdown 格式化为视频生成提示词；可注入全片与相邻分镜上下文以保证叙事连贯。
+        visual_lock：全片共用的画面风格锁定句，每一镜必须原样附带，保证跨镜一致。
         """
-        parts = []
+        parts: List[str] = []
 
-        parts.append(f"Shot {shot_breakdown['shot_number']}: [Camera] {shot_breakdown['framing']} / {shot_breakdown['angle']} / {shot_breakdown['movement']}")
+        vl = (visual_lock or '').strip()
+        if vl:
+            parts.append(
+                "[VISUAL_LOCK — identical in every shot; copy verbatim; style/character/costume/lighting]\n"
+                + vl
+            )
+
+        if narrative_context:
+            idx = int(narrative_context.get('shot_index', 1))
+            total = int(narrative_context.get('total_shots', 1))
+            spine = _clip(narrative_context.get('story_summary') or '', 900)
+            parts.append(
+                f"[Series] One continuous short film. Shot {idx} of {total}. "
+                f"Story spine (same narrative throughout all shots): {spine}"
+            )
+            if idx > 1 and narrative_context.get('previous_plot'):
+                parts.append(
+                    f"[Previous shot summary] {_clip(narrative_context['previous_plot'], 450)}"
+                )
+                if narrative_context.get('previous_dialogue'):
+                    parts.append(
+                        f"[Previous dialogue tone] {_clip(narrative_context['previous_dialogue'], 200)}"
+                    )
+            else:
+                parts.append("[Previous shot] Opening shot; establish world and characters.")
+
+            if narrative_context.get('next_plot') and idx < total:
+                parts.append(
+                    f"[Next beat (hint only — do not show yet)] {_clip(narrative_context['next_plot'], 280)}"
+                )
+
+            parts.append(
+                "[Continuity] This clip must follow logically after the previous shot in story time; "
+                "keep characters, costumes, and world rules consistent unless the script explicitly jumps. "
+                "Advance the plot one step; no random unrelated montage."
+            )
+
+        parts.append(
+            f"Shot {shot_breakdown['shot_number']}: [Camera] {shot_breakdown['framing']} / "
+            f"{shot_breakdown['angle']} / {shot_breakdown['movement']}"
+        )
         parts.append(f"[Action] {shot_breakdown['shot_description']}")
 
         audio = shot_breakdown.get('audio', {})

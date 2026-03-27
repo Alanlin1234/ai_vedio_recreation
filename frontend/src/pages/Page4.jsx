@@ -37,7 +37,14 @@ const Page4 = ({ project, onGenerateSceneVideos, onBack, isLoading, loadingMessa
               </tr>
             </thead>
             <tbody>
-              {storyboard.map((scene, index) => (
+              {storyboard.map((scene, index) => {
+                const dialogueRaw = (scene.dialogue != null && String(scene.dialogue).trim()) || ''
+                const dialogueBad =
+                  !dialogueRaw || dialogueRaw === '暂无台词' || dialogueRaw === '暂无'
+                const dialogueDisplay = dialogueBad
+                  ? '（本镜以动作为主；环境音）'
+                  : dialogueRaw
+                return (
                 <tr key={index} className="border-b border-paper-200 hover:bg-paper-100/50 transition-colors">
                   <td className="p-3">
                     <div className="w-10 h-10 rounded-full bg-moss text-white flex items-center justify-center font-sans font-semibold text-sm">
@@ -75,12 +82,13 @@ const Page4 = ({ project, onGenerateSceneVideos, onBack, isLoading, loadingMessa
                   <td className="p-3">
                     <div className="bg-caramel-50 rounded-xl p-3 border-l-2 border-caramel-300">
                       <p className="text-charcoal-600 text-sm font-serif leading-relaxed whitespace-pre-wrap">
-                        {scene.dialogue || '暂无台词'}
+                        {dialogueDisplay}
                       </p>
                     </div>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>

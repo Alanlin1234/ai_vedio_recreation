@@ -99,31 +99,34 @@ class EnhancedVideoAnalyzer:
         try:
             from dashscope import Generation
 
-            analysis_prompt = f"""请深度分析以下故事内容，提取关键叙事要素：
+            analysis_prompt = f"""请深度分析以下故事内容，提取关键叙事要素。
 
 故事内容：
 {story_content}
 
+语言风格（全字段必须遵守）：
+- 用**大白话、短句**，像给同事讲梗概，不要文采、不要论文腔。
+- 禁止堆砌隐喻、排比、抽象大词（如「史诗」「共舞」「经纬」「转体」「沉浸式」等），除非故事原文如此。
+
 请用JSON格式返回，包含以下维度：
 {{
-    "main_plot": "主要情节 - 用3-5句话概括故事主线",
+    "main_plot": "主要情节 - 用3-5句**直白中文**概括谁、在哪、做了什么、结局如何",
     "characters": [
         {{"name": "人物名称", "role": "角色定位", "traits": "性格特点", "arc": "人物成长变化"}}
     ],
     "key_scenes": [
         {{"description": "场景描述", "significance": "在故事中的作用"}}
     ],
-    "emotional_arc": "情感曲线 - 描述故事的情感起伏",
+    "emotional_arc": "情感曲线 - 一两句说清情绪怎么变",
     "thematic_elements": ["主题元素1", "主题元素2"],
-    "narrative_technique": "叙事技巧 - 描述讲故事的方式方法",
+    "narrative_technique": "叙事方式 - 一句话说明（如顺叙、对比）",
     "target_audience": "目标受众 - 适合的人群"
 }}
 
 分析要求：
-1. 要深入理解故事的核心主题和价值观
-2. 识别故事中的关键转折点
-3. 理解人物的动机和成长
-4. 识别叙事结构（起承转合）"""
+1. 抓住**具体情节与人物行动**，少写空泛评价
+2. 识别关键转折点
+3. 主题词要具体（如「学会分享」），少用笼统的「成长」「共鸣」单独充数"""
 
             if debug_prompts is not None:
                 from app.utils.prompt_trace import trace
@@ -141,7 +144,10 @@ class EnhancedVideoAnalyzer:
             response = Generation.call(
                 model="qwen-plus-latest",
                 messages=[
-                    {"role": "system", "content": "你是一个专业的故事分析师，擅长深度解读叙事内容。"},
+                    {
+                        "role": "system",
+                        "content": "你是故事分析师。输出要直白、具体，拒绝隐喻堆砌和学术腔。",
+                    },
                     {"role": "user", "content": analysis_prompt}
                 ],
                 result_format='message',
@@ -183,7 +189,7 @@ class EnhancedVideoAnalyzer:
         try:
             from dashscope import Generation
 
-            highlights_prompt = f"""请从多个维度分析以下故事，提炼出精彩亮点：
+            highlights_prompt = f"""请从多个维度分析以下故事，提炼**观众能看懂的**精彩亮点。
 
 故事内容：
 {story_content}
@@ -191,28 +197,32 @@ class EnhancedVideoAnalyzer:
 已知的故事结构分析：
 {json.dumps(content_analysis, ensure_ascii=False, indent=2)}
 
-请从以下4个维度提炼亮点（用JSON格式返回）：
+【语言硬性要求】
+- 全文用**口语化、短句**；像短视频口播稿，不要散文、不要论文。
+- **禁止**：空泛隐喻、玄学修辞、学术名词（如随意扯「皮亚杰」「认知史诗」「思维转体」等）。
+- 每条「moment / scene」必须带**具体人、事、物**（谁做了什么），不要只写抽象感受。
+
+请从以下4个维度提炼（用JSON格式返回）：
 {{
     "plot_highlights": [
-        {{"moment": "精彩时刻描述", "reason": "为什么精彩", "impact": "对故事的影响"}}
+        {{"moment": "具体情节瞬间（谁+动作+结果）", "reason": "一两句大白话：为什么好看", "impact": "对后面剧情的作用"}}
     ],
     "emotional_highlights": [
-        {{"moment": "情感高潮描述", "emotion": "触发的情感", "resonance": "引起共鸣的原因"}}
+        {{"moment": "具体场景", "emotion": "例如：好笑/紧张/感动", "resonance": "观众为什么能代入（一句）"}}
     ],
     "visual_highlights": [
-        {{"scene": "精彩画面描述", "technique": "拍摄/剪辑技巧", "aesthetic": "美学价值"}}
+        {{"scene": "能想象出的画面", "technique": "镜头/剪辑（人话）", "aesthetic": "一句：颜色/节奏/氛围"}}
     ],
     "narrative_highlights": [
-        {{"technique": "叙事技巧名称", "description": "具体描述", "effect": "达到的效果"}}
+        {{"technique": "手法名（如：悬念、对比）", "description": "故事里怎么用的（结合情节）", "effect": "观众得到什么信息"}}
     ],
-    "overall_highlights": "综合亮点 - 用一段话总结故事最精彩的3个要点"
+    "overall_highlights": "综合亮点：严格按下面格式写——先一句「主题：……」（点明本片讲什么道理或什么事），再换行写「1. … 2. … 3. …」共三条，每条不超过45字，必须是**具体情节或看点**，禁止只有形容词。"
 }}
 
 亮点提炼要求：
-1. 具体、明确，避免空泛的描述
-2. 解释"为什么"精彩
-3. 指出对观众的影响
-4. 结合故事的具体内容，不要脱离文本"""
+1. **先有可复述的情节**，再评价；禁止只有「很感人」「很深刻」类空话
+2. overall_highlights 总长度建议 120～220 字
+3. 结合故事原文信息，不要编造不存在的角色或桥段"""
 
             if debug_prompts is not None:
                 from app.utils.prompt_trace import trace
@@ -221,7 +231,7 @@ class EnhancedVideoAnalyzer:
                     trace(
                         'education_expert',
                         '亮点提炼',
-                        system='你是一个专业的影视评论家，擅长发现和解读故事的精彩之处。',
+                        system='你写亮点像给朋友推荐片：具体、好懂、不拽词。',
                         user=highlights_prompt,
                         model='qwen-plus-latest',
                     )
@@ -230,12 +240,15 @@ class EnhancedVideoAnalyzer:
             response = Generation.call(
                 model="qwen-plus-latest",
                 messages=[
-                    {"role": "system", "content": "你是一个专业的影视评论家，擅长发现和解读故事的精彩之处。"},
-                    {"role": "user", "content": highlights_prompt}
+                    {
+                        "role": "system",
+                        "content": "你写亮点像给朋友推荐片：具体情节+一句评价，禁止文绉绉和学术腔。",
+                    },
+                    {"role": "user", "content": highlights_prompt},
                 ],
                 result_format='message',
-                temperature=0.8,
-                max_tokens=2500
+                temperature=0.45,
+                max_tokens=2500,
             )
 
             if response.status_code == 200 and response.output and response.output.choices:
@@ -278,7 +291,7 @@ class EnhancedVideoAnalyzer:
         try:
             from dashscope import Generation
 
-            educational_prompt = f"""请深度分析以下故事的教育意义和价值：
+            educational_prompt = f"""请分析以下故事的教育意义，写给**家长/老师/普通观众**看，必须一读就懂。
 
 故事内容：
 {story_content}
@@ -286,45 +299,49 @@ class EnhancedVideoAnalyzer:
 故事结构分析：
 {json.dumps(content_analysis, ensure_ascii=False, indent=2)}
 
-请从以下5个维度分析教育意义（用JSON格式返回）：
+【语言硬性要求】
+- **禁止**卖弄教育理论：不要随意引用「皮亚杰」「建构主义」「元认知」等学术名，除非视频是明确讲教育学的课程。
+- 用**大白话**说明：孩子/观众能学到什么、可以模仿什么行为。
+- `overall_educational_value` 必须写成：**2～4 句短句**，第一句点明「这个故事主要在讲什么道理」，后面接可落地的启发；总字数建议 80～180 字。
+
+请从以下5个维度分析（用JSON格式返回）：
 {{
     "moral_education": {{
-        "values": ["核心品德1", "核心品德2"],
-        "description": "品德教育的具体体现",
-        "examples": ["体现该品德的场景1", "体现该品德的场景2"]
+        "values": ["如：诚实", "如：合作"],
+        "description": "品德用故事里的情节说明，不要空洞口号",
+        "examples": ["情节例子1", "情节例子2"]
     }},
     "knowledge_transfer": {{
-        "knowledge": ["知识1", "知识2"],
-        "description": "传递的具体知识或技能",
-        "learning_points": ["学习要点1", "学习要点2"]
+        "knowledge": ["具体知识点或常识"],
+        "description": "人话说明孩子能学到什么",
+        "learning_points": ["要点1", "要点2"]
     }},
     "value_shaping": {{
-        "life_values": ["人生观", "世界观", "价值观"],
-        "description": "价值观塑造的具体体现",
-        "positive_model": "正面榜样"
+        "life_values": ["如：尊重他人", "如：耐心"],
+        "description": "价值观如何体现在角色选择上",
+        "positive_model": "正面榜样（谁+做了什么）"
     }},
     "life_wisdom": {{
-        "wisdom": ["生活智慧1", "生活智慧2"],
-        "description": "实用的生活经验或建议",
-        "applicable_scenarios": ["适用场景1", "适用场景2"]
+        "wisdom": ["可照做的一条建议"],
+        "description": "与生活相关的一句实用话",
+        "applicable_scenarios": ["例如：亲子对话时"]
     }},
     "behavior_demonstration": {{
-        "positive_behaviors": ["正确行为1", "正确行为2"],
-        "negative_behaviors": ["错误行为1", "错误行为2"],
-        "lessons": "行为启示"
+        "positive_behaviors": ["可模仿的具体行为"],
+        "negative_behaviors": ["反面例子（如有）"],
+        "lessons": "行为启示（一句人话）"
     }},
     "age_appropriateness": {{
         "suitable_ages": "适合年龄段",
-        "parental_guidance": "家长指导建议"
+        "parental_guidance": "家长可问孩子的一个问题或一句话引导"
     }},
-    "overall_educational_value": "综合教育意义 - 一段话总结核心教育价值"
+    "overall_educational_value": "综合教育意义：2～4句白话，有重点、有落脚点，禁止玄学修辞"
 }}
 
 教育意义分析要求：
-1. 具体、实用，避免空洞的说教
-2. 结合故事中的具体情节和人物
-3. 指出对不同年龄段观众的启发
-4. 提供可操作的建议"""
+1. 每条都要能**对应到故事里的情节**，避免万能套话
+2. 家长读完应知道「可以跟孩子聊什么」
+3. 若故事偏娱乐，可如实写「轻启发、重趣味」，不要硬凑高深意义"""
 
             if debug_prompts is not None:
                 from app.utils.prompt_trace import trace
@@ -333,7 +350,7 @@ class EnhancedVideoAnalyzer:
                     trace(
                         'education_expert',
                         '教育意义提取',
-                        system='你是一个专业的教育专家，擅长挖掘故事的教育价值和启发意义。',
+                        system='你写教育意义像班主任与家长沟通：清楚、具体、不拽理论。',
                         user=educational_prompt,
                         model='qwen-plus-latest',
                     )
@@ -342,12 +359,15 @@ class EnhancedVideoAnalyzer:
             response = Generation.call(
                 model="qwen-plus-latest",
                 messages=[
-                    {"role": "system", "content": "你是一个专业的教育专家，擅长挖掘故事的教育价值和启发意义。"},
-                    {"role": "user", "content": educational_prompt}
+                    {
+                        "role": "system",
+                        "content": "你写教育意义像班主任与家长沟通：具体情节+可落地启发，禁止学术套话。",
+                    },
+                    {"role": "user", "content": educational_prompt},
                 ],
                 result_format='message',
-                temperature=0.7,
-                max_tokens=2500
+                temperature=0.45,
+                max_tokens=2500,
             )
 
             if response.status_code == 200 and response.output and response.output.choices:

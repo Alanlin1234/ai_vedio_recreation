@@ -2,8 +2,8 @@
 增强版内容生成服务（故事编剧 Agent）
 
 教育专家已提供：原视频内容理解、故事亮点、教育意义。
-故事编剧仅以「教育理念」为硬锚点；须在全新叙事骨架上创作，避免同构改写或「换人称式优化」。
-原梗概与亮点置于末段作参照，防止模型复述原剧情线。
+故事编剧仅以「教育理念」为硬锚点；须在全新叙事骨架上创作。
+须根据原素材体裁匹配语言（儿童活泼、科普严谨等）；禁止「换物种不换剧情」式换皮。
 """
 
 import json
@@ -17,7 +17,7 @@ class EnhancedContentGenerator:
     """
     故事编剧（二创）：输入为教育专家产出的亮点与教育意义。
     锚点：仅「教育理念 / 价值观内核」必须一脉相承或深化。
-    叙事：要求全新故事骨架，禁止在原作情节线上做换人称、扩场景式「优化」。
+    叙事：全新骨架；文体与语气随素材而变；禁止寓言换皮（如仅小猫改刺猬、同一「种错东西」套路）。
     """
 
     def __init__(self, api_key: str = None):
@@ -29,7 +29,9 @@ class EnhancedContentGenerator:
         self,
         original_analysis: Dict[str, Any],
         highlights: str,
-        educational: str
+        educational: str,
+        creator_notes: str = '',
+        full_story_text: str = '',
     ) -> Dict[str, Any]:
         """
         生成二创新故事（故事编剧）
@@ -38,6 +40,8 @@ class EnhancedContentGenerator:
             original_analysis: 原视频内容梗概（教育专家提取）
             highlights: 原故事亮点（可作灵感，非硬性约束）
             educational: 原故事教育意义（核心锚点）
+            creator_notes: 用户「片子说明」，影响体裁与语气
+            full_story_text: 原视频理解全文，用于判断儿童/科普等文体
 
         Returns:
             新故事正文，以及与新故事配套的亮点总结与教育意义表述
@@ -50,6 +54,8 @@ class EnhancedContentGenerator:
                 highlights=highlights,
                 educational=educational,
                 debug_prompts=debug_prompts,
+                creator_notes=creator_notes,
+                full_story_text=full_story_text,
             )
 
             # 第二步：扩展亮点（保留核心，保持创新）
@@ -89,9 +95,11 @@ class EnhancedContentGenerator:
         highlights: str,
         educational: str,
         debug_prompts: List[Dict[str, Any]] | None = None,
+        creator_notes: str = '',
+        full_story_text: str = '',
     ) -> str:
         """
-        二创新故事：仅以教育理念为锚；情节、人物、时空须与原作明显脱钩，建立新叙事骨架。
+        二创新故事：仅以教育理念为锚；禁止换皮；文体与语气随素材变化。
         """
         try:
             from dashscope import Generation
@@ -103,36 +111,59 @@ class EnhancedContentGenerator:
 
             characters_str = json.dumps(characters, ensure_ascii=False, indent=2) if characters else '（原素材未单独列出人物）'
 
-            story_prompt = f"""你是「影坊」项目的二创故事编剧。你的交付物必须是**一篇读者读完后不会说「这只是把原片换了个说法」的新故事**——可以借原素材的**主题气质**，但**禁止**在原故事线上做「换人称、加细节、微调结局」式的改写。
+            source_for_tone = (full_story_text or main_plot or '').strip()
+            source_for_tone = source_for_tone[:8000]
+            notes = (creator_notes or '').strip()[:4000]
+
+            story_prompt = f"""你是「影坊」项目的二创故事编剧。交付物必须是**全新故事**：读者不能说「只是把原片换了个动物/换了个名字」。
 
 ━━━━━━━━━━━━━━━━
-【唯一硬锚点——教育理念（只保留这个，其余全部可抛弃）】
-以下是你必须贯穿到底的价值观与教育命题；成文须让读者明确感受到这一内核（可换人物与情节来呈现）：
+【唯一硬锚点——教育理念（只保留抽象内核，可换一切具体情节）】
 {educational}
 ━━━━━━━━━━━━━━━━
 
-【明确禁止（违反任一条即视为不合格）】
-1. **禁止同构改写**：不得保留与原梗概「同一套主线因果」——例如同一组核心矛盾按同样顺序发生、仅换叙述者或略改台词/场景。
-2. **禁止「优化式二创」**：禁止写成「同一故事的丰富版 / 导演剪辑版」；禁止让读者一眼看出与原片是同一剧情模板。
-3. **禁止过度贴合原设定**：原片的人物名、具体职业组合、标志性场景顺序若照搬或仅做轻微替换，视为不合格。
+【文体与语言（必须遵守）】
+请先根据下方「原素材全文」与「用户片子说明」判断**体裁与受众**，再据此写作（在正文里自然体现，不要单独列出判断）：
+- **儿童向 / 童话、绘本感**：句子短、口语化、节奏轻快，可重复与叠句，**避免**成人化长句与学术腔。
+- **科普向 / 知识讲解**：概念准确、逻辑清晰，可用「首先/其次」；**避免**过度拟人化童话腔；比喻要贴切。
+- **生活叙事 / 纪实感**：细节真实、对话自然；语气随题材可幽默或克制。
+- 若用户「片子说明」明确指定风格或受众，**以用户为准**。
+
+【可读性与主题（硬性）】
+1. 全文必须让读者**一眼看出核心主题**（如「诚实」「合作」「面对失败」）：在**开头或结尾**用**一两句直白话**点题，不要藏隐喻。
+2. **禁止「文绉绉」**：少用对偶、堆砌形容词、玄学比喻；**禁止**写成散文诗或论文摘要。
+3. **对话与互动优先**：正文里**至少约三分之一到一半**应为**直接引语（对话）**或人物之间的互动回合；多写「谁对谁说、怎么回应」，少写独白式景物。**禁止**用大块环境描写、景物铺陈凑字数；环境最多一两笔带过，能听懂即可。
+4. 优先推进：**动作 + 对话** 交替推动情节；文采服从于「谁说了什么、做了什么」。
+5. 叙事节奏：铺垫→冲突→解决要清楚，不要炫技绕弯。
+
+【明确禁止——「换皮」式假创新（不合格）】
+1. **禁止仅替换物种/角色名**而保留同一套经典寓言骨架。例如：原作为「小猫种鱼」类结构，则**禁止**写成「小刺猬种鱼」「小兔子种鱼」等——仍是「错误认知→同一种幽默反转」，属于换皮。
+2. **禁止保留同一「核心乌龙类型」**：若原作是「把 A 当成 B 来种/养」的单一误会模型，新故事必须改用**完全不同的冲突类型**（例如：改为「合作验证」「时间延迟」「求助权威」「实验对照」「规则博弈」等），只保留抽象教育命题（如「尊重规律」），**不**复刻同一误会模型。
+3. **禁止同构改写**：不得保留与原梗概同一套主线因果顺序；禁止「同一剧情模板 + 微调」。
+4. 原片人物名、场景顺序若照搬或轻微替换，视为不合格。
 
 【必须做到（创新硬性要求）】
-1. **新叙事骨架**：建立**新的核心冲突**与**新的情节走向**（起承转合可与原作完全不同）；未看过原片的人，不应能从情节上反推原片剧情。
-2. **至少两项「明显脱钩」**：从下面维度中任选**不少于两项**与原作拉开距离——**时空**（古今/虚实/异域）、**体裁外壳**（寓言、科幻、童话、职场、校园、奇幻等）、**主角身份与目标**、**对立关系性质**（人与环境/人与自我/群体与群体等）、**高潮解决方式**。在正文中要站得住脚，不是标签堆砌。
-3. **亮点与梗概**：原亮点、原梗概**只作灵感与反例参照**——可完全不用；若化用，只能是「神似」的主题回响，不得复刻桥段链条。
-4. 语言生动、有画面感，**800–1500 字**，结构完整有头有尾。
+1. **新叙事骨架**：新的核心冲突与情节走向；没看过原片的人无法反推原剧情。
+2. **至少两项明显脱钩**：时空、体裁外壳、主角身份、对立关系、解决方式等中任选**不少于两项**与原作拉开距离（正文里站得住脚）。
+3. **亮点与梗概**：仅作灵感；若化用只能是主题神似，**不得**复刻桥段链。
+4. **800–1500 字**，结构完整；语言符合上文文体要求；**以对话与互动带戏**，不要用长段写景代替剧情。
 
-【原视频侧素材（排在最后 intentionally：防止你复述它）】
-——下列内容用于理解「原作在讲什么」，**不是**你的故事大纲。请从中**不要**复用具体情节链与人物关系模板。
-· 主情节摘要（勿复述为成文主线）：{main_plot}
-· 情感线索（勿照搬）：{emotional_arc}
-· 主题元素（可抽象继承，勿逐条落实成同一故事）：{', '.join(thematic_elements) if thematic_elements else '（未单列）'}
-· 人物/设定线索（可全部废弃）：{characters_str}
+【用户片子说明（若有）——优先影响体裁与语气】
+{notes if notes else '（用户未填写）'}
 
-【原故事亮点（可选灵感，非义务）】
+【原素材全文——用于判断文体与语气；不是故事大纲，禁止复述其情节链】
+{source_for_tone if source_for_tone else '（无）'}
+
+【补充线索（勿当大纲复述）】
+· 梗概摘要（勿当成文主线）：{main_plot[:1200] if main_plot else '（无）'}
+· 情感线索：{emotional_arc}
+· 主题元素：{', '.join(thematic_elements) if thematic_elements else '（未单列）'}
+· 人物线索：{characters_str}
+
+【原故事亮点（可选）】
 {highlights}
 
-请**直接输出新故事正文**，不要标题、不要创作说明、不要列出「与原作不同点」的清单。"""
+请**直接输出新故事正文**，不要标题、不要创作说明、不要列出与原作差异清单。"""
 
             if debug_prompts is not None:
                 from app.utils.prompt_trace import trace
@@ -141,7 +172,7 @@ class EnhancedContentGenerator:
                     trace(
                         'story_writer',
                         '二创新故事',
-                        system='你是资深二创编剧：只锚定教育理念，拒绝同构改写；擅长借全新叙事骨架与类型外壳完成大胆创新。',
+                        system='资深二创编剧：理念为锚、全新骨架；多对话互动、少写景；主题显豁。',
                         user=story_prompt,
                         model='qwen-plus-latest',
                     )
@@ -152,13 +183,13 @@ class EnhancedContentGenerator:
                 messages=[
                     {
                         "role": "system",
-                        "content": "你是资深二创编剧。你只保留「教育理念」这一锚点；必须在全新故事骨架上创作，拒绝换人称、扩写场景式的伪创新。若输出读起来仍像原片的改写版，你会推翻重写。",
+                        "content": "你是资深二创编剧。锚定教育理念；全新骨架；多写对话与人物互动，少写景与文采；主题清楚；禁止换皮。",
                     },
                     {"role": "user", "content": story_prompt},
                 ],
                 result_format='message',
-                temperature=0.96,
-                max_tokens=3000,
+                temperature=0.72,
+                max_tokens=3500,
             )
 
             if response.status_code == 200 and response.output and response.output.choices:
@@ -182,25 +213,28 @@ class EnhancedContentGenerator:
         try:
             from dashscope import Generation
 
-            highlights_prompt = f"""请分析以下「二创」新故事，提炼亮点（可与原素材亮点精神呼应，不必字面相同）。
+            highlights_prompt = f"""请分析以下「二创」新故事，写**观众能看懂的**亮点（可与原素材精神呼应，不必字面相同）。
 
 新故事：
 {new_story}
 
-【原素材侧的故事亮点（供对照，不必逐条保留）】
+【原素材侧的故事亮点（供对照）】
 {original_highlights}
 
+【语言要求】
+- 像短视频文案：具体、好懂；**禁止**隐喻堆砌、学术名词、玄学形容词。
+- combined_highlights 格式：**第一行**写「主题：……」（一句话点明本片讲什么）；**换行**后写「1. … 2. … 3. …」三条，每条≤40字，必须是**具体情节或看点**。
+
 【提炼要求】
-1. 突出新故事最精彩的情节与情感时刻
-2. 若某处与原作亮点有呼应或升华，可在 preserved_highlights 中简要说明；否则可留空或写「精神呼应」
-3. new_highlights 写新故事独有的看点
-4. combined_highlights 用一段话概括新故事最抓人的 2–4 个要点
+1. preserved_highlights：若与新作有呼应，用**人话**一句说明；无明显呼应可写「无」
+2. new_highlights：2～4 条短句，写**独有看点**（冲突、反转、人物）
+3. combined_highlights：总字数约 120～220 字
 
 请用JSON格式返回：
 {{
     "preserved_highlights": ["与原作亮点精神呼应处（如有）"],
     "new_highlights": ["新故事的创新亮点1", "创新亮点2"],
-    "combined_highlights": "综合亮点 - 一段话总结"
+    "combined_highlights": "按上文格式：主题行 + 三条编号要点"
 }}"""
 
             if debug_prompts is not None:
@@ -210,7 +244,7 @@ class EnhancedContentGenerator:
                     trace(
                         'story_writer',
                         '扩展亮点总结',
-                        system='你擅长总结二创故事看点，并说明与原作亮点的精神呼应（若有）。',
+                        system='你写看点像给朋友安利：主题一句+三条具体理由，禁止拽文。',
                         user=highlights_prompt,
                         model='qwen-plus-latest',
                     )
@@ -219,12 +253,12 @@ class EnhancedContentGenerator:
             response = Generation.call(
                 model="qwen-plus-latest",
                 messages=[
-                    {"role": "system", "content": "你擅长总结二创故事看点，并说明与原作亮点的精神呼应（若有）。"},
-                    {"role": "user", "content": highlights_prompt}
+                    {"role": "system", "content": "你写看点：主题清楚、三条具体，禁止文绉绉。"},
+                    {"role": "user", "content": highlights_prompt},
                 ],
                 result_format='message',
-                temperature=0.8,
-                max_tokens=2000
+                temperature=0.5,
+                max_tokens=2000,
             )
 
             if response.status_code == 200 and response.output and response.output.choices:
@@ -264,24 +298,28 @@ class EnhancedContentGenerator:
         try:
             from dashscope import Generation
 
-            educational_prompt = f"""请分析以下二创新故事的教育意义，并与「教育专家」给出的原教育意义对照。
+            educational_prompt = f"""请分析以下二创新故事的教育意义，并与「教育专家」给出的原教育意义对照。**写给家长一眼能懂**。
 
 新故事：
 {new_story}
 
-【原视频侧的教育意义（锚点，新故事应与之一致或深化）】
+【原视频侧的教育意义（锚点）】
 {original_educational}
 
+【语言要求】
+- **禁止**随意引用教育心理学理论名词（如皮亚杰等）卖弄；用**大白话**。
+- combined_educational：**2～4 句短句**，第一句说明「新故事落实了哪条原教育意义」，后面写孩子/观众能带走的一两条**具体启发**；总字数约 80～200 字。
+
 【分析要求】
-1. 说明新故事如何体现或深化上述教育意义（这是二创合法性的核心）
-2. 可补充新故事带来的额外教育价值
-3. 从品德/知识/生活智慧/行为示范等维度择要分析
+1. preserved_educational：说明新故事如何承接原教育意义（有情节依据，忌空话）
+2. new_educational：若有额外启发再写，没有则写「无」
+3. 落脚点应是**可讨论、可模仿**的，不是抽象哲理
 
 请用JSON格式返回：
 {{
-    "preserved_educational": "对原教育意义核心内核的延续说明",
-    "new_educational": "新故事带来的额外教育价值（如有）",
-    "combined_educational": "综合教育意义 - 一段话总结",
+    "preserved_educational": "对原教育意义核心内核的延续说明（白话）",
+    "new_educational": "额外教育价值或写「无」",
+    "combined_educational": "综合教育意义：2～4句白话，有重点",
     "age_recommendation": "适合的年龄段"
 }}"""
 
@@ -292,7 +330,7 @@ class EnhancedContentGenerator:
                     trace(
                         'story_writer',
                         '扩展教育意义',
-                        system='你负责核对二创故事是否锚定原教育意义，并提炼综合表述。',
+                        system='你写教育意义：对照原锚点、白话、可落地，禁止学术腔。',
                         user=educational_prompt,
                         model='qwen-plus-latest',
                     )
@@ -301,12 +339,12 @@ class EnhancedContentGenerator:
             response = Generation.call(
                 model="qwen-plus-latest",
                 messages=[
-                    {"role": "system", "content": "你负责核对二创故事是否锚定原教育意义，并提炼综合表述。"},
-                    {"role": "user", "content": educational_prompt}
+                    {"role": "system", "content": "核对二创是否锚定原教育意义；综合句必须白话、具体。"},
+                    {"role": "user", "content": educational_prompt},
                 ],
                 result_format='message',
-                temperature=0.8,
-                max_tokens=2000
+                temperature=0.5,
+                max_tokens=2000,
             )
 
             if response.status_code == 200 and response.output and response.output.choices:

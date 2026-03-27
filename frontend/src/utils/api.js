@@ -98,6 +98,12 @@ export const getProject = async (recreationId) => {
   return response.data
 }
 
+/** 确认后端分镜上限等（排查是否已部署新代码）：GET /api/pipeline/config */
+export const getPipelineConfig = async () => {
+  const response = await api.get('/config')
+  return response.data
+}
+
 export const exportVideo = async (recreationId) => {
   window.open(`${API_BASE_URL}/export-video/${recreationId}`, '_blank')
 }

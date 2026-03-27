@@ -13,8 +13,9 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-_BRIEF_MAX = 100
-_POINT_MAX = 120
+# 教育意义摘要略放宽，避免一句话被截断在关键处（仍偏短，适合列表展示）
+_BRIEF_MAX = 220
+_POINT_MAX = 140
 _POINTS_CAP = 3
 
 
@@ -250,8 +251,8 @@ def _understand_video_with_qwen_vl(
     from dashscope import MultiModalConversation
 
     user_text = (
-        '请详细观看并概括该视频：1）主要情节与叙事；2）人物与场景；'
-        '3）画面风格与节奏；4）可能的亮点片段。用中文分段输出，便于后续改编。'
+        '请详细观看并概括该视频：1）主要情节（谁、做了什么、结果）；2）人物与场景；'
+        '3）画面风格与节奏；4）你觉得好看的片段。用中文分段输出，语言通俗、少堆砌形容词，便于后续改编。'
     )
     if debug_prompts is not None:
         debug_prompts.append(
