@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { VideoCamera, Check, ArrowRight, ArrowCounterClockwise } from '@phosphor-icons/react'
 
 const Page1 = ({
@@ -11,6 +12,7 @@ const Page1 = ({
   isLoading,
   loadingMessage,
 }) => {
+  const { t } = useTranslation()
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState('')
   const fileInputRef = useRef(null)
@@ -34,13 +36,13 @@ const Page1 = ({
     if (videoFile) {
       handleFileSelect(videoFile)
     } else {
-      setError('请上传视频文件')
+      setError(t('page1.errorNoFile'))
     }
   }
 
   const handleFileSelect = async (file) => {
     if (!file.type.startsWith('video/')) {
-      setError('请选择视频文件')
+      setError(t('page1.errorPick'))
       return
     }
 
@@ -48,15 +50,15 @@ const Page1 = ({
     try {
       await onUpload(file)
     } catch (err) {
-      setError(err.response?.data?.error || err.message || '上传失败')
+      setError(err.response?.data?.error || err.message || t('page1.errorUpload'))
     }
   }
 
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-serif font-bold text-charcoal-700 mb-2">上传视频</h2>
-        <p className="text-charcoal-500 font-serif">拖放或点击，把视频丢进来</p>
+        <h2 className="text-2xl font-serif font-bold text-charcoal-700 mb-2">{t('page1.title')}</h2>
+        <p className="text-charcoal-500 font-serif">{t('page1.subtitle')}</p>
       </div>
 
       {!project.video_file ? (
@@ -80,10 +82,10 @@ const Page1 = ({
               <VideoCamera size={32} weight="duotone" className="text-moss" />
             </div>
             <p className="text-lg font-serif font-medium text-charcoal-700 mb-2">
-              {isDragging ? '松开鼠标上传视频' : '拖放视频到这里'}
+              {isDragging ? t('page1.drop') : t('page1.dropHint')}
             </p>
-            <p className="text-charcoal-400 text-sm">或点击选择文件</p>
-            <p className="text-charcoal-400 text-sm mt-3">支持 MP4, AVI, MOV 等格式</p>
+            <p className="text-charcoal-400 text-sm">{t('page1.orClick')}</p>
+            <p className="text-charcoal-400 text-sm mt-3">{t('page1.formats')}</p>
           </div>
         </div>
       ) : (
@@ -101,7 +103,7 @@ const Page1 = ({
             <button
               onClick={onReset}
               className="p-2 rounded-lg hover:bg-charcoal-100 text-charcoal-500 hover:text-charcoal-700 transition-colors"
-              title="重新上传"
+              title={t('page1.reupload')}
             >
               <ArrowCounterClockwise size={20} />
             </button>
@@ -112,18 +114,16 @@ const Page1 = ({
               htmlFor="piece-notes"
               className="block text-sm font-serif font-semibold text-charcoal-700 mb-2"
             >
-              片子说明
+              {t('page1.notesLabel')}
             </label>
-            <p className="text-xs text-charcoal-500 font-sans mb-3 leading-relaxed">
-              简要介绍这部素材的内容、风格，以及你希望做的二创方向。审核员会结合解析结果与你的说明，从内容、画风、叙事与二创潜力等维度打分，并判断是否适合进入二创流程。
-            </p>
+            <p className="text-xs text-charcoal-500 font-sans mb-3 leading-relaxed">{t('page1.notesHelp')}</p>
             <textarea
               id="piece-notes"
               value={creatorNotes}
               onChange={(e) => onCreatorNotesChange(e.target.value)}
               rows={5}
               disabled={isLoading}
-              placeholder="例如：原片是科普类短视频，希望改成悬疑叙事风；或说明画面偏纪实、希望统一成某种画风……"
+              placeholder={t('page1.notesPlaceholder')}
               className="w-full rounded-xl border border-charcoal-200 bg-paper px-4 py-3 text-sm text-charcoal-700 font-sans placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-moss/30 focus:border-moss/40 resize-y min-h-[120px]"
             />
           </div>
@@ -141,7 +141,7 @@ const Page1 = ({
                 </>
               ) : (
                 <>
-                  解析视频
+                  {t('page1.analyze')}
                   <ArrowRight size={18} weight="bold" />
                 </>
               )}

@@ -32,7 +32,9 @@ class ShotBreakdownGenerator:
             "远景": "Extreme Wide"
         }
 
-    def generate_shot_breakdown(self, scene_data: Dict[str, Any], scene_index: int) -> Dict[str, Any]:
+    def generate_shot_breakdown(
+        self, scene_data: Dict[str, Any], scene_index: int, lang: str = 'zh'
+    ) -> Dict[str, Any]:
         """
         将分镜数据转换为 Shot Breakdown 格式
 
@@ -46,11 +48,11 @@ class ShotBreakdownGenerator:
         shot_number = scene_index + 1
         shot_type = scene_data.get('shot_type', '')
 
-        framing = self._map_shot_type(shot_type)
+        framing = self._map_shot_type(shot_type, lang=lang)
         angle = "Eye Level"
         movement = "Static"
 
-        shot_description = self._build_shot_description(scene_data)
+        shot_description = self._build_shot_description(scene_data, lang=lang)
         audio = self._build_audio_info(scene_data)
         duration = float(scene_data.get('duration', 5) or 5)
 
@@ -131,15 +133,9 @@ class ShotBreakdownGenerator:
 
         return "\n".join(parts)
 
-    def _map_shot_type(self, shot_type: str) -> str:
+    def _map_shot_type(self, shot_type: str, lang: str = 'zh') -> str:
         """
-        将中文景别映射为英文专业术语
-
-        Args:
-            shot_type: 中文景别
-
-        Returns:
-            英文专业术语
+        将中文景别映射为英文专业术语；英文模式下若已是英文术语则尽量保留原文。
         """
         if not shot_type:
             return "Medium Shot"
@@ -148,9 +144,13 @@ class ShotBreakdownGenerator:
             if chinese in shot_type:
                 return english
 
+        st = shot_type.strip()
+        if lang == 'en' and st:
+            return st
+
         return "Medium Shot"
 
-    def _build_shot_description(self, scene_data: Dict[str, Any]) -> str:
+    def _build_shot_description(self, scene_data: Dict[str, Any], lang: str = 'zh') -> str:
         """
         构建画面描述
 
@@ -162,15 +162,16 @@ class ShotBreakdownGenerator:
         """
         description = scene_data.get('description', '')
         plot = scene_data.get('plot', '')
+        sep = '. ' if lang == 'en' else '。'
 
         if description and plot:
-            return f"{description}。{plot}"
+            return f"{description}{sep}{plot}"
         elif description:
             return description
         elif plot:
             return plot
         else:
-            return "场景画面描述"
+            return "Scene visual description" if lang == 'en' else "场景画面描述"
 
     def _build_audio_info(self, scene_data: Dict[str, Any]) -> Dict[str, str]:
         """

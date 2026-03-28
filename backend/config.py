@@ -12,15 +12,26 @@ class Config:
     # 添加DashScope API密钥配置
     DASHSCOPE_API_KEY = os.getenv('DASHSCOPE_API_KEY', 'sk-5eeb025e53df459b9f8a4b4209bd5fa5')
     
-    # SQLAlchemy配置 - 使用SQLite数据库
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///video_agent.db'
+    # SQLAlchemy：优先 DATABASE_URL（Supabase Postgres 等），否则 SQLite
+    _db_url = os.environ.get('DATABASE_URL', '').strip()
+    if _db_url:
+        if _db_url.startswith('postgresql://') and '+psycopg2' not in _db_url:
+            _db_url = 'postgresql+psycopg2://' + _db_url[len('postgresql://') :]
+        SQLALCHEMY_DATABASE_URI = _db_url
+    else:
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///video_agent.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
         'echo': False  # 设为True可以看到SQL语句
     }
-    
-    
+
+    # Supabase：设置 SUPABASE_JWT_SECRET 后 API 优先校验 Bearer（前端 Supabase 登录）
+    SUPABASE_JWT_SECRET = os.environ.get('SUPABASE_JWT_SECRET', '').strip()
+    SUPABASE_URL = os.environ.get('SUPABASE_URL', '').strip().rstrip('/')
+    SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '').strip()
+    SUPABASE_STORAGE_BUCKET = os.environ.get('SUPABASE_STORAGE_BUCKET_USER_VIDEOS', 'user-videos').strip()
+
     # SiliconFlow API配置
     SILICONFLOW_API_KEY = os.getenv('SILICONFLOW_API_KEY', 'sk-jqfbsqxrbkgenlxcqecaewfyruosfadxrdfjgdzppbnitflj')  # 已填充新API密钥
     SILICONFLOW_BASE_URL = 'https://api.siliconflow.cn/v1'

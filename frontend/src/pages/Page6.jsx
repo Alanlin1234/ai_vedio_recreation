@@ -1,13 +1,15 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft, DownloadSimple, CheckCircle, FilmSlate, Clock, Check } from '@phosphor-icons/react'
 
 const Page6 = ({ project, onBack, onExport }) => {
+  const { t } = useTranslation()
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-serif font-bold text-charcoal-700 mb-2">完成</h2>
+        <h2 className="text-2xl font-serif font-bold text-charcoal-700 mb-2">{t('page6.title')}</h2>
         <p className="text-charcoal-500 font-serif">
-          {project.final_video ? '新片出炉，可以下载了' : '正在拼接...'}
+          {project.final_video ? t('page6.subtitleReady') : t('page6.subtitleLoading')}
         </p>
       </div>
 
@@ -24,7 +26,7 @@ const Page6 = ({ project, onBack, onExport }) => {
             <div className="w-full h-full flex items-center justify-center bg-paper-200 rounded-lg">
               <div className="text-center text-charcoal-400">
                 <FilmSlate size={48} weight="duotone" className="mx-auto mb-3" />
-                <p className="font-serif">视频正在加载中...</p>
+                <p className="font-serif">{t('page6.videoLoading')}</p>
               </div>
             </div>
           )}
@@ -36,7 +38,7 @@ const Page6 = ({ project, onBack, onExport }) => {
           <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-moss/10 flex items-center justify-center">
             <FilmSlate size={24} weight="duotone" className="text-moss" />
           </div>
-          <div className="text-charcoal-400 text-sm font-serif mb-1">场景数量</div>
+          <div className="text-charcoal-400 text-sm font-serif mb-1">{t('page6.sceneCount')}</div>
           <div className="text-2xl font-serif font-bold text-charcoal-700">
             {project.scene_videos?.length || 0}
           </div>
@@ -45,7 +47,7 @@ const Page6 = ({ project, onBack, onExport }) => {
           <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-caramel-100 flex items-center justify-center">
             <Clock size={24} weight="duotone" className="text-caramel-400" />
           </div>
-          <div className="text-charcoal-400 text-sm font-serif mb-1">总时长</div>
+          <div className="text-charcoal-400 text-sm font-serif mb-1">{t('page6.duration')}</div>
           <div className="text-2xl font-serif font-bold text-charcoal-700">
             {project.scene_videos?.length ? `${project.scene_videos.length * 4}s` : '0s'}
           </div>
@@ -54,8 +56,8 @@ const Page6 = ({ project, onBack, onExport }) => {
           <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-moss/10 flex items-center justify-center">
             <CheckCircle size={24} weight="duotone" className="text-moss" />
           </div>
-          <div className="text-charcoal-400 text-sm font-serif mb-1">状态</div>
-          <div className="text-2xl font-serif font-bold text-moss">完成</div>
+          <div className="text-charcoal-400 text-sm font-serif mb-1">{t('page6.status')}</div>
+          <div className="text-2xl font-serif font-bold text-moss">{t('page6.statusDone')}</div>
         </div>
       </div>
 
@@ -65,14 +67,14 @@ const Page6 = ({ project, onBack, onExport }) => {
           onClick={onBack}
         >
           <ArrowLeft size={18} />
-          上一回
+          {t('page6.back')}
         </button>
         <button
           className="btn-primary flex items-center gap-2"
           onClick={onExport}
         >
           <DownloadSimple size={18} weight="bold" />
-          下载视频
+          {t('page6.download')}
         </button>
       </div>
     </div>

@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { getSupabaseAccessToken, isSupabaseAuthConfigured } from '../lib/supabaseClient'
+import { getStoredAppLanguage } from '../i18n'
 
 const API_BASE_URL = '/api/pipeline'
 
@@ -25,6 +27,25 @@ const authApi = axios.create({
   timeout: 30000,
   withCredentials: true,
 })
+
+function attachBearer(instance) {
+  instance.interceptors.request.use(async (config) => {
+    config.headers = config.headers || {}
+    config.headers['X-Output-Language'] = getStoredAppLanguage()
+    if (isSupabaseAuthConfigured()) {
+      const t = await getSupabaseAccessToken()
+      if (t) {
+        config.headers.Authorization = `Bearer ${t}`
+      }
+    }
+    return config
+  })
+}
+
+attachBearer(api)
+attachBearer(reviewApi)
+attachBearer(agentApi)
+attachBearer(authApi)
 
 export const login = async (username, password) => {
   const response = await authApi.post('/login', { username, password })
@@ -98,21 +119,23 @@ export const getProject = async (recreationId) => {
   return response.data
 }
 
-/** 确认后端分镜上限等（排查是否已部署新代码）：GET /api/pipeline/config */
 export const getPipelineConfig = async () => {
   const response = await api.get('/config')
   return response.data
 }
 
 export const exportVideo = async (recreationId) => {
-  window.open(`${API_BASE_URL}/export-video/${recreationId}`, '_blank')
+  const t = await getSupabaseAccessToken()
+  const q = t ? `?access_token=${encodeURIComponent(t)}` : ''
+  window.open(`${API_BASE_URL}/export-video/${recreationId}${q}`, '_blank')
 }
 
-/** 成片预览 URL（Cookie 会话下与 <video src> 同域可用） */
-export const getFinalPreviewUrl = (recreationId) =>
-  `${API_BASE_URL}/final-preview/${recreationId}`
+export const getFinalPreviewUrl = async (recreationId) => {
+  const t = await getSupabaseAccessToken()
+  const q = t ? `?access_token=${encodeURIComponent(t)}` : ''
+  return `${API_BASE_URL}/final-preview/${recreationId}${q}`
+}
 
-/** 影坊多 Agent 元数据（与前端 constants/yingfangAgents 同源） */
 export const fetchYingfangAgents = async () => {
   const response = await api.get('/yingfang-agents')
   return response.data

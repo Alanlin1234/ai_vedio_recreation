@@ -63,7 +63,12 @@ class QwenVideoService:
         logger.info(f"已切换到API密钥 {self.api_key[:10]}...")
         return self.api_key
     
-    def analyze_keyframes_with_qwen3vl_plus(self, keyframes: List[str], prompt: Dict[str, Any]) -> Dict[str, Any]:
+    def analyze_keyframes_with_qwen3vl_plus(
+        self,
+        keyframes: List[str],
+        prompt: Dict[str, Any],
+        lang: str = 'zh',
+    ) -> Dict[str, Any]:
         try:
             logger.info(f"开始使用qwen3-vl-plus分析关键帧")
             
@@ -74,24 +79,53 @@ class QwenVideoService:
             # 导入DashScope SDK的相关类
             from dashscope import MultiModalConversation
             
+            if lang == 'en':
+                sys_text = (
+                    "You are a professional visual-detail analyst. From the keyframes, infer on-screen style "
+                    "and visual elements and produce precise video-generation prompts. Stay faithful to what "
+                    "is visible; do not invent unrelated content. Camera movement and shot grammar are handled "
+                    "elsewhere — do not analyze them."
+                )
+                user_text = (
+                    f"From these keyframes, output a JSON object suitable as video-generation prompts. "
+                    f"Requirements:\n"
+                    f"1. Focus on visual style, character appearance, and environment.\n"
+                    f"2. Describe color, lighting, and composition.\n"
+                    f"3. Character looks, outfits, expressions, and actions.\n"
+                    f"4. Props, background, spatial layout.\n"
+                    f"5. Overall art direction, palette, and light treatment.\n\n"
+                    f"Reference prompt: {video_prompt}\n\n"
+                    f"Rules: visual details only; prompts must match the keyframes; no unrelated elements."
+                )
+            else:
+                sys_text = (
+                    "你是一个专业的视觉细节分析专家，严格根据提供的关键帧分析视频的画面风格和视觉元素，并生成精确的视频生成提示词。"
+                    "你的分析必须与原视频高度一致，不能添加与原视频无关的内容。注意：镜头移动、拍摄角度等镜头语言分析由其他模块负责，你不需要分析这些内容。"
+                )
+                user_text = (
+                    f"请严格根据以下关键帧分析原视频，生成JSON格式的视频生成提示词。要求：\n"
+                    f"1. 专注于分析画面风格、人物形象等视觉细节\n"
+                    f"2. 详细描述色彩搭配、光影效果、构图方式\n"
+                    f"3. 分析人物的外貌特征、服装造型、表情动作\n"
+                    f"4. 描述环境中的道具、背景元素、空间布局\n"
+                    f"5. 提取艺术风格、色彩调性、光线处理等风格特征\n\n"
+                    f"原始提示词参考：{video_prompt}\n\n"
+                    f"重要要求：\n"
+                    f"- 只分析视觉细节，不分析镜头移动、拍摄角度等镜头语言\n"
+                    f"- 生成的提示词必须与原视频关键帧内容高度相关\n"
+                    f"- 不能添加任何与原视频无关的内容或元素"
+                )
+
             # 准备消息
             messages = [
                 {
                     "role": "system",
-                    "content": [
-                        {
-                            "text": "你是一个专业的视觉细节分析专家，严格根据提供的关键帧分析视频的画面风格和视觉元素，并生成精确的视频生成提示词。你的分析必须与原视频高度一致，不能添加与原视频无关的内容。注意：镜头移动、拍摄角度等镜头语言分析由其他模块负责，你不需要分析这些内容。"
-                        }
-                    ]
+                    "content": [{"text": sys_text}],
                 },
                 {
                     "role": "user",
-                    "content": [
-                        {
-                            "text": f"请严格根据以下关键帧分析原视频，生成JSON格式的视频生成提示词。要求：\n1. 专注于分析画面风格、人物形象等视觉细节\n2. 详细描述色彩搭配、光影效果、构图方式\n3. 分析人物的外貌特征、服装造型、表情动作\n4. 描述环境中的道具、背景元素、空间布局\n5. 提取艺术风格、色彩调性、光线处理等风格特征\n\n原始提示词参考：{video_prompt}\n\n重要要求：\n- 只分析视觉细节，不分析镜头移动、拍摄角度等镜头语言\n- 生成的提示词必须与原视频关键帧内容高度相关\n- 不能添加任何与原视频无关的内容或元素"
-                        }
-                    ]
-                }
+                    "content": [{"text": user_text}],
+                },
             ]
             
             # 添加关键帧到消息
@@ -164,19 +198,29 @@ class QwenVideoService:
             
             # 如果所有API密钥都尝试过仍失败
             logger.error("qwen3-vl-plus关键帧分析失败，使用fallback结果")
-            return {
-                "success": True,
-                "analysis_result": {
+            if lang == 'en':
+                ar = {
+                    "content": "Default video content description",
+                    "style": "Default visual style",
+                    "technical_params": {"resolution": "1920x1080", "fps": 30},
+                    "atmosphere": "Default scene atmosphere",
+                }
+                pr = '{"content": "Default video content description", "style": "Default visual style"}'
+                warn = "Using default analysis because the API call failed"
+            else:
+                ar = {
                     "content": "默认视频内容描述",
                     "style": "默认视觉风格",
-                    "technical_params": {
-                        "resolution": "1920x1080",
-                        "fps": 30
-                    },
-                    "atmosphere": "默认场景氛围"
-                },
-                "prompt": '{"content": "默认视频内容描述", "style": "默认视觉风格"}',
-                "warning": "使用了默认分析结果，因为API调用失败"
+                    "technical_params": {"resolution": "1920x1080", "fps": 30},
+                    "atmosphere": "默认场景氛围",
+                }
+                pr = '{"content": "默认视频内容描述", "style": "默认视觉风格"}'
+                warn = "使用了默认分析结果，因为API调用失败"
+            return {
+                "success": True,
+                "analysis_result": ar,
+                "prompt": pr,
+                "warning": warn,
             }
             
         except Exception as e:

@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft, ArrowRight, BookOpen, Sparkle, Lightbulb } from '@phosphor-icons/react'
 import { pickEducationalSummary } from '../utils/educationalDisplay'
 
 const Page3 = ({ project, onGenerateStoryboard, onBack, isLoading, loadingMessage }) => {
+  const { t } = useTranslation()
   const [error, setError] = useState('')
 
   const handleGenerate = async () => {
@@ -10,7 +12,7 @@ const Page3 = ({ project, onGenerateStoryboard, onBack, isLoading, loadingMessag
     try {
       await onGenerateStoryboard()
     } catch (err) {
-      setError(err.response?.data?.error || err.message || '生成分镜图失败')
+      setError(err.response?.data?.error || err.message || t('page3.error'))
     }
   }
 
@@ -32,9 +34,9 @@ const Page3 = ({ project, onGenerateStoryboard, onBack, isLoading, loadingMessag
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-serif font-bold text-charcoal-700 mb-2">新故事</h2>
+        <h2 className="text-2xl font-serif font-bold text-charcoal-700 mb-2">{t('page3.title')}</h2>
         <p className="text-charcoal-500 font-serif">
-          {newStory.story ? 'AI 重新讲的故事，看看合不合心意' : '正在憋剧本...'}
+          {newStory.story ? t('page3.subtitleReady') : t('page3.subtitleLoading')}
         </p>
       </div>
 
@@ -44,11 +46,11 @@ const Page3 = ({ project, onGenerateStoryboard, onBack, isLoading, loadingMessag
             <div className="w-10 h-10 rounded-lg bg-moss/10 flex items-center justify-center">
               <BookOpen size={20} weight="duotone" className="text-moss" />
             </div>
-            <h3 className="text-lg font-serif font-semibold text-charcoal-700">故事内容</h3>
+            <h3 className="text-lg font-serif font-semibold text-charcoal-700">{t('page3.storyContent')}</h3>
           </div>
           <div className="bg-paper-100 rounded-xl p-5">
             <p className="text-charcoal-600 font-serif whitespace-pre-wrap leading-relaxed text-[15px]">
-              {newStory.story ? stripMarkdown(newStory.story) : <span className="animate-pulse-soft text-charcoal-400">剧本生成中...</span>}
+              {newStory.story ? stripMarkdown(newStory.story) : <span className="animate-pulse-soft text-charcoal-400">{t('page3.generatingStory')}</span>}
             </p>
           </div>
         </div>
@@ -58,11 +60,11 @@ const Page3 = ({ project, onGenerateStoryboard, onBack, isLoading, loadingMessag
             <div className="w-10 h-10 rounded-lg bg-caramel-100 flex items-center justify-center">
               <Sparkle size={20} weight="duotone" className="text-caramel-400" />
             </div>
-            <h3 className="text-lg font-serif font-semibold text-charcoal-700">故事亮点</h3>
+            <h3 className="text-lg font-serif font-semibold text-charcoal-700">{t('page3.storyHighlights')}</h3>
           </div>
           <div className="bg-paper-100 rounded-xl p-5">
             <p className="text-charcoal-600 font-serif whitespace-pre-wrap leading-relaxed text-[15px]">
-              {newStory.highlights ? stripMarkdown(newStory.highlights) : <span className="animate-pulse-soft text-charcoal-400">生成中...</span>}
+              {newStory.highlights ? stripMarkdown(newStory.highlights) : <span className="animate-pulse-soft text-charcoal-400">{t('page3.generating')}</span>}
             </p>
           </div>
         </div>
@@ -72,18 +74,18 @@ const Page3 = ({ project, onGenerateStoryboard, onBack, isLoading, loadingMessag
             <div className="w-10 h-10 rounded-lg bg-moss/10 flex items-center justify-center">
               <Lightbulb size={20} weight="duotone" className="text-moss" />
             </div>
-            <h3 className="text-lg font-serif font-semibold text-charcoal-700">教育意义</h3>
+            <h3 className="text-lg font-serif font-semibold text-charcoal-700">{t('page3.educational')}</h3>
           </div>
           <div className="bg-paper-100 rounded-xl p-5">
             <p className="text-charcoal-600 font-serif whitespace-pre-wrap leading-relaxed text-[15px]">
-              {eduSummary ? stripMarkdown(eduSummary) : <span className="animate-pulse-soft text-charcoal-400">生成中...</span>}
+              {eduSummary ? stripMarkdown(eduSummary) : <span className="animate-pulse-soft text-charcoal-400">{t('page3.generating')}</span>}
             </p>
           </div>
         </div>
       </div>
 
       <p className="text-xs text-charcoal-500 font-sans mb-6 max-w-2xl leading-relaxed">
-        下一步将依据上述剧本智能规划分镜数量；每个分镜约 5 秒成片，并生成分镜图与图生视频提示词，随后按镜生成场景视频，最后由剪辑师顺序拼接成片。
+        {t('page3.footer')}
       </p>
 
       <div className="flex gap-3">
@@ -92,7 +94,7 @@ const Page3 = ({ project, onGenerateStoryboard, onBack, isLoading, loadingMessag
           onClick={onBack}
         >
           <ArrowLeft size={18} />
-          上一回
+          {t('page3.back')}
         </button>
         <button
           className="btn-primary flex items-center gap-2"
@@ -106,7 +108,7 @@ const Page3 = ({ project, onGenerateStoryboard, onBack, isLoading, loadingMessag
             </>
           ) : (
             <>
-              开始分镜
+              {t('page3.next')}
               <ArrowRight size={18} weight="bold" />
             </>
           )}

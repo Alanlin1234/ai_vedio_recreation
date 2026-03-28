@@ -1,10 +1,18 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { VideoCamera, SignIn, SignOut } from '@phosphor-icons/react'
 import { useAuth } from '../context/AuthContext'
+import { setStoredAppLanguage } from '../i18n'
 
 function Navbar() {
+  const { t, i18n } = useTranslation()
   const location = useLocation()
   const { user, authenticated, logout, loading } = useAuth()
+
+  const onLanguageChange = (e) => {
+    const lng = setStoredAppLanguage(e.target.value)
+    i18n.changeLanguage(lng)
+  }
   const isHome = location.pathname === '/'
 
   const isActive = (path) => location.pathname === path
@@ -36,7 +44,7 @@ function Navbar() {
             }`}
             style={{ fontFamily: "'Noto Serif SC', serif" }}
           >
-            影坊
+            {t('nav.brand')}
           </span>
         </Link>
 
@@ -45,7 +53,7 @@ function Navbar() {
             to="/"
             className={`${isHome ? 'nav-link-dark' : 'nav-link'} ${isActive('/') ? 'active' : ''}`}
           >
-            首页
+            {t('nav.home')}
           </Link>
           <Link
             to="/workspace"
@@ -53,7 +61,7 @@ function Navbar() {
               isActive('/workspace') ? 'active' : ''
             }`}
           >
-            工作台
+            {t('nav.workspace')}
           </Link>
           <Link
             to="/history"
@@ -61,8 +69,29 @@ function Navbar() {
               isActive('/history') ? 'active' : ''
             }`}
           >
-            历史
+            {t('nav.history')}
           </Link>
+
+          <label
+            className={`flex items-center gap-1.5 text-sm font-medium font-sans ${
+              isHome ? 'text-white/90' : 'text-charcoal-600'
+            }`}
+          >
+            <span className="sr-only md:not-sr-only md:inline">{t('nav.language')}</span>
+            <select
+              value={i18n.language?.startsWith('en') ? 'en' : 'zh'}
+              onChange={onLanguageChange}
+              aria-label={t('nav.language')}
+              className={`rounded-lg border px-2 py-1 text-sm font-sans outline-none focus:ring-2 focus:ring-moss/40 ${
+                isHome
+                  ? 'bg-white/10 border-white/25 text-white'
+                  : 'bg-white border-charcoal-200 text-charcoal-800'
+              }`}
+            >
+              <option value="zh">{t('nav.langZh')}</option>
+              <option value="en">{t('nav.langEn')}</option>
+            </select>
+          </label>
 
           {!loading && (
             <>
@@ -77,7 +106,7 @@ function Navbar() {
                       isHome ? 'text-white/90' : 'text-charcoal-600'
                     }`}
                   >
-                    {user?.username}
+                    {user?.username || user?.email}
                   </span>
                   <button
                     type="button"
@@ -89,7 +118,7 @@ function Navbar() {
                     }`}
                   >
                     <SignOut size={18} />
-                    <span className="hidden sm:inline">退出</span>
+                    <span className="hidden sm:inline">{t('nav.logout')}</span>
                   </button>
                 </div>
               ) : (
@@ -101,7 +130,7 @@ function Navbar() {
                   }`}
                 >
                   <SignIn size={18} />
-                  登录
+                  {t('nav.login')}
                 </Link>
               )}
             </>

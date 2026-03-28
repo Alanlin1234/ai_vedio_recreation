@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft, ArrowRight, FrameCorners, Play } from '@phosphor-icons/react'
 
 const Page4 = ({ project, onGenerateSceneVideos, onBack, isLoading, loadingMessage }) => {
+  const { t } = useTranslation()
   const [error, setError] = useState('')
 
   const handleGenerate = async () => {
@@ -9,7 +11,7 @@ const Page4 = ({ project, onGenerateSceneVideos, onBack, isLoading, loadingMessa
     try {
       await onGenerateSceneVideos()
     } catch (err) {
-      setError(err.response?.data?.error || err.message || '生成视频失败')
+      setError(err.response?.data?.error || err.message || t('page4.error'))
     }
   }
 
@@ -18,9 +20,9 @@ const Page4 = ({ project, onGenerateSceneVideos, onBack, isLoading, loadingMessa
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-serif font-bold text-charcoal-700 mb-2">分镜脚本</h2>
+        <h2 className="text-2xl font-serif font-bold text-charcoal-700 mb-2">{t('page4.title')}</h2>
         <p className="text-charcoal-500 font-serif">
-          {storyboard.length > 0 ? '把故事拆成镜头语言，看看每个镜头怎么拍' : '正在画分镜...'}
+          {storyboard.length > 0 ? t('page4.subtitleReady') : t('page4.subtitleLoading')}
         </p>
       </div>
 
@@ -29,21 +31,22 @@ const Page4 = ({ project, onGenerateSceneVideos, onBack, isLoading, loadingMessa
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b border-paper-300">
-                <th className="text-left p-3 text-charcoal-500 font-serif font-medium w-16">序号</th>
-                <th className="text-left p-3 text-charcoal-500 font-serif font-medium w-24">景别</th>
-                <th className="text-left p-3 text-charcoal-500 font-serif font-medium w-72">画面</th>
-                <th className="text-left p-3 text-charcoal-500 font-serif font-medium w-56">情节</th>
-                <th className="text-left p-3 text-charcoal-500 font-serif font-medium w-56">台词</th>
+                <th className="text-left p-3 text-charcoal-500 font-serif font-medium w-16">{t('page4.colIndex')}</th>
+                <th className="text-left p-3 text-charcoal-500 font-serif font-medium w-24">{t('page4.colShot')}</th>
+                <th className="text-left p-3 text-charcoal-500 font-serif font-medium w-72">{t('page4.colVisual')}</th>
+                <th className="text-left p-3 text-charcoal-500 font-serif font-medium w-56">{t('page4.colPlot')}</th>
+                <th className="text-left p-3 text-charcoal-500 font-serif font-medium w-56">{t('page4.colDialogue')}</th>
               </tr>
             </thead>
             <tbody>
               {storyboard.map((scene, index) => {
                 const dialogueRaw = (scene.dialogue != null && String(scene.dialogue).trim()) || ''
                 const dialogueBad =
-                  !dialogueRaw || dialogueRaw === '暂无台词' || dialogueRaw === '暂无'
-                const dialogueDisplay = dialogueBad
-                  ? '（本镜以动作为主；环境音）'
-                  : dialogueRaw
+                  !dialogueRaw ||
+                  dialogueRaw === '暂无台词' ||
+                  dialogueRaw === '暂无' ||
+                  dialogueRaw === 'No dialogue'
+                const dialogueDisplay = dialogueBad ? t('page4.noDialogue') : dialogueRaw
                 return (
                 <tr key={index} className="border-b border-paper-200 hover:bg-paper-100/50 transition-colors">
                   <td className="p-3">
@@ -62,20 +65,20 @@ const Page4 = ({ project, onGenerateSceneVideos, onBack, isLoading, loadingMessa
                         <div className="mb-3">
                           <img
                             src={scene.image}
-                            alt={`场景${scene.scene_number || index + 1}`}
+                            alt={t('page4.sceneAlt', { n: scene.scene_number || index + 1 })}
                             className="w-full h-32 object-cover rounded-lg"
                           />
                         </div>
                       )}
                       <p className="text-charcoal-500 text-sm font-serif leading-relaxed whitespace-pre-wrap">
-                        {scene.description || '暂无画面描述'}
+                        {scene.description || t('page4.noDescription')}
                       </p>
                     </div>
                   </td>
                   <td className="p-3">
                     <div className="bg-paper-100 rounded-xl p-3">
                       <p className="text-charcoal-600 text-sm font-serif leading-relaxed whitespace-pre-wrap">
-                        {scene.plot || '暂无情节描述'}
+                        {scene.plot || t('page4.noPlot')}
                       </p>
                     </div>
                   </td>
@@ -97,7 +100,7 @@ const Page4 = ({ project, onGenerateSceneVideos, onBack, isLoading, loadingMessa
           <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-paper-200 flex items-center justify-center">
             <FrameCorners size={32} weight="duotone" className="text-charcoal-400" />
           </div>
-          <p className="text-charcoal-400 font-serif animate-pulse-soft">分镜图马上好...</p>
+          <p className="text-charcoal-400 font-serif animate-pulse-soft">{t('page4.waiting')}</p>
         </div>
       )}
 
@@ -107,7 +110,7 @@ const Page4 = ({ project, onGenerateSceneVideos, onBack, isLoading, loadingMessa
           onClick={onBack}
         >
           <ArrowLeft size={18} />
-          上一回
+          {t('page4.back')}
         </button>
         <button
           className="btn-primary flex items-center gap-2"
@@ -121,7 +124,7 @@ const Page4 = ({ project, onGenerateSceneVideos, onBack, isLoading, loadingMessa
             </>
           ) : (
             <>
-              生成视频
+              {t('page4.next')}
               <ArrowRight size={18} weight="bold" />
             </>
           )}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { YINGFANG_AGENTS, getYingfangAgentName } from '../constants/yingfangAgents'
 
 function statusClass(status) {
@@ -7,17 +8,19 @@ function statusClass(status) {
   return 'text-charcoal-400 bg-paper-50 border-charcoal-100'
 }
 
-function statusLabel(status) {
-  if (status === 'running') return '执行中'
-  if (status === 'completed') return '完成'
-  if (status === 'failed') return '失败'
-  return '待命中'
-}
-
 function AgentProgress({ currentAgent, agentStatuses = {}, isRunning }) {
+  const { t } = useTranslation()
+
+  function statusLabel(status) {
+    if (status === 'running') return t('agents.statusRunning')
+    if (status === 'completed') return t('agents.statusCompleted')
+    if (status === 'failed') return t('agents.statusFailed')
+    return t('agents.statusIdle')
+  }
+
   return (
     <div className="rounded-xl border border-charcoal-100 bg-paper-50/80 p-4">
-      <p className="section-label mb-3">影坊多 Agent</p>
+      <p className="section-label mb-3">{t('agents.panelTitle')}</p>
       <ul className="space-y-2">
         {YINGFANG_AGENTS.map((a) => {
           const st = agentStatuses[a.id] || 'pending'
@@ -30,8 +33,12 @@ function AgentProgress({ currentAgent, agentStatuses = {}, isRunning }) {
               )} ${isCurrent ? 'ring-1 ring-moss/30' : ''}`}
             >
               <div className="min-w-0">
-                <div className="font-sans font-semibold text-charcoal-700">{a.nameZh}</div>
-                <div className="text-[11px] text-charcoal-500 mt-0.5 leading-snug">{a.description}</div>
+                <div className="font-sans font-semibold text-charcoal-700">
+                  {t(`agents.${a.id}.name`)}
+                </div>
+                <div className="text-[11px] text-charcoal-500 mt-0.5 leading-snug">
+                  {t(`agents.${a.id}.description`)}
+                </div>
               </div>
               <span className="flex-shrink-0 font-medium tabular-nums">{statusLabel(st)}</span>
             </li>
@@ -40,12 +47,12 @@ function AgentProgress({ currentAgent, agentStatuses = {}, isRunning }) {
       </ul>
       {currentAgent && (
         <p className="text-xs text-charcoal-600 font-sans mt-3 pt-3 border-t border-charcoal-100">
-          当前执行：
-          <span className="text-moss font-medium">{getYingfangAgentName(currentAgent)}</span>
+          {t('agents.current')}
+          <span className="text-moss font-medium">{getYingfangAgentName(currentAgent, t)}</span>
         </p>
       )}
       {isRunning && !currentAgent && (
-        <p className="text-xs text-charcoal-500 font-sans mt-3">调度中…</p>
+        <p className="text-xs text-charcoal-500 font-sans mt-3">{t('agents.scheduling')}</p>
       )}
     </div>
   )

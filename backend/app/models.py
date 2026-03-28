@@ -25,7 +25,9 @@ class VideoRecreation(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     original_video_id = db.Column(db.String(128))
-    original_video_path = db.Column(db.String(1024))
+    original_video_path = db.Column(db.String(1024), nullable=True)
+    original_video_storage_key = db.Column(db.String(1024), nullable=True)
+    owner_supabase_uid = db.Column(db.String(36), nullable=True, index=True)
     recreation_name = db.Column(db.String(256))
     status = db.Column(db.String(64), default='pending')
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -46,12 +48,15 @@ class VideoRecreation(db.Model):
     analysis_educational = db.Column(db.Text)
     review_score = db.Column(db.Float)
     review_detail_json = db.Column(db.Text)
+    output_language = db.Column(db.String(8), default='zh')
 
     def to_dict(self):
         return {
             'id': self.id,
             'original_video_id': self.original_video_id,
             'original_video_path': self.original_video_path,
+            'original_video_storage_key': self.original_video_storage_key,
+            'owner_supabase_uid': self.owner_supabase_uid,
             'recreation_name': self.recreation_name,
             'status': self.status,
             'created_at': self.created_at.isoformat() if self.created_at else None,
@@ -69,6 +74,7 @@ class VideoRecreation(db.Model):
             'analysis_educational': self.analysis_educational,
             'review_score': self.review_score,
             'review_detail_json': self.review_detail_json,
+            'output_language': self.output_language or 'zh',
         }
 
 
@@ -142,6 +148,14 @@ def ensure_video_recreation_schema():
             stmts.append('ALTER TABLE video_recreations ADD COLUMN review_score REAL')
         if 'review_detail_json' not in cols:
             stmts.append('ALTER TABLE video_recreations ADD COLUMN review_detail_json TEXT')
+        if 'owner_supabase_uid' not in cols:
+            stmts.append('ALTER TABLE video_recreations ADD COLUMN owner_supabase_uid VARCHAR(36)')
+        if 'original_video_storage_key' not in cols:
+            stmts.append(
+                'ALTER TABLE video_recreations ADD COLUMN original_video_storage_key VARCHAR(1024)'
+            )
+        if 'output_language' not in cols:
+            stmts.append("ALTER TABLE video_recreations ADD COLUMN output_language VARCHAR(8)")
         for stmt in stmts:
             db.session.execute(text(stmt))
         db.session.commit()
@@ -151,7 +165,9 @@ def ensure_video_recreation_schema():
 
 
 def ensure_default_user():
-    """若无用户则创建默认管理员（可通过环境变量覆盖）"""
+    """若无用户则创建默认管理员（可通过环境变量覆盖）。启用 Supabase JWT 时跳过。"""
+    if os.environ.get("SUPABASE_JWT_SECRET", "").strip():
+        return
     if User.query.count() > 0:
         return
     username = os.environ.get('DEFAULT_ADMIN_USERNAME', 'admin')

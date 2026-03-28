@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft } from '@phosphor-icons/react'
 import StepIndicator from '../components/StepIndicator'
 import AgentProgress from '../components/AgentProgress'
@@ -12,6 +13,7 @@ import Page5 from './Page5'
 import Page6 from './Page6'
 
 function WorkspacePage() {
+  const { t } = useTranslation()
   const location = useLocation()
   const [currentStep, setCurrentStep] = useState(1)
   const [completedSteps, setCompletedSteps] = useState([])
@@ -82,7 +84,7 @@ function WorkspacePage() {
 
   const handleUploadVideo = async (file) => {
     setIsLoading(true)
-    setLoadingMessage('正在上传...')
+    setLoadingMessage(t('workspace.loadingUpload'))
     try {
       const { uploadVideo } = await import('../utils/api')
       const response = await uploadVideo(file)
@@ -99,7 +101,7 @@ function WorkspacePage() {
 
   const handleAnalyzeVideo = async () => {
     setIsLoading(true)
-    setLoadingMessage('视频解析中...')
+    setLoadingMessage(t('workspace.loadingAnalyze'))
     updateAgentStatus('education_expert', 'running')
     try {
       const { analyzeVideo, reviewVideo } = await import('../utils/api')
@@ -151,7 +153,7 @@ function WorkspacePage() {
           setCurrentStep(3)
         } else {
           updateAgentStatus('reviewer', 'failed')
-          alert(reviewResponse.message || '审核未通过')
+          alert(reviewResponse.message || t('workspace.reviewFailed'))
           resetProject()
           setIsLoading(false)
           return
@@ -168,7 +170,7 @@ function WorkspacePage() {
           alert(
             reviewErr.response?.data?.message ||
               reviewErr.message ||
-              '您的视频无教育意义，不符合要求，请重新上传'
+              t('workspace.reviewNoEducational')
           )
           resetProject()
           setIsLoading(false)
@@ -196,7 +198,7 @@ function WorkspacePage() {
 
   const handleGenerateNewStory = async () => {
     setIsLoading(true)
-    setLoadingMessage('正在憋剧本...')
+    setLoadingMessage(t('workspace.loadingStory'))
     try {
       const { generateNewStory } = await import('../utils/api')
       const response = await generateNewStory(project.id, {
@@ -233,7 +235,7 @@ function WorkspacePage() {
 
   const handleGenerateStoryboard = async () => {
     setIsLoading(true)
-    setLoadingMessage('正在画分镜...')
+    setLoadingMessage(t('workspace.loadingStoryboard'))
     try {
       const { generateStoryboard } = await import('../utils/api')
       const response = await generateStoryboard(project.id)
@@ -257,7 +259,7 @@ function WorkspacePage() {
     }
 
     setIsLoading(true)
-    setLoadingMessage('渲染中...')
+    setLoadingMessage(t('workspace.loadingRender'))
     try {
       const { generateSceneVideosAgent, generateSceneVideos } = await import('../utils/api')
       let response
@@ -270,7 +272,7 @@ function WorkspacePage() {
         response = await generateSceneVideos(project.id)
       }
       if (!response?.success) {
-        throw new Error(response?.error || response?.message || '分场景视频生成失败')
+        throw new Error(response?.error || response?.message || t('workspace.sceneVideoFailed'))
       }
       const list =
         response.result?.scene_videos ||
@@ -299,17 +301,18 @@ function WorkspacePage() {
 
   const handleCombineVideo = async () => {
     setIsLoading(true)
-    setLoadingMessage('正在拼接...')
+    setLoadingMessage(t('workspace.loadingCombine'))
     updateAgentStatus('video_composer', 'running')
     try {
       const { combineVideo, getFinalPreviewUrl } = await import('../utils/api')
       const response = await combineVideo(project.id)
       if (!response?.success) {
-        throw new Error(response?.error || '拼接失败')
+        throw new Error(response?.error || t('workspace.combineFailed'))
       }
+      const previewUrl = await getFinalPreviewUrl(project.id)
       setProject((prev) => ({
         ...prev,
-        final_video: getFinalPreviewUrl(project.id),
+        final_video: previewUrl,
       }))
       updateAgentStatus('video_composer', 'completed')
       markStepCompleted(6)
@@ -332,7 +335,7 @@ function WorkspacePage() {
       updateAgentStatus('video_composer', 'completed')
       markStepCompleted(7)
       setIsLoading(false)
-      alert('视频导出成功！')
+      alert(t('workspace.exportSuccess'))
     } catch (error) {
       updateAgentStatus('video_composer', 'failed')
       setIsLoading(false)
@@ -426,7 +429,7 @@ function WorkspacePage() {
 
   return (
     <div className="min-h-screen bg-paper">
-      <div className="w-full px-8 py-8">
+      <div className="phantom-section-inner py-8">
         <div className="flex gap-8 min-h-[calc(100vh-128px)]">
           <div className="w-[280px] flex-shrink-0 flex flex-col gap-6">
             <Link
@@ -434,7 +437,7 @@ function WorkspacePage() {
               className="inline-flex items-center gap-2 text-charcoal-500 hover:text-moss transition-colors"
             >
               <ArrowLeft size={16} />
-              <span className="text-sm font-medium">返回首页</span>
+              <span className="text-sm font-medium">{t('workspace.backHome')}</span>
             </Link>
 
             <div className="content-card p-6 flex-1 flex flex-col gap-6">

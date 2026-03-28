@@ -2,6 +2,8 @@
 Agent系统API路由
 """
 from flask import Blueprint, request, jsonify
+
+from app.auth_access import require_authenticated_response
 from app.agents.orchestrator import VideoCreationOrchestrator
 from config import config
 import asyncio
@@ -11,13 +13,10 @@ agent_bp = Blueprint('agent', __name__, url_prefix='/api/agent')
 
 @agent_bp.before_request
 def _require_login_for_agent():
-    from flask import session, jsonify
-
     if request.method == 'OPTIONS':
         return None
-    if not session.get('user_id'):
-        return jsonify({'success': False, 'error': '请先登录', 'code': 'UNAUTHORIZED'}), 401
-    return None
+    resp = require_authenticated_response()
+    return resp if resp else None
 
 
 # 初始化编排器
@@ -128,11 +127,13 @@ def agent_generate_scene_videos(recreation_id):
     返回体同时包含扁平字段与 result 包装，兼容不同前端解析方式。
     """
     from app.models import VideoRecreation, db
+    from app.output_language import generation_language
+    from app.recreation_access import recreation_for_request
     from app.services.pipeline_workflow import run_generate_scene_videos
 
-    recreation = VideoRecreation.query.get(recreation_id)
-    if not recreation:
-        return jsonify({'success': False, 'error': '项目不存在'}), 404
+    recreation, err = recreation_for_request(recreation_id)
+    if err:
+        return err
 
     result = run_generate_scene_videos(recreation_id)
 
@@ -141,6 +142,9 @@ def agent_generate_scene_videos(recreation_id):
         db.session.commit()
 
     gv = result.get('generated_videos') or []
+    lang = generation_language(recreation)
+    ok_msg = 'Done' if lang == 'en' else '完成'
+    fail_msg = 'Generation failed' if lang == 'en' else '生成失败'
     payload = {
         'success': bool(result.get('success')),
         'recreation_id': recreation_id,
@@ -155,14 +159,19 @@ def agent_generate_scene_videos(recreation_id):
             'generated_videos': gv,
             'debug_prompts': result.get('debug_prompts') or [],
         },
-        'message': '完成' if result.get('success') else (result.get('error') or '生成失败'),
+        'message': ok_msg if result.get('success') else (result.get('error') or fail_msg),
     }
     return jsonify(payload), (200 if result.get('success') else 500)
 
 
 @agent_bp.route('/video-status/<int:recreation_id>', methods=['GET'])
 def agent_video_status(recreation_id):
+    from app.recreation_access import recreation_for_request
     from app.services.pipeline_workflow import build_scene_video_status
+
+    _, err = recreation_for_request(recreation_id)
+    if err:
+        return err
 
     data = build_scene_video_status(recreation_id)
     code = 200 if data.get('success') else 404

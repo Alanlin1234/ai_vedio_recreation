@@ -437,6 +437,221 @@ textarea.input-field {
   }
 }
 
+/* Phantom-Video 项目站式分节与排版 */
+.phantom-section {
+  padding-top: 3.5rem;
+  padding-bottom: 3.5rem;
+}
+
+@media (min-width: 768px) {
+  .phantom-section {
+    padding-top: 4.5rem;
+    padding-bottom: 4.5rem;
+  }
+}
+
+.phantom-section-light {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-top: 1px solid var(--border-light);
+}
+
+.phantom-section-dark {
+  background: linear-gradient(
+    180deg,
+    #1a1f28 0%,
+    var(--phantom-hero-bg-mid) 100%
+  );
+  color: var(--phantom-hero-text);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.phantom-heading {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+@media (min-width: 768px) {
+  .phantom-heading {
+    font-size: 1.75rem;
+  }
+}
+
+.phantom-section-dark .phantom-heading {
+  color: var(--phantom-hero-text);
+}
+
+.phantom-lead {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  max-width: 42rem;
+  margin-bottom: 1.5rem;
+}
+
+.phantom-section-dark .phantom-lead {
+  color: var(--phantom-hero-muted);
+}
+
+.phantom-hero-subtitle {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--phantom-hero-muted);
+  max-width: 36rem;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .phantom-hero-subtitle {
+    font-size: 1.05rem;
+  }
+}
+
+.phantom-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1rem;
+  margin-bottom: 2rem;
+}
+
+.phantom-link-external {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--phantom-hero-text);
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.06);
+  transition:
+    background 0.2s var(--ease-out-expo),
+    border-color 0.2s var(--ease-out-expo),
+    transform 0.2s var(--ease-out-expo);
+}
+
+.phantom-link-external:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+.phantom-card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .phantom-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .phantom-card-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.phantom-feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.35rem;
+  box-shadow: var(--shadow-card);
+  transition:
+    box-shadow 0.3s var(--ease-out-expo),
+    transform 0.3s var(--ease-out-expo);
+}
+
+.phantom-feature-card:hover {
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-2px);
+}
+
+.phantom-section-dark .phantom-feature-card {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+}
+
+.phantom-section-dark .phantom-feature-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.phantom-feature-card h3 {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.phantom-section-dark .phantom-feature-card h3 {
+  color: var(--phantom-hero-text);
+}
+
+.phantom-feature-card p {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.phantom-section-dark .phantom-feature-card p {
+  color: var(--phantom-hero-muted);
+}
+
+.phantom-footer {
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-light);
+}
+
+.phantom-footer-inner {
+  max-width: var(--phantom-section-max);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+.phantom-footer h2 {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: var(--text-primary);
+}
+
+.phantom-footer p {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  max-width: 48rem;
+  margin: 0 0 0.75rem;
+}
+
+.phantom-footer p:last-child {
+  margin-bottom: 0;
+}
+
 /* 首页深色顶栏下的导航链接 */
 .nav-link-dark {
   position: relative;

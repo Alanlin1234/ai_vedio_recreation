@@ -31,6 +31,7 @@ class EnhancedVideoAnalyzer:
         video_path: str,
         video_analysis_result: Dict[str, Any],
         debug_prompts: Optional[List[Dict[str, Any]]] = None,
+        lang: str = 'zh',
     ) -> Dict[str, Any]:
         """
         完整的视频分析流程
@@ -52,14 +53,14 @@ class EnhancedVideoAnalyzer:
                 }
 
             # 第一阶段：深度内容理解
-            content_analysis = self._deep_content_analysis(story_content, debug_prompts)
+            content_analysis = self._deep_content_analysis(story_content, debug_prompts, lang=lang)
 
             # 第二阶段：亮点提炼
-            highlights = self._extract_highlights(story_content, content_analysis, debug_prompts)
+            highlights = self._extract_highlights(story_content, content_analysis, debug_prompts, lang=lang)
 
             # 第三阶段：教育意义提取
             educational = self._extract_educational_meaning(
-                story_content, content_analysis, debug_prompts
+                story_content, content_analysis, debug_prompts, lang=lang
             )
 
             # 第四阶段：结构化总结
@@ -67,7 +68,8 @@ class EnhancedVideoAnalyzer:
                 story_content,
                 content_analysis,
                 highlights,
-                educational
+                educational,
+                lang=lang,
             )
 
             return {
@@ -92,6 +94,7 @@ class EnhancedVideoAnalyzer:
         self,
         story_content: str,
         debug_prompts: Optional[List[Dict[str, Any]]] = None,
+        lang: str = 'zh',
     ) -> Dict[str, Any]:
         """
         深度内容分析 - 理解故事的叙事结构
@@ -99,7 +102,33 @@ class EnhancedVideoAnalyzer:
         try:
             from dashscope import Generation
 
-            analysis_prompt = f"""请深度分析以下故事内容，提取关键叙事要素。
+            if lang == 'en':
+                analysis_prompt = f"""Analyze the following story and extract narrative elements. Write every field in **clear English**, short sentences, no academic jargon.
+
+Story:
+{story_content}
+
+Return **only** a JSON object with these keys:
+{{
+    "main_plot": "3-5 plain sentences: who, where, what happened, outcome",
+    "characters": [
+        {{"name": "...", "role": "...", "traits": "...", "arc": "..."}}
+    ],
+    "key_scenes": [
+        {{"description": "...", "significance": "..."}}
+    ],
+    "emotional_arc": "one or two sentences on how emotion shifts",
+    "thematic_elements": ["concrete theme 1", "concrete theme 2"],
+    "narrative_technique": "e.g. linear, flashback, contrast — one sentence",
+    "target_audience": "who this fits"
+}}
+
+Rules: ground every claim in concrete actions; name turning points; themes must be specific (e.g. sharing), not vague buzzwords."""
+
+                sys_msg = "You are a story analyst. Output plain, concrete English JSON only."
+                trace_sys = "Professional story analyst; concise English."
+            else:
+                analysis_prompt = f"""请深度分析以下故事内容，提取关键叙事要素。
 
 故事内容：
 {story_content}
@@ -128,6 +157,9 @@ class EnhancedVideoAnalyzer:
 2. 识别关键转折点
 3. 主题词要具体（如「学会分享」），少用笼统的「成长」「共鸣」单独充数"""
 
+                sys_msg = "你是故事分析师。输出要直白、具体，拒绝隐喻堆砌和学术腔。"
+                trace_sys = "你是一个专业的故事分析师，擅长深度解读叙事内容。"
+
             if debug_prompts is not None:
                 from app.utils.prompt_trace import trace
 
@@ -135,7 +167,7 @@ class EnhancedVideoAnalyzer:
                     trace(
                         'education_expert',
                         '深度内容分析',
-                        system='你是一个专业的故事分析师，擅长深度解读叙事内容。',
+                        system=trace_sys,
                         user=analysis_prompt,
                         model='qwen-plus-latest',
                     )
@@ -146,7 +178,7 @@ class EnhancedVideoAnalyzer:
                 messages=[
                     {
                         "role": "system",
-                        "content": "你是故事分析师。输出要直白、具体，拒绝隐喻堆砌和学术腔。",
+                        "content": sys_msg,
                     },
                     {"role": "user", "content": analysis_prompt}
                 ],
@@ -166,17 +198,18 @@ class EnhancedVideoAnalyzer:
                 except:
                     pass
 
-            return self._get_default_content_analysis()
+            return self._get_default_content_analysis(lang=lang)
 
         except Exception as e:
             logger.error(f"深度内容分析失败: {e}")
-            return self._get_default_content_analysis()
+            return self._get_default_content_analysis(lang=lang)
 
     def _extract_highlights(
         self,
         story_content: str,
         content_analysis: Dict,
         debug_prompts: Optional[List[Dict[str, Any]]] = None,
+        lang: str = 'zh',
     ) -> Dict[str, Any]:
         """
         亮点提炼 - 识别故事的高光时刻
@@ -189,13 +222,45 @@ class EnhancedVideoAnalyzer:
         try:
             from dashscope import Generation
 
-            highlights_prompt = f"""请从多个维度分析以下故事，提炼**观众能看懂的**精彩亮点。
+            ca = json.dumps(content_analysis, ensure_ascii=False, indent=2)
+            if lang == 'en':
+                highlights_prompt = f"""Analyze the story from multiple angles and extract **clear, concrete** highlights. All text in **English**, short spoken style, no academic jargon.
+
+Story:
+{story_content}
+
+Structure analysis:
+{ca}
+
+Return **only** JSON:
+{{
+    "plot_highlights": [
+        {{"moment": "who + action + result", "reason": "why it works", "impact": "story role"}}
+    ],
+    "emotional_highlights": [
+        {{"moment": "scene", "emotion": "funny/tense/moving", "resonance": "why viewers care"}}
+    ],
+    "visual_highlights": [
+        {{"scene": "imaginable shot", "technique": "camera/edit in plain words", "aesthetic": "color/rhythm/mood"}}
+    ],
+    "narrative_highlights": [
+        {{"technique": "e.g. suspense", "description": "how it appears in this story", "effect": "what viewers learn"}}
+    ],
+    "overall_highlights": "First line: Theme: ... Then 3 numbered bullets, each under 45 chars, must name concrete beats — no adjective-only fluff. Total 120-220 chars."
+}}
+
+Ground every point in the source; do not invent characters or scenes."""
+
+                hi_sys = "You write highlights like recommending a film to a friend: concrete beats, plain English."
+                hi_trace = "Highlight writer: concrete, accessible English."
+            else:
+                highlights_prompt = f"""请从多个维度分析以下故事，提炼**观众能看懂的**精彩亮点。
 
 故事内容：
 {story_content}
 
 已知的故事结构分析：
-{json.dumps(content_analysis, ensure_ascii=False, indent=2)}
+{ca}
 
 【语言硬性要求】
 - 全文用**口语化、短句**；像短视频口播稿，不要散文、不要论文。
@@ -224,6 +289,9 @@ class EnhancedVideoAnalyzer:
 2. overall_highlights 总长度建议 120～220 字
 3. 结合故事原文信息，不要编造不存在的角色或桥段"""
 
+                hi_sys = "你写亮点像给朋友推荐片：具体情节+一句评价，禁止文绉绉和学术腔。"
+                hi_trace = "你写亮点像给朋友推荐片：具体、好懂、不拽词。"
+
             if debug_prompts is not None:
                 from app.utils.prompt_trace import trace
 
@@ -231,7 +299,7 @@ class EnhancedVideoAnalyzer:
                     trace(
                         'education_expert',
                         '亮点提炼',
-                        system='你写亮点像给朋友推荐片：具体、好懂、不拽词。',
+                        system=hi_trace,
                         user=highlights_prompt,
                         model='qwen-plus-latest',
                     )
@@ -242,7 +310,7 @@ class EnhancedVideoAnalyzer:
                 messages=[
                     {
                         "role": "system",
-                        "content": "你写亮点像给朋友推荐片：具体情节+一句评价，禁止文绉绉和学术腔。",
+                        "content": hi_sys,
                     },
                     {"role": "user", "content": highlights_prompt},
                 ],
@@ -267,17 +335,18 @@ class EnhancedVideoAnalyzer:
                 except:
                     pass
 
-            return self._get_default_highlights()
+            return self._get_default_highlights(lang=lang)
 
         except Exception as e:
             logger.error(f"亮点提炼失败: {e}")
-            return self._get_default_highlights()
+            return self._get_default_highlights(lang=lang)
 
     def _extract_educational_meaning(
         self,
         story_content: str,
         content_analysis: Dict,
         debug_prompts: Optional[List[Dict[str, Any]]] = None,
+        lang: str = 'zh',
     ) -> Dict[str, Any]:
         """
         教育意义提取 - 多维度价值分析
@@ -291,13 +360,62 @@ class EnhancedVideoAnalyzer:
         try:
             from dashscope import Generation
 
-            educational_prompt = f"""请分析以下故事的教育意义，写给**家长/老师/普通观众**看，必须一读就懂。
+            ca_edu = json.dumps(content_analysis, ensure_ascii=False, indent=2)
+            if lang == 'en':
+                educational_prompt = f"""Analyze educational value for parents, teachers, or general viewers. **All English**, plain language, no edu-theory name-dropping unless the video is explicitly about pedagogy.
+
+Story:
+{story_content}
+
+Structure:
+{ca_edu}
+
+Return **only** JSON (keys exactly as below; all string values in English):
+{{
+    "moral_education": {{
+        "values": ["e.g. honesty"],
+        "description": "tie to plot, not slogans",
+        "examples": ["plot beat 1", "plot beat 2"]
+    }},
+    "knowledge_transfer": {{
+        "knowledge": ["concrete fact or skill"],
+        "description": "what a child/viewer learns",
+        "learning_points": ["point 1", "point 2"]
+    }},
+    "value_shaping": {{
+        "life_values": ["e.g. respect"],
+        "description": "how values show in character choices",
+        "positive_model": "who did what (role model)"
+    }},
+    "life_wisdom": {{
+        "wisdom": ["one actionable tip"],
+        "description": "one practical line for daily life",
+        "applicable_scenarios": ["e.g. family chat"]
+    }},
+    "behavior_demonstration": {{
+        "positive_behaviors": ["imitable actions"],
+        "negative_behaviors": ["counterexamples if any"],
+        "lessons": "one-sentence takeaway"
+    }},
+    "age_appropriateness": {{
+        "suitable_ages": "age band",
+        "parental_guidance": "one question parents can ask"
+    }},
+    "overall_educational_value": "2-4 short sentences: core moral first, then grounded insight; no purple prose"
+}}
+
+Rules: every point must map to the story; if it is light entertainment, say so honestly; do not invent morals not in the text."""
+
+                edu_sys = "Educational notes for families: concrete, English, no academic jargon."
+                edu_trace = "Educational meaning: clear English for parents/teachers."
+            else:
+                educational_prompt = f"""请分析以下故事的教育意义，写给**家长/老师/普通观众**看，必须一读就懂。
 
 故事内容：
 {story_content}
 
 故事结构分析：
-{json.dumps(content_analysis, ensure_ascii=False, indent=2)}
+{ca_edu}
 
 【语言硬性要求】
 - **禁止**卖弄教育理论：不要随意引用「皮亚杰」「建构主义」「元认知」等学术名，除非视频是明确讲教育学的课程。
@@ -343,6 +461,9 @@ class EnhancedVideoAnalyzer:
 2. 家长读完应知道「可以跟孩子聊什么」
 3. 若故事偏娱乐，可如实写「轻启发、重趣味」，不要硬凑高深意义"""
 
+                edu_sys = "你写教育意义像班主任与家长沟通：具体情节+可落地启发，禁止学术套话。"
+                edu_trace = "你写教育意义像班主任与家长沟通：清楚、具体、不拽理论。"
+
             if debug_prompts is not None:
                 from app.utils.prompt_trace import trace
 
@@ -350,7 +471,7 @@ class EnhancedVideoAnalyzer:
                     trace(
                         'education_expert',
                         '教育意义提取',
-                        system='你写教育意义像班主任与家长沟通：清楚、具体、不拽理论。',
+                        system=edu_trace,
                         user=educational_prompt,
                         model='qwen-plus-latest',
                     )
@@ -361,7 +482,7 @@ class EnhancedVideoAnalyzer:
                 messages=[
                     {
                         "role": "system",
-                        "content": "你写教育意义像班主任与家长沟通：具体情节+可落地启发，禁止学术套话。",
+                        "content": edu_sys,
                     },
                     {"role": "user", "content": educational_prompt},
                 ],
@@ -386,18 +507,19 @@ class EnhancedVideoAnalyzer:
                 except:
                     pass
 
-            return self._get_default_educational()
+            return self._get_default_educational(lang=lang)
 
         except Exception as e:
             logger.error(f"教育意义提取失败: {e}")
-            return self._get_default_educational()
+            return self._get_default_educational(lang=lang)
 
     def _create_structured_summary(
         self,
         story_content: str,
         content_analysis: Dict,
         highlights: Dict,
-        educational: Dict
+        educational: Dict,
+        lang: str = 'zh',
     ) -> Dict[str, Any]:
         """
         创建结构化总结
@@ -406,9 +528,12 @@ class EnhancedVideoAnalyzer:
             highlights_summary = highlights.get('summary', '') if isinstance(highlights, dict) else str(highlights)
             educational_summary = educational.get('summary', '') if isinstance(educational, dict) else str(educational)
 
+            default_plot = (
+                'A warm story about growth.' if lang == 'en' else '故事内容摘要'
+            )
             return {
                 'story_content': story_content,
-                'story_summary': content_analysis.get('main_plot', '故事内容摘要'),
+                'story_summary': content_analysis.get('main_plot', default_plot),
                 'highlights': highlights_summary,
                 'educational': educational_summary,
                 'characters': content_analysis.get('characters', []),
@@ -419,14 +544,30 @@ class EnhancedVideoAnalyzer:
 
         except Exception as e:
             logger.error(f"创建结构化总结失败: {e}")
+            if lang == 'en':
+                return {
+                    'story_content': story_content,
+                    'highlights': 'A compelling story.',
+                    'educational': 'Meaningful takeaway for viewers.',
+                }
             return {
                 'story_content': story_content,
                 'highlights': '精彩纷呈的故事',
                 'educational': '富有教育意义'
             }
 
-    def _get_default_content_analysis(self) -> Dict[str, Any]:
+    def _get_default_content_analysis(self, lang: str = 'zh') -> Dict[str, Any]:
         """默认内容分析"""
+        if lang == 'en':
+            return {
+                "main_plot": "A warm, character-driven story.",
+                "characters": [],
+                "key_scenes": [],
+                "emotional_arc": "Rising tension and resolution.",
+                "thematic_elements": ["growth", "courage", "kindness"],
+                "narrative_technique": "Linear progression",
+                "target_audience": "General audience",
+            }
         return {
             "main_plot": "一个充满温情和成长的故事",
             "characters": [],
@@ -437,8 +578,11 @@ class EnhancedVideoAnalyzer:
             "target_audience": "适合所有年龄段"
         }
 
-    def _get_default_highlights(self) -> Dict[str, Any]:
+    def _get_default_highlights(self, lang: str = 'zh') -> Dict[str, Any]:
         """默认亮点"""
+        summary = (
+            'Strong moments and sincere emotion.' if lang == 'en' else '故事精彩纷呈，情感真挚动人'
+        )
         return {
             'success': True,
             'highlights': {
@@ -447,11 +591,14 @@ class EnhancedVideoAnalyzer:
                 'visual_highlights': [],
                 'narrative_highlights': []
             },
-            'summary': '故事精彩纷呈，情感真挚动人'
+            'summary': summary
         }
 
-    def _get_default_educational(self) -> Dict[str, Any]:
+    def _get_default_educational(self, lang: str = 'zh') -> Dict[str, Any]:
         """默认教育意义"""
+        summary = (
+            'Positive values viewers can discuss.' if lang == 'en' else '故事传递了积极向上的价值观'
+        )
         return {
             'success': True,
             'educational': {
@@ -461,7 +608,7 @@ class EnhancedVideoAnalyzer:
                 'life_wisdom': {},
                 'behavior_demonstration': {}
             },
-            'summary': '故事传递了积极向上的价值观'
+            'summary': summary
         }
 
 

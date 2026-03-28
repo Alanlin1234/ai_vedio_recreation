@@ -35,7 +35,12 @@ export const YINGFANG_AGENTS = [
   },
 ]
 
-export function getYingfangAgentName(agentId) {
+export function getYingfangAgentName(agentId, t) {
+  if (typeof t === 'function') {
+    const key = `agents.${agentId}.name`
+    const label = t(key)
+    return label === key ? agentId : label
+  }
   const a = YINGFANG_AGENTS.find((x) => x.id === agentId)
   return a ? a.nameZh : agentId
 }

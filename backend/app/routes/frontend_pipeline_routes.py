@@ -1,8 +1,19 @@
-from flask import Blueprint, request, jsonify, current_app, send_from_directory
+from flask import Blueprint, request, jsonify, current_app, send_from_directory, g
 from app.models import db, VideoRecreation, RecreationScene, RecreationLog
+from app.auth_access import require_authenticated_response
+from app.supabase_storage import storage_configured, upload_object
+from app.video_source_path import ensure_local_original_video
+from app.recreation_access import recreation_for_request
+from app.output_language import (
+    generation_language,
+    parse_output_language,
+    sync_recreation_output_language_before_analysis,
+)
 from app.services.efficient_video_analyzer import (
     EfficientVideoAnalyzerWithHighlights,
     normalize_educational_for_api_response,
+    _empty_edu,
+    _empty_hi,
 )
 from app.services.enhanced_content_generator import EnhancedContentGenerator
 from app.services.video_recreation_service import VideoRecreationService
@@ -19,18 +30,21 @@ logger = logging.getLogger(__name__)
 frontend_pipeline_bp = Blueprint('frontend_pipeline', __name__)
 
 
+def _safe_filename(name: str) -> str:
+    base = (name or "video").replace("\\", "/").split("/")[-1]
+    keep = [c for c in base if c.isalnum() or c in "._-"]
+    s = "".join(keep)[:180] or "video"
+    return s
+
+
 @frontend_pipeline_bp.before_request
 def _require_login_for_pipeline():
-    from flask import session, jsonify
-
-    if request.method == 'OPTIONS':
+    if request.method == "OPTIONS":
         return None
-    # 公开：便于未登录时确认当前分镜上限等是否为新部署
-    if (request.path or '').rstrip('/').endswith('/config'):
+    if (request.path or "").rstrip("/").endswith("/config"):
         return None
-    if not session.get('user_id'):
-        return jsonify({'success': False, 'error': '请先登录', 'code': 'UNAUTHORIZED'}), 401
-    return None
+    resp = require_authenticated_response()
+    return resp if resp else None
 
 
 @frontend_pipeline_bp.route('/yingfang-agents', methods=['GET'])
@@ -55,30 +69,61 @@ def upload_video():
         if video_file.filename == '':
             return jsonify({'success': False, 'error': '没有选择视频文件'}), 400
 
-        upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'user_videos')
-        os.makedirs(upload_dir, exist_ok=True)
+        file_ext = os.path.splitext(video_file.filename)[1] or '.mp4'
+        raw = video_file.read()
+        if not raw:
+            return jsonify({'success': False, 'error': '文件为空'}), 400
 
-        file_ext = os.path.splitext(video_file.filename)[1]
-        unique_filename = f"video_{uuid.uuid4().hex[:12]}{file_ext}"
-        video_path = os.path.join(upload_dir, unique_filename)
-
-        video_file.save(video_path)
-
+        owner_uid = getattr(g, 'supabase_uid', None)
         recreation = VideoRecreation(
             original_video_id=f"user_{uuid.uuid4().hex}",
-            original_video_path=video_path,
+            original_video_path=None,
+            original_video_storage_key=None,
+            owner_supabase_uid=owner_uid,
             recreation_name=os.path.splitext(video_file.filename)[0],
             status='pending',
-            created_at=datetime.now()
+            created_at=datetime.now(),
+            output_language=parse_output_language(),
         )
         db.session.add(recreation)
         db.session.commit()
 
+        use_storage = storage_configured() and owner_uid
+        if use_storage:
+            safe = _safe_filename(video_file.filename)
+            object_path = f"{owner_uid}/{recreation.id}/{safe}"
+            bucket = current_app.config['SUPABASE_STORAGE_BUCKET']
+            ct = video_file.mimetype or 'application/octet-stream'
+            if not upload_object(bucket, object_path, raw, content_type=ct):
+                db.session.delete(recreation)
+                db.session.commit()
+                return jsonify({'success': False, 'error': '上传到云存储失败'}), 500
+            recreation.original_video_storage_key = object_path
+            cache_dir = os.path.join(
+                current_app.config['UPLOAD_FOLDER'], 'user_videos', str(owner_uid), str(recreation.id)
+            )
+            os.makedirs(cache_dir, exist_ok=True)
+            video_path = os.path.join(cache_dir, f'source{file_ext}')
+            with open(video_path, 'wb') as f:
+                f.write(raw)
+            recreation.original_video_path = video_path
+            db.session.commit()
+        else:
+            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'user_videos')
+            os.makedirs(upload_dir, exist_ok=True)
+            unique_filename = f"video_{uuid.uuid4().hex[:12]}{file_ext}"
+            video_path = os.path.join(upload_dir, unique_filename)
+            with open(video_path, 'wb') as f:
+                f.write(raw)
+            recreation.original_video_path = video_path
+            db.session.commit()
+
         return jsonify({
             'success': True,
             'recreation_id': recreation.id,
-            'video_path': video_path,
-            'filename': video_file.filename
+            'video_path': recreation.original_video_path,
+            'filename': video_file.filename,
+            'storage_key': recreation.original_video_storage_key,
         })
 
     except Exception as e:
@@ -93,22 +138,26 @@ def upload_video():
 @frontend_pipeline_bp.route('/analyze-video/<int:recreation_id>', methods=['POST'])
 def analyze_video(recreation_id):
     try:
-        recreation = VideoRecreation.query.get(recreation_id)
-        if not recreation:
-            return jsonify({'success': False, 'error': '项目不存在'}), 404
+        recreation, err = recreation_for_request(recreation_id)
+        if err:
+            return err
 
         data = request.get_json(silent=True) or {}
         if isinstance(data, dict) and 'creator_notes' in data:
             recreation.creator_notes = (data.get('creator_notes') or '')[:12000]
 
-        video_path = recreation.original_video_path
-        if not os.path.exists(video_path):
-            return jsonify({'success': False, 'error': '视频文件不存在'}), 400
+        sync_recreation_output_language_before_analysis(recreation)
+        db.session.commit()
 
+        video_path = ensure_local_original_video(recreation)
+        if not video_path or not os.path.exists(video_path):
+            return jsonify({'success': False, 'error': '视频文件不存在或无法从存储拉取'}), 400
+
+        lang = generation_language(recreation)
         video_analyzer = EfficientVideoAnalyzerWithHighlights()
 
-        print(f"[视频分析] 开始高效分析视频: {video_path}")
-        result = asyncio.run(video_analyzer.analyze_video_complete(video_path=video_path))
+        print(f"[视频分析] 开始高效分析视频: {video_path} (lang={lang})")
+        result = asyncio.run(video_analyzer.analyze_video_complete(video_path=video_path, lang=lang))
 
         if not result.get('success'):
             return jsonify({
@@ -122,7 +171,7 @@ def analyze_video(recreation_id):
         educational = result.get('educational_meaning', '')
         educational_points = result.get('educational_points') or []
         educational, educational_points = normalize_educational_for_api_response(
-            educational, educational_points
+            educational, educational_points, lang=lang
         )
 
         print(f"[视频分析] 高效分析完成")
@@ -145,8 +194,8 @@ def analyze_video(recreation_id):
             'success': True,
             'recreation_id': recreation_id,
             'story_content': story_content,
-            'highlights': highlights if highlights else '暂无亮点描述',
-            'educational_meaning': educational if educational else '暂无教育意义描述',
+            'highlights': highlights if highlights else _empty_hi(lang),
+            'educational_meaning': educational if educational else _empty_edu(lang),
             'educational_points': educational_points,
             'analysis_metadata': {
                 'keyframes_count': result.get('keyframes_count', 0),
@@ -170,9 +219,9 @@ def analyze_video(recreation_id):
 @frontend_pipeline_bp.route('/generate-new-story/<int:recreation_id>', methods=['POST'])
 def generate_new_story(recreation_id):
     try:
-        recreation = VideoRecreation.query.get(recreation_id)
-        if not recreation:
-            return jsonify({'success': False, 'error': '项目不存在'}), 404
+        recreation, err = recreation_for_request(recreation_id)
+        if err:
+            return err
 
         data = request.get_json() or {}
 
@@ -188,6 +237,7 @@ def generate_new_story(recreation_id):
 
         print(f"[新故事生成] 开始生成新故事...")
 
+        lang = generation_language(recreation)
         from app.services.enhanced_content_generator import EnhancedContentGenerator
         content_generator = EnhancedContentGenerator()
 
@@ -204,6 +254,7 @@ def generate_new_story(recreation_id):
             educational=original_educational,
             creator_notes=(recreation.creator_notes or '')[:12000],
             full_story_text=original_story,
+            language=lang,
         )
 
         if enhanced_result.get('success'):
@@ -213,7 +264,9 @@ def generate_new_story(recreation_id):
 
             combined_highlights = highlights_data.get('combined_highlights', original_highlights)
             combined_educational = educational_data.get('combined_educational', original_educational)
-            combined_educational, _ = normalize_educational_for_api_response(combined_educational)
+            combined_educational, _ = normalize_educational_for_api_response(
+                combined_educational, lang=lang
+            )
 
             print(f"[新故事生成] 新故事生成成功")
             print(f"[新故事生成] - 亮点: {combined_highlights[:100]}...")
@@ -253,9 +306,9 @@ def generate_new_story(recreation_id):
 @frontend_pipeline_bp.route('/generate-storyboard/<int:recreation_id>', methods=['POST'])
 def generate_storyboard(recreation_id):
     try:
-        recreation = VideoRecreation.query.get(recreation_id)
-        if not recreation:
-            return jsonify({'success': False, 'error': '项目不存在'}), 404
+        recreation, err = recreation_for_request(recreation_id)
+        if err:
+            return err
 
         story_content = recreation.new_script_content or recreation.video_understanding
         if not story_content:
@@ -282,6 +335,7 @@ def generate_storyboard(recreation_id):
 
         from app.services.storyboard_generator import MAX_SCENES, StoryboardGenerator
 
+        lang = generation_language(recreation)
         storyboard_generator = StoryboardGenerator()
 
         print(f"[分镜图生成] 开始生成分镜（scene_count={scene_count!r}，None 表示智能规划）...")
@@ -289,7 +343,8 @@ def generate_storyboard(recreation_id):
             story_content=story_content,
             scene_count=scene_count,
             output_dir=output_dir,
-            generate_images=True
+            generate_images=True,
+            language=lang,
         )
 
         if not storyboard_result.get('success'):
@@ -301,8 +356,12 @@ def generate_storyboard(recreation_id):
         scenes = storyboard_result.get('scenes', [])[:MAX_SCENES]
         for sc in scenes:
             d = (sc.get('dialogue') or '').strip()
-            if not d or d in ('暂无台词', '暂无'):
-                sc['dialogue'] = '（本镜以动作为主；环境音）'
+            if not d or d in ('暂无台词', '暂无', 'No dialogue'):
+                sc['dialogue'] = (
+                    '(Action-led shot; ambience only)'
+                    if lang == 'en'
+                    else '（本镜以动作为主；环境音）'
+                )
 
         RecreationScene.query.filter_by(recreation_id=recreation_id).delete()
 
@@ -364,9 +423,9 @@ def generate_storyboard(recreation_id):
 @frontend_pipeline_bp.route('/generate-scene-videos/<int:recreation_id>', methods=['POST'])
 def generate_scene_videos(recreation_id):
     try:
-        recreation = VideoRecreation.query.get(recreation_id)
-        if not recreation:
-            return jsonify({'success': False, 'error': '项目不存在'}), 404
+        recreation, err = recreation_for_request(recreation_id)
+        if err:
+            return err
 
         from app.services.pipeline_workflow import run_generate_scene_videos
 
@@ -392,9 +451,9 @@ def generate_scene_videos(recreation_id):
 @frontend_pipeline_bp.route('/combine-video/<int:recreation_id>', methods=['POST'])
 def combine_video(recreation_id):
     try:
-        recreation = VideoRecreation.query.get(recreation_id)
-        if not recreation:
-            return jsonify({'success': False, 'error': '项目不存在'}), 404
+        recreation, err = recreation_for_request(recreation_id)
+        if err:
+            return err
 
         scenes = RecreationScene.query.filter_by(
             recreation_id=recreation_id,
@@ -452,8 +511,10 @@ def combine_video(recreation_id):
 @frontend_pipeline_bp.route('/export-video/<int:recreation_id>', methods=['GET'])
 def export_video(recreation_id):
     try:
-        recreation = VideoRecreation.query.get(recreation_id)
-        if not recreation or not recreation.final_video_path:
+        recreation, err = recreation_for_request(recreation_id)
+        if err:
+            return err
+        if not recreation.final_video_path:
             return jsonify({'success': False, 'error': '视频不存在'}), 404
 
         video_dir = os.path.dirname(recreation.final_video_path)
@@ -477,8 +538,10 @@ def export_video(recreation_id):
 def final_preview(recreation_id):
     """成片在线预览（inline，供 <video src> 使用；下载仍用 export-video）"""
     try:
-        recreation = VideoRecreation.query.get(recreation_id)
-        if not recreation or not recreation.final_video_path:
+        recreation, err = recreation_for_request(recreation_id)
+        if err:
+            return err
+        if not recreation.final_video_path:
             return jsonify({'success': False, 'error': '视频不存在'}), 404
 
         if not os.path.exists(recreation.final_video_path):
@@ -506,7 +569,11 @@ def get_storyboard_image(recreation_id, scene_number):
     """获取分镜图"""
     try:
         from flask import send_from_directory
-        
+
+        recreation, err = recreation_for_request(recreation_id)
+        if err:
+            return err
+
         image_dir = os.path.join(
             current_app.config['UPLOAD_FOLDER'],
             'storyboards',
@@ -548,9 +615,9 @@ def get_project(recreation_id):
     try:
         from app.services.storyboard_generator import MAX_SCENES
 
-        recreation = VideoRecreation.query.get(recreation_id)
-        if not recreation:
-            return jsonify({'success': False, 'error': '项目不存在'}), 404
+        recreation, err = recreation_for_request(recreation_id)
+        if err:
+            return err
 
         scenes = (
             RecreationScene.query.filter_by(recreation_id=recreation_id)

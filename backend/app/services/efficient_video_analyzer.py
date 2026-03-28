@@ -19,9 +19,20 @@ _POINT_MAX = 140
 _POINTS_CAP = 3
 
 
-def _flatten_educational_for_api(educational_raw: Any) -> tuple[str, List[str]]:
+def _empty_edu(lang: str) -> str:
+    return 'No educational theme description yet.' if lang == 'en' else '暂无教育意义描述'
+
+
+def _empty_hi(lang: str) -> str:
+    return 'No highlights yet.' if lang == 'en' else '暂无亮点描述'
+
+
+def _flatten_educational_for_api(educational_raw: Any, lang: str = 'zh') -> tuple[str, List[str]]:
     """将教育意义转为简短摘要 + 分点列表，避免整段 JSON 字符串展示。"""
     points: List[str] = []
+    empty_edu = _empty_edu(lang)
+    en = lang == 'en'
+    sep_list = ', ' if en else '、'
 
     def _clip(s: str, n: int = _POINT_MAX) -> str:
         s = (s or '').strip()
@@ -34,11 +45,11 @@ def _flatten_educational_for_api(educational_raw: Any) -> tuple[str, List[str]]:
             points.append(f'{prefix}{text}')
 
     if educational_raw is None:
-        return ('暂无教育意义描述', points)
+        return (empty_edu, points)
     if isinstance(educational_raw, str):
         s = educational_raw.strip()
         if not s:
-            return ('暂无教育意义描述', points)
+            return (empty_edu, points)
         return (s[:_BRIEF_MAX] + ('…' if len(s) > _BRIEF_MAX else ''), points)
     if not isinstance(educational_raw, dict):
         return (str(educational_raw)[:_BRIEF_MAX], points)
@@ -54,50 +65,53 @@ def _flatten_educational_for_api(educational_raw: Any) -> tuple[str, List[str]]:
     if isinstance(me, dict):
         d = _clip(me.get('description') or '')
         if d:
-            _add_point('品德：', d)
+            _add_point('Moral: ' if en else '品德：', d)
         elif isinstance(me.get('values'), list) and me['values']:
-            _add_point('品德：', '、'.join(str(x) for x in me['values'][:4]))
+            _add_point('Moral: ' if en else '品德：', sep_list.join(str(x) for x in me['values'][:4]))
 
     kt = inner.get('knowledge_transfer') or {}
     if isinstance(kt, dict):
         d = _clip(kt.get('description') or '')
         if d:
-            _add_point('知识：', d)
+            _add_point('Knowledge: ' if en else '知识：', d)
         elif isinstance(kt.get('learning_points'), list) and kt['learning_points']:
-            _add_point('学习要点：', '、'.join(str(x) for x in kt['learning_points'][:3]))
+            _add_point(
+                'Learning: ' if en else '学习要点：',
+                sep_list.join(str(x) for x in kt['learning_points'][:3]),
+            )
 
     vs = inner.get('value_shaping') or {}
     if isinstance(vs, dict):
         d = _clip(vs.get('description') or vs.get('positive_model') or '')
         if d:
-            _add_point('价值观：', d)
+            _add_point('Values: ' if en else '价值观：', d)
 
     lw = inner.get('life_wisdom') or {}
     if isinstance(lw, dict):
         d = _clip(lw.get('description') or '')
         if d:
-            _add_point('生活智慧：', d)
+            _add_point('Life wisdom: ' if en else '生活智慧：', d)
 
     age = inner.get('age_appropriateness') or {}
     if isinstance(age, dict):
         sa = (age.get('suitable_ages') or '').strip()
         if sa:
-            _add_point('适龄：', _clip(sa, 80))
+            _add_point('Ages: ' if en else '适龄：', _clip(sa, 80))
 
     bd = inner.get('behavior_demonstration') or {}
     if isinstance(bd, dict) and len(points) < _POINTS_CAP:
         les = (bd.get('lessons') or '').strip()
         if les:
-            _add_point('行为启示：', _clip(les, 100))
+            _add_point('Behavior: ' if en else '行为启示：', _clip(les, 100))
 
     if not brief:
-        brief = summary_line or '暂无教育意义描述'
+        brief = summary_line or empty_edu
     if len(brief) > _BRIEF_MAX:
         brief = brief[: _BRIEF_MAX - 1] + '…'
 
     # 若维度未凑够要点，用综合句拆成 2～3 条（用户侧只关心最核心几条）
-    if len(points) < 2 and brief and brief != '暂无教育意义描述':
-        extra = _split_core_sentences(brief, max_n=max(0, _POINTS_CAP - len(points)))
+    if len(points) < 2 and brief and brief != empty_edu:
+        extra = _split_core_sentences(brief, max_n=max(0, _POINTS_CAP - len(points)), lang=lang)
         for line in extra:
             if len(points) >= _POINTS_CAP:
                 break
@@ -107,15 +121,20 @@ def _flatten_educational_for_api(educational_raw: Any) -> tuple[str, List[str]]:
     return (brief[:_BRIEF_MAX], points[:_POINTS_CAP])
 
 
-def _split_core_sentences(text: str, max_n: int = 3) -> List[str]:
+def _split_core_sentences(text: str, max_n: int = 3, lang: str = 'zh') -> List[str]:
     """把一段综合表述按句号拆成若干短句，作补充要点。"""
     if not text or max_n <= 0:
         return []
-    chunks = re.split(r'(?<=[。！？])\s*', text.strip())
+    if lang == 'en':
+        chunks = re.split(r'(?<=[.!?])\s+', text.strip())
+        min_len = 16
+    else:
+        chunks = re.split(r'(?<=[。！？])\s*', text.strip())
+        min_len = 12
     out: List[str] = []
     for c in chunks:
         c = c.strip()
-        if len(c) < 12:
+        if len(c) < min_len:
             continue
         if len(c) > _POINT_MAX:
             c = c[: _POINT_MAX - 1] + '…'
@@ -141,7 +160,7 @@ def _extract_quoted_field_from_repr_blob(s: str, field: str) -> str:
     return ''
 
 
-def _extract_educational_from_repr_blob(s: str) -> tuple[str, List[str]]:
+def _extract_educational_from_repr_blob(s: str, lang: str = 'zh') -> tuple[str, List[str]]:
     """
     literal_eval 失败时（超长引号、转义异常等）：从 repr 文本中抽 summary / overall，
     再拆成 2～3 条核心要点。
@@ -154,11 +173,12 @@ def _extract_educational_from_repr_blob(s: str) -> tuple[str, List[str]]:
         m = re.search(r"'description'\s*:\s*'((?:[^'\\]|\\.){15,800})'", blob, re.DOTALL)
         if m:
             text = m.group(1).replace("\\'", "'")
+    empty_edu = _empty_edu(lang)
     if not text:
-        return ('暂无教育意义描述', [])
+        return (empty_edu, [])
     text = text.replace('\\n', ' ')
     brief = text[:_BRIEF_MAX] + ('…' if len(text) > _BRIEF_MAX else '')
-    points = _split_core_sentences(text, max_n=_POINTS_CAP)
+    points = _split_core_sentences(text, max_n=_POINTS_CAP, lang=lang)
     if len(points) < 2:
         parts = [p.strip() for p in re.split(r'[；;]\s*', text) if len(p.strip()) >= 12]
         for p in parts:
@@ -175,20 +195,23 @@ def _extract_educational_from_repr_blob(s: str) -> tuple[str, List[str]]:
 def normalize_educational_for_api_response(
     value: Any,
     educational_points: Optional[List[str]] = None,
+    *,
+    lang: str = 'zh',
 ) -> tuple[str, List[str]]:
     """
     接口出口统一处理：保证 educational_meaning 为短纯文本，educational_points 为列表。
     兼容 dict、以及历史上误用 str(dict) 存入的整段 repr 字符串。
     """
+    empty_edu = _empty_edu(lang)
     pts: List[str] = list(educational_points) if educational_points else []
     if isinstance(value, dict):
-        b, p = _flatten_educational_for_api(value)
+        b, p = _flatten_educational_for_api(value, lang=lang)
         return (b, p if p else pts)
 
     if isinstance(value, str):
         s = value.strip()
         if not s:
-            return ('暂无教育意义描述', pts)
+            return (empty_edu, pts)
         # 历史问题：整段 Python dict 被 str() 后展示成「JSON」
         if s.startswith('{') and ("'educational'" in s or '"educational"' in s) and len(s) < 80000:
             parsed_dict: Optional[Dict[str, Any]] = None
@@ -210,15 +233,15 @@ def normalize_educational_for_api_response(
                 except (json.JSONDecodeError, ValueError):
                     pass
             if parsed_dict is not None:
-                return _flatten_educational_for_api(parsed_dict)
-            bb, pp = _extract_educational_from_repr_blob(s)
-            if bb != '暂无教育意义描述' or pp:
+                return _flatten_educational_for_api(parsed_dict, lang=lang)
+            bb, pp = _extract_educational_from_repr_blob(s, lang=lang)
+            if bb != empty_edu or pp:
                 return (bb, pp[:_POINTS_CAP] if pp else pts)
         if len(s) > _BRIEF_MAX:
             s = s[: _BRIEF_MAX - 1] + '…'
         return (s, pts)
 
-    b, p = _flatten_educational_for_api(value)
+    b, p = _flatten_educational_for_api(value, lang=lang)
     return (b, p if p else pts)
 
 
@@ -232,9 +255,11 @@ def _dashscope_key() -> str:
 
 
 def _understand_video_with_qwen_vl(
-    video_path: str, debug_prompts: Optional[List[Dict[str, Any]]] = None
+    video_path: str,
+    debug_prompts: Optional[List[Dict[str, Any]]] = None,
+    lang: str = 'zh',
 ) -> str:
-    """使用 DashScope 多模态模型理解本地视频，返回中文长文本描述。"""
+    """使用 DashScope 多模态模型理解本地视频，返回长文本描述（语言由 lang 约束）。"""
     import dashscope
 
     from app.utils.prompt_trace import trace
@@ -250,10 +275,17 @@ def _understand_video_with_qwen_vl(
 
     from dashscope import MultiModalConversation
 
-    user_text = (
-        '请详细观看并概括该视频：1）主要情节（谁、做了什么、结果）；2）人物与场景；'
-        '3）画面风格与节奏；4）你觉得好看的片段。用中文分段输出，语言通俗、少堆砌形容词，便于后续改编。'
-    )
+    if lang == 'en':
+        user_text = (
+            'Watch the video carefully and summarize in English: 1) Main plot (who, what, outcome); '
+            '2) Characters and settings; 3) Visual style and pacing; 4) Most engaging moments. '
+            'Use clear sections; plain language, minimal purple prose, for downstream adaptation.'
+        )
+    else:
+        user_text = (
+            '请详细观看并概括该视频：1）主要情节（谁、做了什么、结果）；2）人物与场景；'
+            '3）画面风格与节奏；4）你觉得好看的片段。用中文分段输出，语言通俗、少堆砌形容词，便于后续改编。'
+        )
     if debug_prompts is not None:
         debug_prompts.append(
             trace(
@@ -309,11 +341,11 @@ class EfficientVideoAnalyzerWithHighlights:
     def __init__(self, api_key: str | None = None):
         self.api_key = api_key or _dashscope_key()
 
-    async def analyze_video_complete(self, video_path: str) -> Dict[str, Any]:
+    async def analyze_video_complete(self, video_path: str, lang: str = 'zh') -> Dict[str, Any]:
         t0 = time.time()
         debug_prompts: List[Dict[str, Any]] = []
         try:
-            raw_content = _understand_video_with_qwen_vl(video_path, debug_prompts)
+            raw_content = _understand_video_with_qwen_vl(video_path, debug_prompts, lang=lang)
         except Exception as e:
             logger.exception('视频多模态理解失败: %s', e)
             return {
@@ -336,6 +368,7 @@ class EfficientVideoAnalyzerWithHighlights:
                 video_path,
                 {'content': raw_content},
                 debug_prompts=debug_prompts,
+                lang=lang,
             )
         except Exception as e:
             logger.exception('EnhancedVideoAnalyzer 失败，仅使用原始理解文本: %s', e)
@@ -348,13 +381,13 @@ class EfficientVideoAnalyzerWithHighlights:
             educational_raw = inner.get('educational_meaning')
             if isinstance(highlights, dict):
                 highlights = highlights.get('summary') or str(highlights)
-            educational_brief, educational_points = _flatten_educational_for_api(educational_raw)
+            educational_brief, educational_points = _flatten_educational_for_api(educational_raw, lang=lang)
             story = inner.get('story_content') or raw_content
             return {
                 'success': True,
                 'content': story,
-                'highlights': highlights or '暂无亮点描述',
-                'educational_meaning': educational_brief or '暂无教育意义描述',
+                'highlights': highlights or _empty_hi(lang),
+                'educational_meaning': educational_brief or _empty_edu(lang),
                 'educational_points': educational_points,
                 'keyframes_count': 0,
                 'time_cost': elapsed,
@@ -365,8 +398,8 @@ class EfficientVideoAnalyzerWithHighlights:
         return {
             'success': True,
             'content': raw_content,
-            'highlights': '暂无亮点描述',
-            'educational_meaning': '暂无教育意义描述',
+            'highlights': _empty_hi(lang),
+            'educational_meaning': _empty_edu(lang),
             'educational_points': [],
             'keyframes_count': 0,
             'time_cost': elapsed,

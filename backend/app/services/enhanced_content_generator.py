@@ -32,6 +32,7 @@ class EnhancedContentGenerator:
         educational: str,
         creator_notes: str = '',
         full_story_text: str = '',
+        language: str = 'zh',
     ) -> Dict[str, Any]:
         """
         生成二创新故事（故事编剧）
@@ -56,6 +57,7 @@ class EnhancedContentGenerator:
                 debug_prompts=debug_prompts,
                 creator_notes=creator_notes,
                 full_story_text=full_story_text,
+                language=language,
             )
 
             # 第二步：扩展亮点（保留核心，保持创新）
@@ -63,6 +65,7 @@ class EnhancedContentGenerator:
                 original_highlights=highlights,
                 new_story=new_story,
                 debug_prompts=debug_prompts,
+                language=language,
             )
 
             # 第三步：扩展教育意义（保留核心，大方向一致）
@@ -70,6 +73,7 @@ class EnhancedContentGenerator:
                 original_educational=educational,
                 new_story=new_story,
                 debug_prompts=debug_prompts,
+                language=language,
             )
 
             return {
@@ -97,6 +101,7 @@ class EnhancedContentGenerator:
         debug_prompts: List[Dict[str, Any]] | None = None,
         creator_notes: str = '',
         full_story_text: str = '',
+        language: str = 'zh',
     ) -> str:
         """
         二创新故事：仅以教育理念为锚；禁止换皮；文体与语气随素材变化。
@@ -109,13 +114,61 @@ class EnhancedContentGenerator:
             emotional_arc = original_analysis.get('emotional_arc', '')
             thematic_elements = original_analysis.get('thematic_elements', [])
 
-            characters_str = json.dumps(characters, ensure_ascii=False, indent=2) if characters else '（原素材未单独列出人物）'
+            if language == 'en':
+                characters_str = (
+                    json.dumps(characters, ensure_ascii=False, indent=2)
+                    if characters
+                    else '(No separate character list in source)'
+                )
+            else:
+                characters_str = json.dumps(characters, ensure_ascii=False, indent=2) if characters else '（原素材未单独列出人物）'
 
             source_for_tone = (full_story_text or main_plot or '').strip()
             source_for_tone = source_for_tone[:8000]
             notes = (creator_notes or '').strip()[:4000]
 
-            story_prompt = f"""你是「影坊」项目的二创故事编剧。交付物必须是**全新故事**：读者不能说「只是把原片换了个动物/换了个名字」。
+            if language == 'en':
+                story_prompt = f"""You are the secondary-creation story writer for project Yingfang. Deliver a **brand-new story**: readers must not say you only renamed species or swapped one animal for another.
+
+━━━━━━━━━━━━━━━━
+【Hard anchor — educational idea (abstract core only; all concrete plot may change)】
+{educational}
+━━━━━━━━━━━━━━━━
+
+【Voice】Infer genre/audience from the source text and user notes; show it in the prose (do not list the diagnosis).
+- Kids / fable: short sentences, playful rhythm.
+- Explainer / STEM: clear terms, light metaphor.
+- Realistic slice-of-life: concrete detail, natural dialogue.
+
+【Clarity】State the theme plainly in opening or closing (honesty, teamwork, etc.). One third to half of the piece should be **dialogue or back-and-forth**. No long scenery padding.
+
+【Anti-reskin】Do not keep the same mistaken-belief gag chain as the source; invent a new conflict skeleton while keeping the educational core. At least two dimensions (setting, cast, conflict type, resolution) must diverge strongly from the source.
+
+【Length】800–1500 Chinese characters equivalent (~500–900 English words). Prioritize action + talk.
+
+User notes:
+{notes if notes else '(none)'}
+
+Source text (for tone only — do not retell its plot chain):
+{source_for_tone if source_for_tone else '(none)'}
+
+Clues (not a beat outline):
+· Plot sketch: {main_plot[:1200] if main_plot else '(none)'}
+· Emotional arc: {emotional_arc}
+· Themes: {', '.join(thematic_elements) if thematic_elements else '(none)'}
+· Characters: {characters_str}
+
+Original highlights (optional inspiration):
+{highlights}
+
+Output **only** the new story body in English — no title, no meta commentary."""
+
+                wr_sys = (
+                    "Senior adaptation writer: educational anchor, fresh skeleton, lots of dialogue, clear theme, "
+                    "no reskin."
+                )
+            else:
+                story_prompt = f"""你是「影坊」项目的二创故事编剧。交付物必须是**全新故事**：读者不能说「只是把原片换了个动物/换了个名字」。
 
 ━━━━━━━━━━━━━━━━
 【唯一硬锚点——教育理念（只保留抽象内核，可换一切具体情节）】
@@ -165,14 +218,19 @@ class EnhancedContentGenerator:
 
 请**直接输出新故事正文**，不要标题、不要创作说明、不要列出与原作差异清单。"""
 
+                wr_sys = (
+                    "你是资深二创编剧。锚定教育理念；全新骨架；多写对话与人物互动，少写景与文采；主题清楚；禁止换皮。"
+                )
+
             if debug_prompts is not None:
                 from app.utils.prompt_trace import trace
 
+                trace_sys = wr_sys[:80] + ('…' if len(wr_sys) > 80 else '')
                 debug_prompts.append(
                     trace(
                         'story_writer',
                         '二创新故事',
-                        system='资深二创编剧：理念为锚、全新骨架；多对话互动、少写景；主题显豁。',
+                        system=trace_sys,
                         user=story_prompt,
                         model='qwen-plus-latest',
                     )
@@ -183,7 +241,7 @@ class EnhancedContentGenerator:
                 messages=[
                     {
                         "role": "system",
-                        "content": "你是资深二创编剧。锚定教育理念；全新骨架；多写对话与人物互动，少写景与文采；主题清楚；禁止换皮。",
+                        "content": wr_sys,
                     },
                     {"role": "user", "content": story_prompt},
                 ],
@@ -195,17 +253,20 @@ class EnhancedContentGenerator:
             if response.status_code == 200 and response.output and response.output.choices:
                 return response.output.choices[0].message.content
 
+            if language == 'en':
+                return f"A story inspired by: {main_plot[:200]}..."
             return f"一个关于{main_plot}的精彩故事..."
 
         except Exception as e:
             logger.error(f"生成创新故事失败: {e}")
-            return f"一个精彩的故事..."
+            return "A compelling story." if language == 'en' else "一个精彩的故事..."
 
     def _expand_highlights_preserving_core(
         self,
         original_highlights: str,
         new_story: str,
         debug_prompts: List[Dict[str, Any]] | None = None,
+        language: str = 'zh',
     ) -> Dict[str, Any]:
         """
         扩展亮点 - 保留核心亮点，进行创新扩展
@@ -213,7 +274,26 @@ class EnhancedContentGenerator:
         try:
             from dashscope import Generation
 
-            highlights_prompt = f"""请分析以下「二创」新故事，写**观众能看懂的**亮点（可与原素材精神呼应，不必字面相同）。
+            if language == 'en':
+                highlights_prompt = f"""Analyze the adapted story below and write **clear** highlights for viewers (may echo the spirit of the source, not literal copy).
+
+New story:
+{new_story}
+
+Source-side highlights (reference):
+{original_highlights}
+
+Style: short, concrete, no academic jargon. combined_highlights: first line "Theme: ..."; then three numbered lines ≤40 chars each, each a concrete beat.
+
+Return JSON only:
+{{
+    "preserved_highlights": ["echo of source highlight if any"],
+    "new_highlights": ["fresh hook 1", "fresh hook 2"],
+    "combined_highlights": "Theme line + three bullets"
+}}"""
+                hi_sys = "Write selling points: clear theme + three concrete reasons, plain English."
+            else:
+                highlights_prompt = f"""请分析以下「二创」新故事，写**观众能看懂的**亮点（可与原素材精神呼应，不必字面相同）。
 
 新故事：
 {new_story}
@@ -236,6 +316,7 @@ class EnhancedContentGenerator:
     "new_highlights": ["新故事的创新亮点1", "创新亮点2"],
     "combined_highlights": "按上文格式：主题行 + 三条编号要点"
 }}"""
+                hi_sys = "你写看点：主题清楚、三条具体，禁止文绉绉。"
 
             if debug_prompts is not None:
                 from app.utils.prompt_trace import trace
@@ -244,7 +325,7 @@ class EnhancedContentGenerator:
                     trace(
                         'story_writer',
                         '扩展亮点总结',
-                        system='你写看点像给朋友安利：主题一句+三条具体理由，禁止拽文。',
+                        system=hi_sys[:60],
                         user=highlights_prompt,
                         model='qwen-plus-latest',
                     )
@@ -253,7 +334,7 @@ class EnhancedContentGenerator:
             response = Generation.call(
                 model="qwen-plus-latest",
                 messages=[
-                    {"role": "system", "content": "你写看点：主题清楚、三条具体，禁止文绉绉。"},
+                    {"role": "system", "content": hi_sys},
                     {"role": "user", "content": highlights_prompt},
                 ],
                 result_format='message',
@@ -272,6 +353,12 @@ class EnhancedContentGenerator:
                 except:
                     pass
 
+            if language == 'en':
+                return {
+                    'preserved_highlights': [original_highlights],
+                    'new_highlights': ['Richer plot and character beats'],
+                    'combined_highlights': original_highlights,
+                }
             return {
                 'preserved_highlights': [original_highlights],
                 'new_highlights': ['故事情节更加丰富'],
@@ -291,6 +378,7 @@ class EnhancedContentGenerator:
         original_educational: str,
         new_story: str,
         debug_prompts: List[Dict[str, Any]] | None = None,
+        language: str = 'zh',
     ) -> Dict[str, Any]:
         """
         扩展教育意义 - 保留核心教育方向，进行深化扩展
@@ -298,7 +386,27 @@ class EnhancedContentGenerator:
         try:
             from dashscope import Generation
 
-            educational_prompt = f"""请分析以下二创新故事的教育意义，并与「教育专家」给出的原教育意义对照。**写给家长一眼能懂**。
+            if language == 'en':
+                educational_prompt = f"""Analyze educational meaning of the adapted story vs the original anchor. Write for parents in **plain English**, no theory name-dropping.
+
+New story:
+{new_story}
+
+Original educational anchor:
+{original_educational}
+
+combined_educational: 2-4 short sentences; first ties new story to the anchor; then one or two actionable takeaways. About 80-200 words total across fields.
+
+Return JSON only:
+{{
+    "preserved_educational": "how the new story continues the core idea (grounded)",
+    "new_educational": "extra insight or 'none'",
+    "combined_educational": "2-4 plain sentences",
+    "age_recommendation": "suggested ages"
+}}"""
+                ed_sys = "Educational notes: anchor to source meaning; concrete English; no jargon."
+            else:
+                educational_prompt = f"""请分析以下二创新故事的教育意义，并与「教育专家」给出的原教育意义对照。**写给家长一眼能懂**。
 
 新故事：
 {new_story}
@@ -322,6 +430,7 @@ class EnhancedContentGenerator:
     "combined_educational": "综合教育意义：2～4句白话，有重点",
     "age_recommendation": "适合的年龄段"
 }}"""
+                ed_sys = "核对二创是否锚定原教育意义；综合句必须白话、具体。"
 
             if debug_prompts is not None:
                 from app.utils.prompt_trace import trace
@@ -330,7 +439,7 @@ class EnhancedContentGenerator:
                     trace(
                         'story_writer',
                         '扩展教育意义',
-                        system='你写教育意义：对照原锚点、白话、可落地，禁止学术腔。',
+                        system=ed_sys[:60],
                         user=educational_prompt,
                         model='qwen-plus-latest',
                     )
@@ -339,7 +448,7 @@ class EnhancedContentGenerator:
             response = Generation.call(
                 model="qwen-plus-latest",
                 messages=[
-                    {"role": "system", "content": "核对二创是否锚定原教育意义；综合句必须白话、具体。"},
+                    {"role": "system", "content": ed_sys},
                     {"role": "user", "content": educational_prompt},
                 ],
                 result_format='message',
@@ -358,6 +467,13 @@ class EnhancedContentGenerator:
                 except:
                     pass
 
+            if language == 'en':
+                return {
+                    'preserved_educational': original_educational,
+                    'new_educational': 'The story reinforces positive values.',
+                    'combined_educational': original_educational,
+                    'age_recommendation': 'General audience',
+                }
             return {
                 'preserved_educational': original_educational,
                 'new_educational': '新故事传递了积极的价值观',
@@ -367,6 +483,13 @@ class EnhancedContentGenerator:
 
         except Exception as e:
             logger.error(f"扩展教育意义失败: {e}")
+            if language == 'en':
+                return {
+                    'preserved_educational': original_educational,
+                    'new_educational': 'Positive values for discussion.',
+                    'combined_educational': original_educational,
+                    'age_recommendation': 'General audience',
+                }
             return {
                 'preserved_educational': original_educational,
                 'new_educational': '新故事传递了积极的价值观',

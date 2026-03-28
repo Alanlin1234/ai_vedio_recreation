@@ -51,6 +51,7 @@ def review_for_secondary_creation(
     highlights: str,
     educational: str,
     creator_notes: str,
+    lang: str = 'zh',
 ) -> Dict[str, Any]:
     """
     返回:
@@ -61,18 +62,30 @@ def review_for_secondary_creation(
     hi = (highlights or '').strip() if highlights else ''
     ed = (educational or '').strip() if educational else ''
 
+    en = lang == 'en'
+
     if len(vu) < 20:
-        return _fail_result('视频理解内容过短，请先完成解析或检查解析是否成功', overall=0.0)
+        msg = (
+            'Understanding text is too short; run analysis first.'
+            if en
+            else '视频理解内容过短，请先完成解析或检查解析是否成功'
+        )
+        return _fail_result(msg, overall=0.0)
 
-    bad_markers = ['解析失败', '无法识别', '无内容', 'N/A']
+    bad_markers = ['解析失败', '无法识别', '无内容', 'N/A', 'Analysis failed', 'no content']
     if any(m in vu[:500] for m in bad_markers) and len(vu) < 80:
-        return _fail_result('视频理解质量不足，暂无法完成二创审核', overall=15.0)
+        msg = (
+            'Understanding quality is too low for review.'
+            if en
+            else '视频理解质量不足，暂无法完成二创审核'
+        )
+        return _fail_result(msg, overall=15.0)
 
-    llm = _try_llm_review(vu, hi, ed, cn)
+    llm = _try_llm_review(vu, hi, ed, cn, lang=lang)
     if llm:
         return llm
 
-    return _heuristic_review(vu, hi, ed, cn)
+    return _heuristic_review(vu, hi, ed, cn, lang=lang)
 
 
 def _fail_result(message: str, overall: float = 0.0) -> Dict[str, Any]:
@@ -93,7 +106,7 @@ def _fail_result(message: str, overall: float = 0.0) -> Dict[str, Any]:
     }
 
 
-def _try_llm_review(vu: str, hi: str, ed: str, cn: str) -> Optional[Dict[str, Any]]:
+def _try_llm_review(vu: str, hi: str, ed: str, cn: str, lang: str = 'zh') -> Optional[Dict[str, Any]]:
     try:
         import dashscope
         from dashscope import Generation
@@ -104,7 +117,41 @@ def _try_llm_review(vu: str, hi: str, ed: str, cn: str) -> Optional[Dict[str, An
 
         dashscope.api_key = api_key
 
-        prompt = f"""你是影视二创项目的「审核专员」。用户会上传原始视频并希望做「二创」（改编/重构/续写风格的新视频）。
+        if lang == 'en':
+            none_ = '(none)'
+            prompt = f"""You are the review lead for a secondary-creation video pipeline. Users upload source video and want adapted/remixed output.
+Score 0–100 on four dimensions from: (1) system understanding of the video; (2) highlights; (3) theme/educational angle; (4) user's project notes (intent / direction).
+
+[Video understanding]
+{vu[:6000]}
+
+[Highlights]
+{hi[:2000] if hi else none_}
+
+[Theme / educational]
+{ed[:2000] if ed else none_}
+
+[User notes]
+{cn[:2000] if cn else none_}
+
+Dimensions:
+- content: clarity, information, suitability as recreation source (can narrative be broken down).
+- visual_style: inferred look, pacing, audiovisual potential for consistent style.
+- story_recreation: room to adapt; empty or risky content scores lower.
+- creator_notes_alignment: fit between notes and material; if notes empty, use neutral 45–55 and say so.
+
+Output **only** one JSON object, no Markdown:
+{{
+  "content": <0-100 int>,
+  "visual_style": <0-100 int>,
+  "story_recreation": <0-100 int>,
+  "creator_notes_alignment": <0-100 int>,
+  "summary": "<one English sentence>",
+  "suggestions": "<one English improvement tip or empty string>"
+}}"""
+            rev_sys = 'You only output valid JSON with the exact keys requested.'
+        else:
+            prompt = f"""你是影视二创项目的「审核专员」。用户会上传原始视频并希望做「二创」（改编/重构/续写风格的新视频）。
 请根据：①系统对视频的文本理解；②亮点；③教育/主题意义；④用户自己对这部片子的说明（创作意图、想做的二创方向等），从四个维度分别打 0–100 分，并判断是否适合进入二创流程。
 
 【视频内容理解】
@@ -134,6 +181,7 @@ def _try_llm_review(vu: str, hi: str, ed: str, cn: str) -> Optional[Dict[str, An
   "summary": "<一句中文结论>",
   "suggestions": "<一句改进建议，可空字符串>"
 }}"""
+            rev_sys = '你只输出合法 JSON，键名与要求完全一致。'
 
         from app.utils.prompt_trace import trace
 
@@ -141,7 +189,7 @@ def _try_llm_review(vu: str, hi: str, ed: str, cn: str) -> Optional[Dict[str, An
             trace(
                 'reviewer',
                 '二创准入审核',
-                system='你只输出合法 JSON，键名与要求完全一致。',
+                system=rev_sys,
                 user=prompt,
                 model='qwen-plus-latest',
             )
@@ -152,7 +200,7 @@ def _try_llm_review(vu: str, hi: str, ed: str, cn: str) -> Optional[Dict[str, An
             messages=[
                 {
                     'role': 'system',
-                    'content': '你只输出合法 JSON，键名与要求完全一致。',
+                    'content': rev_sys,
                 },
                 {'role': 'user', 'content': prompt},
             ],
@@ -175,15 +223,22 @@ def _try_llm_review(vu: str, hi: str, ed: str, cn: str) -> Optional[Dict[str, An
         scores = {k: _clamp_score(data.get(k)) for k in keys}
         overall = sum(scores[k] * w[i] for i, k in enumerate(keys))
 
-        summary = (data.get('summary') or '').strip() or '审核完成'
+        done = 'Review complete' if lang == 'en' else '审核完成'
+        summary = (data.get('summary') or '').strip() or done
         suggestions = (data.get('suggestions') or '').strip()
         passed = overall >= PASS_SCORE
 
         message = summary
         if not passed:
-            message = f'得分 {overall:.1f}，未达二创准入线（{PASS_SCORE:.0f}）。{summary}'
+            if lang == 'en':
+                message = f'Score {overall:.1f}, below admission threshold ({PASS_SCORE:.0f}). {summary}'
+            else:
+                message = f'得分 {overall:.1f}，未达二创准入线（{PASS_SCORE:.0f}）。{summary}'
         else:
-            message = f'得分 {overall:.1f}，适合进入二创。{summary}'
+            if lang == 'en':
+                message = f'Score {overall:.1f}, admitted to secondary creation. {summary}'
+            else:
+                message = f'得分 {overall:.1f}，适合进入二创。{summary}'
 
         return {
             'success': True,
@@ -201,7 +256,7 @@ def _try_llm_review(vu: str, hi: str, ed: str, cn: str) -> Optional[Dict[str, An
         return None
 
 
-def _heuristic_review(vu: str, hi: str, ed: str, cn: str) -> Dict[str, Any]:
+def _heuristic_review(vu: str, hi: str, ed: str, cn: str, lang: str = 'zh') -> Dict[str, Any]:
     """无可用大模型时的保守打分。"""
     L = len(vu)
     base_content = min(100.0, 35.0 + min(40.0, L / 80.0))
@@ -223,10 +278,19 @@ def _heuristic_review(vu: str, hi: str, ed: str, cn: str) -> Dict[str, Any]:
     }
     overall = sum(scores[k] * w[i] for i, k in enumerate(keys))
     passed = overall >= PASS_SCORE
-    summary = '启发式审核：未调用大模型，结果仅供参考。'
-    message = (
-        f'得分 {overall:.1f}，{"适合进入二创" if passed else f"未达准入线（{PASS_SCORE:.0f}）"}。{summary}'
-    )
+    if lang == 'en':
+        summary = 'Heuristic review (no LLM); for reference only.'
+        message = (
+            f'Score {overall:.1f}, '
+            f'{"admitted" if passed else f"below threshold ({PASS_SCORE:.0f})"}. {summary}'
+        )
+        sugg = 'Set DASHSCOPE_API_KEY for a more accurate review.'
+    else:
+        summary = '启发式审核：未调用大模型，结果仅供参考。'
+        message = (
+            f'得分 {overall:.1f}，{"适合进入二创" if passed else f"未达准入线（{PASS_SCORE:.0f}）"}。{summary}'
+        )
+        sugg = '建议配置 DASHSCOPE_API_KEY 以获得更准确的审核。'
     from app.utils.prompt_trace import trace
 
     return {
@@ -235,7 +299,7 @@ def _heuristic_review(vu: str, hi: str, ed: str, cn: str) -> Dict[str, Any]:
         'overall_score': round(overall, 1),
         'scores': scores,
         'summary': summary,
-        'suggestions': '建议配置 DASHSCOPE_API_KEY 以获得更准确的审核。',
+        'suggestions': sugg,
         'message': message,
         'detail': {'source': 'heuristic'},
         'debug_prompts': [

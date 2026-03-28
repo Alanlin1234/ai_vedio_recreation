@@ -1,14 +1,16 @@
 import { Check, Circle, ListNumbers } from '@phosphor-icons/react'
+import { useTranslation } from 'react-i18next'
 
 function StepIndicator({ currentStep, completedSteps = [], onStepClick }) {
+  const { t } = useTranslation()
   const steps = [
-    { id: 1, name: '上传视频' },
-    { id: 2, name: '解析与审核' },
-    { id: 3, name: '二创新故事' },
-    { id: 4, name: '分镜（5秒/镜）' },
-    { id: 5, name: '场景视频' },
-    { id: 6, name: '拼接成片' },
-    { id: 7, name: '导出' },
+    { id: 1, name: t('steps.upload') },
+    { id: 2, name: t('steps.analyze') },
+    { id: 3, name: t('steps.newStory') },
+    { id: 4, name: t('steps.storyboard') },
+    { id: 5, name: t('steps.scenes') },
+    { id: 6, name: t('steps.combine') },
+    { id: 7, name: t('steps.export') },
   ]
 
   const getStepStatus = (stepId) => {
@@ -33,7 +35,7 @@ function StepIndicator({ currentStep, completedSteps = [], onStepClick }) {
     <div className="space-y-0">
       <div className="flex items-center gap-2 mb-4">
         <ListNumbers size={16} className="text-moss" />
-        <span className="section-label">工作流程</span>
+        <span className="section-label">{t('steps.workflow')}</span>
       </div>
 
       <div className="relative pl-4 max-h-[min(70vh,520px)] overflow-y-auto pr-1">

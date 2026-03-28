@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CaretDown, CaretRight, Trash } from '@phosphor-icons/react'
 import { getYingfangAgentName } from '../constants/yingfangAgents'
 
@@ -15,6 +16,7 @@ function Block({ label, text }) {
 }
 
 export default function PromptDebugPanel({ entries, onClear }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(true)
   const count = entries?.length ?? 0
 
@@ -32,7 +34,7 @@ export default function PromptDebugPanel({ entries, onClear }) {
   if (count === 0) {
     return (
       <div className="rounded-xl border border-dashed border-charcoal-200 bg-charcoal-50/50 px-4 py-3 text-xs text-charcoal-400">
-        完成「解析 / 审核 / 编剧 / 分镜 / 视频生成」等步骤后，此处会显示各 Agent 调用模型时使用的提示词（调试）。
+        {t('promptDebug.hint')}
       </div>
     )
   }
@@ -46,8 +48,10 @@ export default function PromptDebugPanel({ entries, onClear }) {
       >
         <span className="flex items-center gap-2 text-sm font-semibold text-moss-600">
           {open ? <CaretDown size={18} /> : <CaretRight size={18} />}
-          提示词调试
-          <span className="font-normal text-charcoal-400">({count} 条)</span>
+          {t('promptDebug.title')}
+          <span className="font-normal text-charcoal-400">
+            ({t('promptDebug.count', { count })})
+          </span>
         </span>
         {onClear && (
           <span
@@ -67,7 +71,7 @@ export default function PromptDebugPanel({ entries, onClear }) {
             className="inline-flex items-center gap-1 text-xs text-charcoal-400 hover:text-caramel-500"
           >
             <Trash size={14} />
-            清空
+            {t('promptDebug.clear')}
           </span>
         )}
       </button>
@@ -76,7 +80,7 @@ export default function PromptDebugPanel({ entries, onClear }) {
           {Object.entries(grouped).map(([agentId, items]) => (
             <div key={agentId} className="space-y-2">
               <div className="text-xs font-semibold text-charcoal-600 border-b border-charcoal-100 pb-1">
-                {getYingfangAgentName(agentId)}
+                {getYingfangAgentName(agentId, t)}
                 <span className="font-mono font-normal text-charcoal-400 ml-2">{agentId}</span>
               </div>
               <ul className="space-y-3 pl-1">
@@ -87,11 +91,13 @@ export default function PromptDebugPanel({ entries, onClear }) {
                   >
                     <div className="text-sm font-medium text-charcoal-800">{e.step}</div>
                     {e.model && (
-                      <div className="text-[11px] text-charcoal-400">模型: {e.model}</div>
+                      <div className="text-[11px] text-charcoal-400">
+                        {t('promptDebug.model')}: {e.model}
+                      </div>
                     )}
                     <Block label="System" text={e.system} />
                     <Block label="User" text={e.user} />
-                    <Block label="完整提示 / Body" text={e.body} />
+                    <Block label={t('promptDebug.fullPrompt')} text={e.body} />
                     {e.extra && Object.keys(e.extra).length > 0 && (
                       <Block label="Extra" text={JSON.stringify(e.extra, null, 2)} />
                     )}

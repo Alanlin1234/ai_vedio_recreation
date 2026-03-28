@@ -1,0 +1,2 @@
+-- Optional RLS examples for Supabase SQL Editor (Flask service_role often bypasses RLS).
+-- ALTER TABLE public.video_recreations ENABLE ROW LEVEL SECURITY;

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   ArrowLeft,
   ArrowRight,
@@ -10,22 +11,26 @@ import {
 
 import { pickEducationalSummary } from '../utils/educationalDisplay'
 
-const REVIEW_SCORE_LABELS = {
-  content: '内容',
-  visual_style: '画风与视听',
-  story_recreation: '二创叙事潜力',
-  creator_notes_alignment: '与用户说明契合',
-}
-
 const Page2 = ({ project, onGenerateNewStory, onBack, isLoading, loadingMessage }) => {
+  const { t } = useTranslation()
   const [error, setError] = useState('')
+
+  const reviewScoreLabels = useMemo(
+    () => ({
+      content: t('page2.dimContent'),
+      visual_style: t('page2.dimVisual'),
+      story_recreation: t('page2.dimStory'),
+      creator_notes_alignment: t('page2.dimNotes'),
+    }),
+    [t]
+  )
 
   const handleGenerate = async () => {
     setError('')
     try {
       await onGenerateNewStory()
     } catch (err) {
-      setError(err.response?.data?.error || err.message || '生成新故事失败')
+      setError(err.response?.data?.error || err.message || t('page2.errorStory'))
     }
   }
 
@@ -49,9 +54,9 @@ const Page2 = ({ project, onGenerateNewStory, onBack, isLoading, loadingMessage 
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-serif font-bold text-charcoal-700 mb-2">原片分析</h2>
+        <h2 className="text-2xl font-serif font-bold text-charcoal-700 mb-2">{t('page2.title')}</h2>
         <p className="text-charcoal-500 font-serif">
-          {analysis.story_content ? '这是 AI 对原片的理解' : '正在看片，别催...'}
+          {analysis.story_content ? t('page2.subtitleReady') : t('page2.subtitleLoading')}
         </p>
       </div>
 
@@ -63,17 +68,13 @@ const Page2 = ({ project, onGenerateNewStory, onBack, isLoading, loadingMessage 
                 <SealCheck size={22} weight="duotone" className="text-moss" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-lg font-serif font-semibold text-charcoal-700">
-                  审核专员评分
-                </h3>
-                <p className="text-sm text-charcoal-500 mt-0.5">
-                  二创准入审核（达到及格线方可继续）
-                </p>
+                <h3 className="text-lg font-serif font-semibold text-charcoal-700">{t('page2.reviewTitle')}</h3>
+                <p className="text-sm text-charcoal-500 mt-0.5">{t('page2.reviewSubtitle')}</p>
               </div>
             </div>
             <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 mb-4">
               <p className="text-2xl font-serif font-bold text-charcoal-800">
-                总分{' '}
+                {t('page2.total')}{' '}
                 <span className="text-moss tabular-nums">
                   {review.score != null ? Number(review.score).toFixed(1) : '—'}
                 </span>
@@ -81,7 +82,7 @@ const Page2 = ({ project, onGenerateNewStory, onBack, isLoading, loadingMessage 
               </p>
               {review.pass_threshold != null && (
                 <p className="text-sm text-charcoal-600">
-                  及格线：<span className="tabular-nums">{review.pass_threshold}</span>
+                  {t('page2.threshold')}<span className="tabular-nums">{review.pass_threshold}</span>
                 </p>
               )}
               {review.passed != null && (
@@ -92,7 +93,7 @@ const Page2 = ({ project, onGenerateNewStory, onBack, isLoading, loadingMessage 
                       : 'bg-red-100 text-red-700'
                   }`}
                 >
-                  {review.passed ? '已通过' : '未通过'}
+                  {review.passed ? t('page2.passed') : t('page2.notPassed')}
                 </span>
               )}
             </div>
@@ -104,7 +105,7 @@ const Page2 = ({ project, onGenerateNewStory, onBack, isLoading, loadingMessage 
                     className="flex justify-between gap-3 text-sm bg-paper-100 rounded-lg px-3 py-2"
                   >
                     <span className="text-charcoal-600">
-                      {REVIEW_SCORE_LABELS[key] || key}
+                      {reviewScoreLabels[key] || key}
                     </span>
                     <span className="font-medium text-charcoal-800 tabular-nums">
                       {val != null ? Number(val).toFixed(1) : '—'}
@@ -115,7 +116,7 @@ const Page2 = ({ project, onGenerateNewStory, onBack, isLoading, loadingMessage 
             )}
             {review.summary && (
               <div className="bg-paper-100 rounded-xl p-4 border border-charcoal-100">
-                <p className="text-xs font-medium text-charcoal-500 mb-1">审核摘要</p>
+                <p className="text-xs font-medium text-charcoal-500 mb-1">{t('page2.reviewSummary')}</p>
                 <p className="text-charcoal-700 font-serif text-[15px] leading-relaxed whitespace-pre-wrap">
                   {stripMarkdown(review.summary)}
                 </p>
@@ -129,11 +130,11 @@ const Page2 = ({ project, onGenerateNewStory, onBack, isLoading, loadingMessage 
             <div className="w-10 h-10 rounded-lg bg-moss/10 flex items-center justify-center">
               <BookOpen size={20} weight="duotone" className="text-moss" />
             </div>
-            <h3 className="text-lg font-serif font-semibold text-charcoal-700">故事内容</h3>
+            <h3 className="text-lg font-serif font-semibold text-charcoal-700">{t('page2.storyContent')}</h3>
           </div>
           <div className="bg-paper-100 rounded-xl p-5">
             <p className="text-charcoal-600 font-serif whitespace-pre-wrap leading-relaxed text-[15px]">
-              {analysis.story_content ? stripMarkdown(analysis.story_content) : <span className="animate-pulse-soft text-charcoal-400">正在加载...</span>}
+              {analysis.story_content ? stripMarkdown(analysis.story_content) : <span className="animate-pulse-soft text-charcoal-400">{t('page2.loading')}</span>}
             </p>
           </div>
         </div>
@@ -143,11 +144,11 @@ const Page2 = ({ project, onGenerateNewStory, onBack, isLoading, loadingMessage 
             <div className="w-10 h-10 rounded-lg bg-caramel-100 flex items-center justify-center">
               <Sparkle size={20} weight="duotone" className="text-caramel-400" />
             </div>
-            <h3 className="text-lg font-serif font-semibold text-charcoal-700">故事亮点</h3>
+            <h3 className="text-lg font-serif font-semibold text-charcoal-700">{t('page2.highlights')}</h3>
           </div>
           <div className="bg-paper-100 rounded-xl p-5">
             <p className="text-charcoal-600 font-serif whitespace-pre-wrap leading-relaxed text-[15px]">
-              {analysis.highlights ? stripMarkdown(analysis.highlights) : <span className="animate-pulse-soft text-charcoal-400">正在加载...</span>}
+              {analysis.highlights ? stripMarkdown(analysis.highlights) : <span className="animate-pulse-soft text-charcoal-400">{t('page2.loading')}</span>}
             </p>
           </div>
         </div>
@@ -157,12 +158,12 @@ const Page2 = ({ project, onGenerateNewStory, onBack, isLoading, loadingMessage 
             <div className="w-10 h-10 rounded-lg bg-moss/10 flex items-center justify-center">
               <Lightbulb size={20} weight="duotone" className="text-moss" />
             </div>
-            <h3 className="text-lg font-serif font-semibold text-charcoal-700">教育意义</h3>
+            <h3 className="text-lg font-serif font-semibold text-charcoal-700">{t('page2.educational')}</h3>
           </div>
           <div className="bg-paper-100 rounded-xl p-5 space-y-4">
             {eduPoints.length > 0 ? (
               <>
-                <p className="text-xs font-medium text-charcoal-500 tracking-wide">核心要点</p>
+                <p className="text-xs font-medium text-charcoal-500 tracking-wide">{t('page2.corePoints')}</p>
                 <ul className="space-y-2.5">
                   {eduPoints.map((line, idx) => (
                     <li
@@ -185,7 +186,7 @@ const Page2 = ({ project, onGenerateNewStory, onBack, isLoading, loadingMessage 
                 {stripMarkdown(eduSummary)}
               </p>
             ) : (
-              <span className="animate-pulse-soft text-charcoal-400">正在加载...</span>
+              <span className="animate-pulse-soft text-charcoal-400">{t('page2.loading')}</span>
             )}
           </div>
         </div>
@@ -197,7 +198,7 @@ const Page2 = ({ project, onGenerateNewStory, onBack, isLoading, loadingMessage 
           onClick={onBack}
         >
           <ArrowLeft size={18} />
-          上一回
+          {t('page2.back')}
         </button>
         <button
           className="btn-primary flex items-center gap-2"
@@ -211,7 +212,7 @@ const Page2 = ({ project, onGenerateNewStory, onBack, isLoading, loadingMessage 
             </>
           ) : (
             <>
-              换个结局试试
+              {t('page2.next')}
               <ArrowRight size={18} weight="bold" />
             </>
           )}
